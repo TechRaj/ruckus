@@ -21,18 +21,23 @@ The problem: saved reels are a black hole. People save hundreds and never find t
 
 **Ruckus** — decided 2 Sept 2026, overriding the earlier pick of Rascal.
 
-The word does double duty: the app is Ruckus, and a friend group inside it is
-*your ruckus*. That collapses two nouns into one and reads naturally in product
-copy ("3 people in your ruckus want to go"). The raccoon character survives the
-rename — a ruckus is what raccoons cause.
+The app is Ruckus; a friend group inside it is a **Den**. Confirmed against the
+Figma on 2 Sept — the People screen reads "Switch Den" and the paywall reads
+"Unlimited Dens". Den is the better word anyway: it is where raccoons actually
+live, it pluralises cleanly, and it leaves "ruckus" free to mean the app.
 
-| Concept | Word |
-| --- | --- |
-| The app | Ruckus |
-| A friend group | your ruckus |
-| Your saved spots | your Stash |
-| A planned outing | a Caper |
-| Badge tiers | Scallywag, Ringleader, Night Owl |
+| Concept | Word | Seen in design |
+| --- | --- | --- |
+| The app | Ruckus | — |
+| A friend group | a Den | "Switch Den", "Unlimited Dens" |
+| Your saved spots | the Stash | "YOUR SHARED STASH", "Add to Stash" |
+| A planned outing | a Caper | not yet in any screen |
+| Paid tier | Ruckus Pro | "Unlimited Dens, no ads" |
+| Badge tiers | Scallywag, Ringleader, Night Owl | not yet in any screen |
+
+Dens have names ("Toronto Shenanigans") and an emoji/crest, and are joined by a
+short link — `ruckus.app/j/8FK2QD` in the design, so a six-character code and a
+universal link.
 
 Previously rejected and still rejected: Stash and Trove (fintech apps sit on
 both), Gaze, Tanuki, Caper as the app name, Sly (Sly Cooper trademark risk),
@@ -67,7 +72,12 @@ Ruckus is the central object, not a screen. Everything is scoped to a group — 
 
 **People** — friends, messaging, temp group chats that auto-archive after the event.
 
-**Monetisation** — ad space via RevenueCat, paid/free tier split. Not designed.
+**Monetisation** — designed as of the 2 Sept Figma, contrary to earlier notes
+here. **Ruckus Pro: "Unlimited Dens, no ads."** So the free tier is capped on
+Den count and carries ads; Pro removes both. Two consequences: the free cap has
+to be at least 1 Den with a visible upgrade path, and **a Den count of exactly
+one cannot be the shipped scope** — the paywall has nothing to sell if you can
+never have a second Den. Entry point is a row on the People screen.
 
 ---
 
