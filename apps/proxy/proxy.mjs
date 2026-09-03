@@ -38,8 +38,10 @@ if (!process.env.OPENROUTER_API_KEY) {
  * Rate limiting. Naive and in-memory, which is fine until it isn't.
  * Swap for Redis when you have more than one instance.
  * ------------------------------------------------------------------ */
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 20;
+const WINDOW_MS = Number(process.env.RATE_WINDOW_MS || 60_000);
+// 20 is right for a phone. Batch tooling over the whole corpus needs headroom,
+// so it is an env var rather than a reason to comment the limiter out.
+const MAX_PER_WINDOW = Number(process.env.RATE_MAX || 20);
 const hits = new Map();
 
 function rateLimited(key) {

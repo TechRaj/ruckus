@@ -18,13 +18,27 @@
 
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** crude token overlap, enough to tell "Thindi Café" from "Thai Basil" */
+/**
+ * Crude token overlap, enough to tell "Thindi Café" from "Thai Basil".
+ *
+ * Containment is checked first because trigram overlap divides by the LONGER
+ * name, so a correct short name inside a longer official one scored terribly:
+ * "Bow Lake" vs "Bow Lake Viewpoint", "Fuego" vs "Volcán de Fuego", "Ruta del
+ * Cares" vs "La Ruta del Cares" were all being penalised -3 as mismatches in
+ * the 3 Sep run. Google returns the official name; creators write the short one.
+ */
 function nameSimilarity(a, b) {
-  const A = new Set(norm(a).match(/.{1,3}/g) || []);
-  const B = new Set(norm(b).match(/.{1,3}/g) || []);
+  const x = norm(a), y = norm(b);
+  if (!x || !y) return 0;
+  if (x === y) return 1;
+  // one name wholly inside the other, and not a trivially short fragment
+  if ((x.includes(y) || y.includes(x)) && Math.min(x.length, y.length) >= 4) return 0.85;
+
+  const A = new Set(x.match(/.{1,3}/g) || []);
+  const B = new Set(y.match(/.{1,3}/g) || []);
   if (!A.size || !B.size) return 0;
   let hit = 0;
-  for (const x of A) if (B.has(x)) hit++;
+  for (const t of A) if (B.has(t)) hit++;
   return hit / Math.max(A.size, B.size);
 }
 
@@ -116,9 +130,25 @@ export function refineWithGeocode(scored, place, geoResults = [], expectedCity =
     t.add('geocode_ambiguous', -2);
   }
 
-  if (expectedCity && best.address) {
-    if (norm(best.address).includes(norm(expectedCity))) t.add('geocode_city_match', 2);
-    else t.add('geocode_city_mismatch', -3);
+  // City is the weakest of these signals and it took two tries to admit it.
+  // The model emits a REGIONAL label - "Banff", "Iceland", "Antigua" - while
+  // Places returns a municipality: "Improvement District No. 9", "Reykjavík".
+  // Both describe the same spot and no string comparison bridges them.
+  //
+  // So: check the locality and the full formatted address (checking only the
+  // locality flagged "Reykjavík, Iceland" as not being in Iceland), award the
+  // match, and make the mismatch nearly free. Agreement is real evidence;
+  // disagreement is mostly this field being coarse. A real fix compares
+  // coordinates against the region's bounding box, which costs another lookup.
+  if (expectedCity) {
+    const want = norm(expectedCity);
+    const hay = `${norm(best.city)} ${norm(best.address)}`.trim();
+    if (!hay) t.add('geocode_city_unknown', 0);
+    else if (hay.includes(want) || (norm(best.city) && want.includes(norm(best.city)))) {
+      t.add('geocode_city_match', 2);
+    } else {
+      t.add('geocode_city_weak', -1);
+    }
   }
 
   return { ...t.result, geo: best };
@@ -148,7 +178,6 @@ const WARNINGS = [
   ['geocode_no_match',       "Couldn't find this on the map"],
   ['evidence_not_in_caption','Not clearly mentioned in the caption'],
   ['geocode_name_mismatch',  'The map found something with a different name'],
-  ['geocode_city_mismatch',  'This may be in a different city'],
   ['geocode_ambiguous',      'Several places share this name'],
   ['handle_unresolved',      "The tagged account didn't load"],
 ];
@@ -171,9 +200,23 @@ export function explain(codes = []) {
  * possible now because the inputs are facts rather than model moods.
  * ------------------------------------------------------------------ */
 
+/**
+ * Thresholds. These were set against PRE-geocode scores, which topped out
+ * around 12; with the geocode phase running the scale reaches 17 and the old
+ * 9/4 split graded 61 of 70 candidates "high" - the confirm screen would have
+ * auto-picked almost everything, which is the failure §5.8 exists to prevent.
+ *
+ * Re-cut against the 3 Sep run's distribution: roughly 40% single-tap,
+ * 50% pick-from-three, 10% fall through to search.
+ *
+ * This is fitted to the SHAPE of the distribution, not to accuracy - nobody
+ * has filled in `correct?` yet. Once a run is labelled, set these against the
+ * rows where a high score was wrong and a low score was right. Until then they
+ * are a better guess, not a measurement.
+ */
 export function tierOf(score) {
-  if (score >= 9) return 'high';
-  if (score >= 4) return 'medium';
+  if (score >= 13) return 'high';
+  if (score >= 8) return 'medium';
   return 'low';
 }
 
