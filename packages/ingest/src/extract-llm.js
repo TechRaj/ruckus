@@ -16,9 +16,9 @@
  */
 
 import { rankCandidates as heuristicRank } from './ranker.js';
-import { scoreCandidate, tierOf } from './confidence.js';
+import { scoreCandidate, tierOf, explain } from './confidence.js';
 
-export { confirmationMode, refineWithGeocode } from './confidence.js';
+export { confirmationMode, refineWithGeocode, explain } from './confidence.js';
 
 // Your proxy, not api.anthropic.com - an API key in the binary is extractable.
 const ENDPOINT = process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
@@ -111,7 +111,7 @@ function parseJson(raw) {
 function toCandidates(result, parsed, resolvedNames) {
   return (result.places || [])
     .map(p => {
-      const { score, why } = scoreCandidate(p, parsed, resolvedNames);
+      const { score, why, codes } = scoreCandidate(p, parsed, resolvedNames);
       return {
         name: p.name,
         handle: p.instagram_handle ?? null,
@@ -122,7 +122,11 @@ function toCandidates(result, parsed, resolvedNames) {
         address: p.address ?? null,
         score,                      // deterministic, pre-geocode
         tier: tierOf(score),
-        reasons: why,
+        reasons: why,               // debug strings
+        codes,                      // the same signals, structured
+        // the line under the name on the confirm card. Recompute after
+        // geocoding - the geocode signals change what it should say.
+        explanation: explain(codes),
         geocodeQuery: p.geocode_query || p.name,
       };
     })

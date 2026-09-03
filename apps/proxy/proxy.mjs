@@ -129,7 +129,110 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-app.get('/health', (_, res) => res.json({ ok: true, model: MODEL }));
+
+/* ------------------------------------------------------------------ *
+ * /geocode - candidate name -> a real place with a stable id.
+ *
+ * Same reason as /extract: the Places key cannot sit in the binary either.
+ * Uses the Places API (New) Text Search, which returns `id` - the stable
+ * place id the whole schema dedupes on.
+ *
+ * Cached in memory because the same cafe arrives from several reels, and
+ * because Google's terms allow caching place ids indefinitely but other
+ * fields only for a limited window. A process-lifetime cache is comfortably
+ * inside that and cuts the bill at the same time.
+ * ------------------------------------------------------------------ */
+
+const PLACES_ENDPOINT = 'https://places.googleapis.com/v1/places:searchText';
+const FIELD_MASK = [
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.location',
+  'places.types',
+  'places.addressComponents',
+].join(',');
+
+const geoCache = new Map();
+const GEO_CACHE_MAX = 500;
+
+const componentOf = (components, type) =>
+  components?.find(c => c.types?.includes(type))?.longText ?? null;
+
+/** Google's shape -> the shape confidence.js and ResolvedPlace expect. */
+function normalisePlace(p) {
+  const c = p.addressComponents;
+  return {
+    placeId: p.id,
+    name: p.displayName?.text ?? '',
+    address: p.formattedAddress ?? '',
+    lat: p.location?.latitude ?? null,
+    lng: p.location?.longitude ?? null,
+    neighbourhood: componentOf(c, 'neighborhood') ?? componentOf(c, 'sublocality'),
+    city: componentOf(c, 'locality') ?? componentOf(c, 'postal_town'),
+    types: p.types ?? [],
+  };
+}
+
+app.post('/geocode', async (req, res) => {
+  if (rateLimited(req.ip)) return res.status(429).json({ error: 'slow down' });
+
+  const { query, city, bias } = req.body ?? {};
+  if (typeof query !== 'string' || !query.trim()) {
+    return res.status(400).json({ error: 'query required' });
+  }
+  if (!process.env.GOOGLE_PLACES_API_KEY) {
+    // Say so plainly. Silently returning [] reads downstream as
+    // geocode_no_match (-5) and quietly poisons every score.
+    return res.status(503).json({ error: 'GOOGLE_PLACES_API_KEY unset' });
+  }
+
+  const text = city ? `${query.trim()} ${city}`.trim() : query.trim();
+  const key = text.toLowerCase();
+
+  if (geoCache.has(key)) {
+    return res.json({ results: geoCache.get(key), cached: true });
+  }
+
+  try {
+    const r = await fetch(PLACES_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': FIELD_MASK,
+      },
+      body: JSON.stringify({
+        textQuery: text,
+        maxResultCount: 5,          // confidence.js wants the field, not one answer
+        ...(bias ? { locationBias: bias } : {}),
+      }),
+    });
+
+    if (!r.ok) {
+      console.error('[places]', r.status, (await r.text()).slice(0, 300));
+      return res.status(502).json({ error: 'geocode failed' });
+    }
+
+    const results = ((await r.json()).places ?? []).map(normalisePlace);
+
+    if (geoCache.size >= GEO_CACHE_MAX) geoCache.delete(geoCache.keys().next().value);
+    geoCache.set(key, results);
+
+    // the query is a place name, not user content - safe to log, useful to have
+    console.log(`[geocode] "${text}" -> ${results.length}`);
+    res.json({ results, cached: false });
+  } catch (err) {
+    console.error('[places]', err.message);
+    res.status(502).json({ error: 'geocode failed' });
+  }
+});
+
+app.get('/health', (_, res) => res.json({
+  ok: true,
+  model: MODEL,
+  geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
+}));
 
 app.listen(process.env.PORT || 3000, () =>
   console.log(`proxy listening on ${process.env.PORT || 3000}, model=${MODEL}`)

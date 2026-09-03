@@ -11,8 +11,9 @@
  *                 is there an address? did the model quote real text?
  *   post-geocode  did an independent source find exactly this place, here?
  *
- * Every input is checkable, so every score is explainable. `why` is on the
- * output for exactly that reason - when a routing decision looks wrong, read it.
+ * Every input is checkable, so every score is explainable. Each candidate
+ * carries `reasons` (debug strings) and `codes` (the same signals, structured).
+ * `explain(codes)` turns them into the one line the confirm card shows.
  */
 
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -27,118 +28,146 @@ function nameSimilarity(a, b) {
   return hit / Math.max(A.size, B.size);
 }
 
+/**
+ * Accumulates score, human-readable debug strings, and structured codes at
+ * once, so the three can never drift apart. They did before: the copy on the
+ * confirm card was being reverse-engineered from the debug string.
+ */
+function tally(startScore = 0, startWhy = [], startCodes = []) {
+  let score = startScore;
+  const why = [...startWhy];
+  const codes = [...startCodes];
+  return {
+    add(code, delta) {
+      score += delta;
+      codes.push(code);
+      why.push(`${code} ${delta >= 0 ? '+' : ''}${delta}`);
+    },
+    get result() { return { score, why, codes }; },
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Phase 1 - before geocoding
  * ------------------------------------------------------------------ */
 
 export function scoreCandidate(place, parsed, resolvedNames = {}) {
-  const why = [];
-  let score = 0;
+  const t = tally();
   const caption = norm(parsed.caption);
 
   // --- the hallucination check. The model must quote the caption; we verify
   //     the quote is really there. A made-up place can't produce real text.
   if (place.evidence) {
-    if (caption.includes(norm(place.evidence))) {
-      score += 3;
-      why.push('evidence_verified +3');
-    } else {
-      score -= 4;
-      why.push('evidence_not_in_caption -4');
-    }
+    if (caption.includes(norm(place.evidence))) t.add('evidence_verified', 3);
+    else t.add('evidence_not_in_caption', -4);
   } else {
-    why.push('no_evidence 0');
+    t.add('no_evidence', 0);
   }
 
   // --- the name itself written in the caption
   if (place.name && norm(place.name).length >= 4 && caption.includes(norm(place.name))) {
-    score += 3;
-    why.push('name_in_caption +3');
+    t.add('name_in_caption', 3);
   }
 
   // --- a handle that resolved to a real profile
   if (place.handle && resolvedNames[place.handle]) {
     const sim = nameSimilarity(place.name, resolvedNames[place.handle]);
-    if (sim > 0.4) {
-      score += 3;
-      why.push('handle_resolved_matches +3');
-    } else {
-      score += 1;
-      why.push('handle_resolved_only +1');
-    }
+    if (sim > 0.4) t.add('handle_resolved_matches', 3);
+    else t.add('handle_resolved_only', 1);
   } else if (place.handle) {
-    score -= 1;
-    why.push('handle_unresolved -1');
+    t.add('handle_unresolved', -1);
   }
 
   // --- a street address in the caption is about as good as it gets
-  if (place.address) {
-    score += 3;
-    why.push('address_present +3');
-  }
+  if (place.address) t.add('address_present', 3);
 
   // --- a region is a weaker save than a business: no place_id, no hours
-  if (place.kind && place.kind !== 'venue') {
-    score -= 1;
-    why.push(`kind_${place.kind} -1`);
-  }
+  if (place.kind && place.kind !== 'venue') t.add(`kind_${place.kind}`, -1);
 
-  return { score, why };
+  return t.result;
 }
 
 /* ------------------------------------------------------------------ *
  * Phase 2 - after geocoding. The strongest signal, and free.
  *
- * Pass the raw results array from MKLocalSearch / Places Text Search.
+ * Pass the raw results array from Places Text Search.
  * ------------------------------------------------------------------ */
 
 export function refineWithGeocode(scored, place, geoResults = [], expectedCity = null) {
-  const why = [...scored.why];
-  let score = scored.score;
+  const t = tally(scored.score, scored.why, scored.codes ?? []);
 
   if (!geoResults.length) {
-    return { score: score - 5, why: [...why, 'geocode_no_match -5'], geo: null };
+    t.add('geocode_no_match', -5);
+    return { ...t.result, geo: null };
   }
 
   const best = geoResults[0];
   const sim = nameSimilarity(place.name, best.name);
 
-  if (sim > 0.7) {
-    score += 4;
-    why.push('geocode_name_match +4');
-  } else if (sim > 0.4) {
-    score += 1;
-    why.push('geocode_name_partial +1');
-  } else {
-    score -= 3;
-    why.push('geocode_name_mismatch -3');
-  }
+  if (sim > 0.7) t.add('geocode_name_match', 4);
+  else if (sim > 0.4) t.add('geocode_name_partial', 1);
+  else t.add('geocode_name_mismatch', -3);
 
   // one clear result beats a page of maybes
   if (geoResults.length === 1) {
-    score += 2;
-    why.push('geocode_unique +2');
+    t.add('geocode_unique', 2);
   } else if (geoResults.length > 3 && nameSimilarity(best.name, geoResults[1]?.name) > 0.6) {
     // several near-identical hits: a chain, or the wrong branch
-    score -= 2;
-    why.push('geocode_ambiguous -2');
+    t.add('geocode_ambiguous', -2);
   }
 
   if (expectedCity && best.address) {
-    if (norm(best.address).includes(norm(expectedCity))) {
-      score += 2;
-      why.push('geocode_city_match +2');
-    } else {
-      score -= 3;
-      why.push('geocode_city_mismatch -3');
-    }
+    if (norm(best.address).includes(norm(expectedCity))) t.add('geocode_city_match', 2);
+    else t.add('geocode_city_mismatch', -3);
   }
 
-  return { score, why, geo: best };
+  return { ...t.result, geo: best };
 }
 
 /* ------------------------------------------------------------------ *
- * Tiers. Thresholds are guesses - tune them against results.csv, which is
+ * Turning codes into the line under the place name.
+ *
+ * The confirm card in the design reads "Matched from a tagged handle" - that
+ * is this, not a debug string. Copy lives next to the codes so adding a signal
+ * without giving it words is obvious.
+ * ------------------------------------------------------------------ */
+
+/** Strongest first. The first code a candidate has is the one shown. */
+const EXPLANATIONS = [
+  ['address_present',        'The caption gave a street address'],
+  ['handle_resolved_matches','Matched from a tagged handle'],
+  ['geocode_name_match',     'Named in the caption, found on the map'],
+  ['name_in_caption',        'Named in the caption'],
+  ['evidence_verified',      'Mentioned in the caption'],
+  ['handle_resolved_only',   'From an account tagged in the post'],
+  ['geocode_name_partial',   'Close match on the map'],
+];
+
+/** Shown instead when something is actually wrong - these win over the above. */
+const WARNINGS = [
+  ['geocode_no_match',       "Couldn't find this on the map"],
+  ['evidence_not_in_caption','Not clearly mentioned in the caption'],
+  ['geocode_name_mismatch',  'The map found something with a different name'],
+  ['geocode_city_mismatch',  'This may be in a different city'],
+  ['geocode_ambiguous',      'Several places share this name'],
+  ['handle_unresolved',      "The tagged account didn't load"],
+];
+
+/**
+ * One human sentence for a candidate, for the line under the name.
+ *
+ * @param {string[]} codes  the `codes` array off a scored candidate
+ * @returns {{ text: string, tone: 'good' | 'warn' }}
+ */
+export function explain(codes = []) {
+  const has = new Set(codes);
+  for (const [code, text] of WARNINGS) if (has.has(code)) return { text, tone: 'warn' };
+  for (const [code, text] of EXPLANATIONS) if (has.has(code)) return { text, tone: 'good' };
+  return { text: 'Best guess from the caption', tone: 'warn' };
+}
+
+/* ------------------------------------------------------------------ *
+ * Tiers. Thresholds are guesses - tune them against a labelled run, which is
  * possible now because the inputs are facts rather than model moods.
  * ------------------------------------------------------------------ */
 

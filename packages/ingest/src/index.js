@@ -27,7 +27,7 @@ export {
 } from './instagram.js';
 
 export { extractPlaces } from './extract-llm.js';
-export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode } from './confidence.js';
+export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode, explain } from './confidence.js';
 export { rankCandidates } from './ranker.js';
 
 import { fetchPage, shortcodeOf, parseReelPage, resolveHandle } from './instagram.js';
