@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+__pycache__/
+
+# harness output. Keep a run only once its 'correct?' column is filled in
+# by hand - an unlabelled CSV is not a measurement.
+tools/harness/results/*.csv
+!tools/harness/results/*.labelled.csv
+
+# expo / rn
+apps/mobile/.expo/
+apps/mobile/ios/
+apps/mobile/android/
+*.log
+design/manifest.json

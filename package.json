@@ -1,0 +1,20 @@
+{
+  "name": "ruckus",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/proxy",
+    "tools/harness"
+  ],
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "proxy": "npm run start -w @ruckus/proxy",
+    "harness": "npm run start -w @ruckus/harness",
+    "design": "node --env-file=.env tools/figma-export.mjs"
+  },
+  "license": "MIT",
+  "description": "Collect places you find on Instagram Reels and turn them into plans with friends."
+}

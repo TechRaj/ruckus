@@ -1,0 +1,14 @@
+{
+  "name": "@ruckus/proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "proxy.mjs",
+  "scripts": {
+    "start": "node --env-file=../../.env proxy.mjs",
+    "start:prod": "node proxy.mjs"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

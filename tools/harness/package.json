@@ -1,0 +1,12 @@
+{
+  "name": "@ruckus/harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "EXTRACT_ENDPOINT=${EXTRACT_ENDPOINT:-http://localhost:3000/extract} node harness.mjs urls.txt"
+  },
+  "dependencies": {
+    "@ruckus/ingest": "*"
+  }
+}
