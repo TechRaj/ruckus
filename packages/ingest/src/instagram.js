@@ -20,9 +20,54 @@ const UA = 'Mozilla/5.0 (compatible; facebookexternalhit/1.1)';
  * These two break when Instagram changes their format. Ship them from
  * your server so you can fix them without an App Store release.
  * ------------------------------------------------------------------ */
-const WRAPPER =
-  /^(?:([\d,.]+[KMkm]?)\s+likes?,\s*([\d,.]+[KMkm]?)\s+comments?\s*-\s*)?(\S+)\s+on\s+(.+?):\s*"([\s\S]*)"\.?\s*$/;
-const PROFILE_NAME = /from\s+([\s\S]+?)\s*\(@/;
+const DEFAULTS = {
+  wrapper:
+    /^(?:([\d,.]+[KMkm]?)\s+likes?,\s*([\d,.]+[KMkm]?)\s+comments?\s*-\s*)?(\S+)\s+on\s+(.+?):\s*"([\s\S]*)"\.?\s*$/,
+  profileName: /from\s+([\s\S]+?)\s*\(@/,
+};
+
+// Mutable so the server can correct them mid-flight. Never reassign the
+// object - callers hold no reference to it, but the pattern getters below do.
+let patterns = { ...DEFAULTS };
+
+/**
+ * Replace the two fragile regexes at runtime.
+ *
+ * These break when Instagram changes the format of og:description, and that
+ * change arrives without warning. Shipping them as config means a fix is a
+ * server deploy, not an App Store review - which is days versus a week or more,
+ * during which the app cannot read a single reel.
+ *
+ * Patterns arrive as strings because they come over the wire as JSON. An
+ * invalid pattern is ignored rather than thrown: a bad remote config must
+ * degrade to the built-in behaviour, never brick the app.
+ *
+ *   configure({ wrapper: '^(?:...)$' })   // usually from GET /config
+ *   configure(null)                       // back to the built-ins
+ *
+ * @returns {string[]} the keys that were actually applied
+ */
+export function configure(next) {
+  if (!next) { patterns = { ...DEFAULTS }; return []; }
+  const applied = [];
+  for (const key of ['wrapper', 'profileName']) {
+    const v = next[key];
+    if (typeof v !== 'string' || !v) continue;
+    try {
+      patterns[key] = new RegExp(v);
+      applied.push(key);
+    } catch {
+      // keep whatever was working; a broken regex from the server is a
+      // deploy mistake and must not take the client down with it
+    }
+  }
+  return applied;
+}
+
+/** What the parser is currently using, for a debug screen or a bug report. */
+export function currentPatterns() {
+  return { wrapper: String(patterns.wrapper), profileName: String(patterns.profileName) };
+}
 
 /* ------------------------------------------------------------------ *
  * HTML entities - RN has no DOM, so no textarea trick. Hand-rolled.
@@ -114,7 +159,7 @@ export function parseReelPage(page) {
   const title = og(page, 'og:title');
 
   let author = null, postedAt = null, caption = desc;
-  const m = desc.match(WRAPPER);
+  const m = desc.match(patterns.wrapper);
   if (m) {
     author = m[3];
     postedAt = m[4];
@@ -163,7 +208,7 @@ export async function resolveHandle(handle, opts = {}) {
   try {
     const page = await fetchPage(`https://www.instagram.com/${handle}/`, opts);
     const desc = og(page, 'og:description');
-    const m = desc.match(PROFILE_NAME);
+    const m = desc.match(patterns.profileName);
     return m ? m[1].trim() : null;
   } catch {
     return null; // not fatal - fall through to the handle string itself

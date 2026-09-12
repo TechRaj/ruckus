@@ -145,7 +145,8 @@ user shares reel URL
   [ PROXY ]
   4. model extraction  → candidate places, kind, confidence
         ↓
-  5. geocode           → MKLocalSearch or Google Places → place_id, lat/lng
+  [ PROXY ]
+  5. geocode           → Google Places (New) Text Search → place_id, lat/lng
         ↓
   user confirms
         ↓
@@ -245,7 +246,10 @@ Three runs over the same URL set, `harness.mjs` → `results.csv`.
 - **Model confidence was removed entirely.** Nearly every place returned 0.95 across 94 rows. A model's stated confidence is not a measurement, and the Messages API doesn't expose logprobs. Replaced with `confidence.js` — a deterministic score over verifiable facts (see §5.7). The model no longer rates itself.
 - **One reel returned 27 places** (a 10-day road trip). Prompt now caps at 8, ordered by prominence.
 - **`kind` drifted** — the model invented `activity` beyond the five allowed values, and classified Lake Louise as `region` in one reel and `venue` in another. Matters because regions geocode to areas, not businesses.
-- **City format is inconsistent** — "Banff", "Banff, Alberta", "Normandy, France", null. Normalise before building geocode queries.
+- ~~**City format is inconsistent**~~ — handled by `normaliseCity()` in
+  `geocode.js`. Two things it fixed, both measured: the city suffix is only
+  appended for venues (for a region, "Lake Louise" + "Banff" returned *Banff
+  National Park*), and the province and the words "National Park" are stripped.
 - **2 of 29 reels return no og tags at all**, consistently across all three runs. Deleted, private, or age-gated. That's the floor — roughly 7%.
 
 ---
@@ -281,6 +285,7 @@ packages/ingest/                @ruckus/ingest - the whole pipeline, no UI
   src/index.js                  extractFromReel() - owns the orchestration
   src/instagram.js              fetch + parse og tags, decode entities, resolve handles
   src/extract-llm.js            model extraction  <- primary
+  src/geocode.js                candidates -> place_id, coords, address
   src/confidence.js             deterministic scoring + confirmationMode
   src/ranker.js                 heuristic fallback, offline only
 apps/proxy/proxy.mjs            model proxy, keeps the key off the device
@@ -310,16 +315,44 @@ The ingest tier is small: two HTTP requests, a regex, an entity decoder, one mod
 
 ```ts
 type ResolvedPlace = {
-  placeId: string;          // primary key — dedupes across reels
-  name: string;
-  coordinate: { lat: number; lng: number };
-  address: string;
+  googlePlaceId: string | null;   // primary key — dedupes across reels
+  name: string;                   // Google's name, falling back to the model's
+  coordinate: { lat: number; lng: number } | null;
+  address: string | null;
+  neighbourhood: string | null;   // list rows read "Little Italy · 1.2 km"
+  city: string | null;
   kind: 'venue' | 'region' | 'event' | 'trail' | 'accommodation';
-  category?: string;
-  sourceUrl: string;        // the reel
-  confidence: number;
+  category?: string | null;
+  when: {                         // null for most saves, set for events
+    text: string | null;          //   verbatim from the caption, safe to show
+    start: string | null;         //   YYYY-MM-DD, only when truly resolvable
+    end: string | null;
+    recurring: string | null;     //   "First Wednesday of each month"
+  } | null;
+  alsoSeenAs?: string[];          // other kinds this place was returned as
+  sourceUrl: string;              // the reel
+  score: number;                  // confidence.js, post-geocode
+  tier: 'high' | 'medium' | 'low';
+  reasons: string[];              // debug: the signals that fired
+  explanation: { text: string; tone: 'good' | 'warn' };  // the line under the name
 };
 ```
+
+`extractFromReel(url)` returns these directly — geocoding is inside the
+pipeline, not the caller's job. Pass `{ geocode: false }` to stop before it,
+which is only useful offline: without geocoding there is no `googlePlaceId`
+and therefore nothing that can be saved.
+
+The nullable fields are nullable on purpose. A candidate that fails to geocode
+is kept, scored -5, and routed to `search` — dropping it would throw away the
+name the model found.
+
+**`when` exists because an event is a place plus a time.** Every reel in the
+12 Sept holdout carried a date in the caption and all of it was being dropped.
+The model resolves the year against `POSTED` from the og tags, so "August 11"
+on a post from 6 Aug 2026 becomes `2026-08-11`. `text` is always safe to show;
+`start`/`end` only populate when genuinely resolvable, because a wrong date on
+a calendar is worse than no date. Open: what a past-dated save does.
 
 **Setup notes:**
 - Expo dev build, not Expo Go — share extensions need native code. `npx expo run:ios`.
@@ -335,8 +368,16 @@ Friends, calendar, and messaging all assume the core loop works. Don't build the
 
 - **Multi-place reels.** `confirmMode: 'multi'` fires on itinerary reels. Does a travel reel become one save with several pins, several independent saves, or a **Caper**? The naming table already has the word and nothing uses it. This is a schema decision and it blocks the confirm screen.
 - **Tune the score thresholds** in `confidence.js`. The weights are guesses; they're tunable now because every input is a checkable fact rather than a model mood. Fill `correct?` on a run and adjust.
-- **Regions vs venues.** A lake or a national park has no `place_id` in the way a café does. Decide whether regions get pinned differently, or are excluded.
-- **MKLocalSearch vs Google Places.** MapKit is free, native, needs no key or billing, keeps the privacy label clean. Returns thinner data (no ratings, price, hours) and its stable-identifier behaviour needs verifying on our deployment target — `placeId` is what makes dedup work. Likely answer: MapKit for display always, Google as a second pass only if the UI needs richer fields, cached hard.
+- ~~**Regions vs venues.**~~ **Answered 3 Sept.** All 70 candidates from the
+  full run geocoded, including all 34 regions — Moraine Lake, Peyto Lake and
+  Mont Saint-Michel all return real place ids. Regions are places; treat them
+  the same. What they lack is hours, ratings and a street address, which is a
+  display concern, not a schema one.
+- ~~**MKLocalSearch vs Google Places.**~~ **Decided: Google Places (New).**
+  Its `place_id` is stable and portable, which is what makes dedup and a shared
+  Stash work; MapKit's identifiers are not, and MapKit is iOS-only. The key
+  lives on the proxy (`POST /geocode`, cached server-side). Map *rendering* is
+  a separate, still-open choice — the data layer does not constrain it.
 - **Cover-frame OCR.** `og:image` is reachable and unused. Listicle reels put their title text on frame one. Cheapest unbuilt improvement — one image fetch and a text-recognition pass.
 - **Dedup and the confirm queue.** The same café will arrive from several reels; low-confidence results need somewhere that isn't the main list.
 - **The withheld-location problem.** Some creators keep the location out deliberately — withholding *is* the engagement mechanic. Comments would have caught these; they're unreachable. These may simply be manual-entry cases, and that's an acceptable answer.

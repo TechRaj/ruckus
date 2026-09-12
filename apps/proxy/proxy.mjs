@@ -85,7 +85,12 @@ app.post('/extract', async (req, res) => {
         // form, which extract-llm.js already handles.
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: system },
+          // cache_control marks the static system block as cacheable. Whether
+          // it engages depends on the model's minimum cacheable prompt length,
+          // so /extract reports what came back rather than assuming.
+          process.env.PROMPT_CACHE === '0'
+            ? { role: 'system', content: system }
+            : { role: 'system', content: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] },
           { role: 'user', content: message },
         ],
       }),
@@ -118,9 +123,10 @@ app.post('/extract', async (req, res) => {
     // Log cost and model, never the caption. The caption is the creator's
     // writing, and §5.6 of the context doc says no Instagram content is
     // retained. usage.cost is what this run is actually spending.
+    const cached = data.usage?.prompt_tokens_details?.cached_tokens ?? 0;
     console.log(
       `[extract] ${data.model ?? MODEL} ` +
-      `in=${data.usage?.prompt_tokens ?? '?'} out=${data.usage?.completion_tokens ?? '?'} ` +
+      `in=${data.usage?.prompt_tokens ?? '?'} (cached ${cached}) out=${data.usage?.completion_tokens ?? '?'} ` +
       `cost=$${(data.usage?.cost ?? 0).toFixed(5)}`
     );
 
@@ -230,11 +236,63 @@ app.post('/geocode', async (req, res) => {
   }
 });
 
-app.get('/health', (_, res) => res.json({
-  ok: true,
-  model: MODEL,
-  geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
-}));
+
+/* ------------------------------------------------------------------ *
+ * /config - the two regexes that break when Instagram changes format.
+ *
+ * §5.4: ship them from the server so a fix is a deploy, not an App Store
+ * review. The app fetches this at launch, passes it to configure(), and falls
+ * back to its built-ins if this is unreachable - so an outage here is
+ * invisible, not fatal.
+ *
+ * Override without a code change by setting WRAPPER_RE / PROFILE_NAME_RE.
+ * ------------------------------------------------------------------ */
+app.get('/config', (_, res) => {
+  const patterns = {};
+  if (process.env.WRAPPER_RE) patterns.wrapper = process.env.WRAPPER_RE;
+  if (process.env.PROFILE_NAME_RE) patterns.profileName = process.env.PROFILE_NAME_RE;
+  // cache briefly: every cold start asks, and a fix should still land fast
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ patterns, updatedAt: process.env.CONFIG_UPDATED_AT ?? null });
+});
+
+/* ------------------------------------------------------------------ *
+ * /alarm - the canary for Instagram changing og:description.
+ *
+ * wrapperOk:false means the wrapper regex stopped matching. One is a weird
+ * post; a sustained rate is the format having moved, and the whole app is
+ * blind until the regex is fixed. Counted in memory, which is enough to see
+ * it on /health - wire it to something real before launch.
+ *
+ * Deliberately takes no caption and no URL. §5.6 says no Instagram content is
+ * retained, and an alarm endpoint is exactly where that promise gets broken
+ * by accident.
+ * ------------------------------------------------------------------ */
+const alarms = { wrapperFail: 0, wrapperOk: 0, since: new Date().toISOString() };
+
+app.post('/alarm', (req, res) => {
+  const { kind } = req.body ?? {};
+  if (kind === 'wrapper_fail') alarms.wrapperFail++;
+  else if (kind === 'wrapper_ok') alarms.wrapperOk++;
+  else return res.status(400).json({ error: 'unknown kind' });
+
+  const total = alarms.wrapperFail + alarms.wrapperOk;
+  const rate = total >= 20 ? alarms.wrapperFail / total : null;
+  if (rate !== null && rate > 0.25) {
+    console.error(`[ALARM] wrapper regex failing on ${(rate * 100).toFixed(0)}% of ${total} parses - Instagram may have changed og:description`);
+  }
+  res.json({ ok: true });
+});
+
+app.get('/health', (_, res) => {
+  const total = alarms.wrapperFail + alarms.wrapperOk;
+  res.json({
+    ok: true,
+    model: MODEL,
+    geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
+    wrapper: { ...alarms, failRate: total ? +(alarms.wrapperFail / total).toFixed(3) : null },
+  });
+});
 
 app.listen(process.env.PORT || 3000, () =>
   console.log(`proxy listening on ${process.env.PORT || 3000}, model=${MODEL}`)

@@ -6,6 +6,7 @@
  *
  *   instagram.js   fetch + parse og tags, decode entities, resolve handles
  *   extract-llm.js the model call, via the proxy            <- primary
+ *   geocode.js     candidates -> real places with stable ids
  *   confidence.js  deterministic scoring + confirm routing
  *   ranker.js      heuristic fallback, offline only
  *
@@ -19,6 +20,8 @@
  */
 
 export {
+  configure,
+  currentPatterns,
   decodeEntities,
   fetchPage,
   shortcodeOf,
@@ -27,11 +30,13 @@ export {
 } from './instagram.js';
 
 export { extractPlaces } from './extract-llm.js';
+export { geocodeCandidates, normaliseCity } from './geocode.js';
 export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode, explain } from './confidence.js';
 export { rankCandidates } from './ranker.js';
 
 import { fetchPage, shortcodeOf, parseReelPage, resolveHandle } from './instagram.js';
 import { extractPlaces } from './extract-llm.js';
+import { geocodeCandidates } from './geocode.js';
 import { confirmationMode } from './confidence.js';
 
 /** Never resolve more than this many handles - each one is a round trip. */
@@ -44,13 +49,21 @@ const MAX_HANDLES = 3;
  * @param {object} [opts]
  * @param {AbortSignal} [opts.signal]  abort the whole pipeline
  * @param {string} [opts.userCity]     hint for the heuristic fallback
- * @returns {Promise<object>}   parsed metadata + scored candidates + confirm mode
+ * @param {boolean} [opts.geocode=true] set false to stop before geocoding -
+ *        only useful offline, since without it there is no placeId and so
+ *        nothing that can actually be saved
+ * @returns {Promise<object>}   parsed metadata + ResolvedPlace[] + confirm mode
  */
 export async function extractFromReel(url, opts = {}) {
   const shortcode = shortcodeOf(url);
   if (!shortcode) throw new Error('Not an Instagram reel or post URL.');
 
-  const sourceUrl = `https://www.instagram.com/reel/${shortcode}/`;
+  // Keep the path the user actually shared. Instagram serves the same page
+  // under /p/ and /reel/, so fetching either works - but sourceUrl is what we
+  // store and what pins deep-link to, and filing a photo carousel under
+  // /reel/ is wrong even when it resolves.
+  const path = /instagram\.com\/(?:p|tv)\//i.test(String(url)) ? 'p' : 'reel';
+  const sourceUrl = `https://www.instagram.com/${path}/${shortcode}/`;
   const parsed = parseReelPage(await fetchPage(sourceUrl, opts));
 
   // Resolve every handle, not just the first - the venue is often the second,
@@ -62,7 +75,17 @@ export async function extractFromReel(url, opts = {}) {
   const resolvedNames = Object.fromEntries(handles.map((h, i) => [h, names[i]]));
 
   const ranked = await extractPlaces(parsed, resolvedNames, opts);
-  const confirm = confirmationMode(ranked.candidates);
+
+  // Geocoding is part of the pipeline, not an afterthought for the caller.
+  // Without it a candidate has no googlePlaceId, no coordinate and no address,
+  // which means it is not a ResolvedPlace and there is nothing to save. It is
+  // also where most of the scoring signal lives (§5.7), so routing the confirm
+  // screen on pre-geocode scores sends almost everything to 'medium'.
+  const candidates = opts.geocode === false
+    ? ranked.candidates
+    : await geocodeCandidates(ranked.candidates, { city: ranked.city, sourceUrl }, opts);
+
+  const confirm = confirmationMode(candidates);
 
   return {
     shortcode,
@@ -70,9 +93,8 @@ export async function extractFromReel(url, opts = {}) {
     ...parsed,
     resolvedNames,
     city: ranked.city,
-    candidates: ranked.candidates,
-    top: ranked.candidates[0] ?? null,
-    geocodeQuery: ranked.candidates[0]?.geocodeQuery ?? null,
+    candidates,                // ResolvedPlace[] unless geocode:false
+    top: candidates[0] ?? null,
     confirmMode: confirm.mode,
     confirmOptions: confirm.options,
     engine: ranked.engine,     // 'model' | 'heuristic' - which path actually ran

@@ -13,7 +13,8 @@
   "scripts": {
     "proxy": "npm run start -w @ruckus/proxy",
     "harness": "npm run start -w @ruckus/harness",
-    "design": "node --env-file=.env tools/figma-export.mjs"
+    "design": "node --env-file=.env tools/figma-export.mjs",
+    "test": "node --test packages/ingest/test/"
   },
   "license": "MIT",
   "description": "Collect places you find on Instagram Reels and turn them into plans with friends."

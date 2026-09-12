@@ -21,7 +21,15 @@ import { scoreCandidate, tierOf, explain } from './confidence.js';
 export { confirmationMode, refineWithGeocode, explain } from './confidence.js';
 
 // Your proxy, not api.anthropic.com - an API key in the binary is extractable.
-const ENDPOINT = process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
+//
+// Read at call time, never at module load. ESM imports are hoisted above the
+// importing file's own statements, so a caller that sets EXTRACT_ENDPOINT at
+// the top of its file still loses the race - this module is already evaluated.
+// That failure is silent and expensive: the fetch hits the placeholder host,
+// throws, and extractPlaces() quietly returns heuristic results that look
+// plausible. It cost a whole 14-URL run on 12 Sept.
+const extractEndpoint = () =>
+  process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
 
 const SYSTEM = `You identify places from Instagram Reel metadata for a saved-places app.
 
@@ -40,7 +48,13 @@ Return ONLY a JSON object. No prose, no markdown fences.
       "category": "short descriptor, e.g. 'specialty coffee', 'ramen'",
       "address": "street address if stated, else null",
       "evidence": "the exact substring of the caption this came from — copy it verbatim, do not paraphrase",
-      "geocode_query": "what to send to a places API, usually name + city"
+      "geocode_query": "what to send to a places API, usually name + city",
+      "when": {
+        "text": "the date phrase exactly as the caption writes it, else null",
+        "start": "YYYY-MM-DD, else null",
+        "end": "YYYY-MM-DD for a range, else null",
+        "recurring": "e.g. 'Wednesday nights', else null"
+      }
     }
   ],
   "notes": "one sentence on anything ambiguous, or null"
@@ -61,6 +75,13 @@ How to judge:
   describes a place; it is not its name. If the caption never names the place,
   return an empty places array rather than guessing.
 
+- A festival programme is not a place. Event reels name strands, showcases and
+  series - "Midnight Madness", "Festival Street", "After Hours" - which read
+  like proper nouns but are things that happen, not somewhere to go. Return the
+  VENUE that hosts them if the caption names one, and otherwise return nothing
+  for that strand. The same applies to an event's own name: "Water Lantern
+  Festival" is an event, and the place to save is the park it runs in.
+
 - Travel reels often name several places, and some are regions rather than
   businesses (a lake, a park, a neighbourhood). Return them all, each tagged
   with the right "kind". Do not collapse an itinerary into one entry.
@@ -77,6 +98,13 @@ How to judge:
   hallucination and the candidate is discarded. If you cannot quote the
   caption for a place, do not return that place.
 
+- Fill "when" whenever the caption gives a date, a range or a recurrence, even
+  loosely. Copy the phrase verbatim into "text". Resolve "start"/"end" against
+  POSTED, which is when the caption was written - "August 11" on a post from
+  September 2026 means 2026-08-11, and a bare month means the next occurrence.
+  Leave "start" null rather than guessing a year you cannot infer. A place with
+  no date gets "when": null - most saves have no date and that is fine.
+
 - Do not rate your own certainty. Confidence is computed downstream from
   facts that can be checked.
 
@@ -86,6 +114,8 @@ function buildUserMessage(parsed, resolvedNames = {}) {
   const lines = [];
   lines.push(`CAPTION:\n${parsed.caption || '(empty)'}`);
   if (parsed.creator) lines.push(`\nPOSTED BY: ${parsed.creator} (@${parsed.author ?? '?'})`);
+  // the model needs this to turn "August 11" into a real date
+  if (parsed.postedAt) lines.push(`\nPOSTED: ${parsed.postedAt}`);
 
   const tagged = (parsed.handles || []).map(h => {
     const r = resolvedNames[h];
@@ -108,6 +138,26 @@ function parseJson(raw) {
  * Normalise the model output into the shape the confirm screen already
  * consumes, so this is a drop-in swap for rankCandidates().
  */
+/**
+ * An event is a place plus a when, and until now the when was dropped on the
+ * floor: every reel in the 12 Sept holdout carried a date in the caption
+ * ("Sept 10-20", "Wednesday nights", "August 11") and none of it survived.
+ *
+ * Kept deliberately loose. `text` is what the caption said and is always safe
+ * to show; `start`/`end` are only set when the model could resolve a real
+ * date, and a calendar entry needs those. Never fabricate a year here - the
+ * model has POSTED for that and a wrong date is worse than no date.
+ */
+function normaliseWhen(w) {
+  if (!w || typeof w !== 'object') return null;
+  const iso = v => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const text = typeof w.text === 'string' && w.text.trim() ? w.text.trim() : null;
+  const recurring = typeof w.recurring === 'string' && w.recurring.trim() ? w.recurring.trim() : null;
+  const start = iso(w.start), end = iso(w.end);
+  if (!text && !start && !recurring) return null;
+  return { text, start, end: end && start && end >= start ? end : null, recurring };
+}
+
 function toCandidates(result, parsed, resolvedNames) {
   return (result.places || [])
     .map(p => {
@@ -128,6 +178,7 @@ function toCandidates(result, parsed, resolvedNames) {
         // geocoding - the geocode signals change what it should say.
         explanation: explain(codes),
         geocodeQuery: p.geocode_query || p.name,
+        when: normaliseWhen(p.when),
       };
     })
     .filter(c => c.name)
@@ -141,7 +192,7 @@ function toCandidates(result, parsed, resolvedNames) {
  */
 export async function extractPlaces(parsed, resolvedNames = {}, opts = {}) {
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(opts.endpoint ?? extractEndpoint(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: opts.signal,
