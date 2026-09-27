@@ -1,27 +1,91 @@
 # apps/mobile
 
-The Ruckus iOS app. React Native, Expo **dev build** (not Expo Go — the share
-extension needs native code).
+`@ruckus/mobile` — the Ruckus iOS app. React Native on Expo SDK 57 (RN 0.86,
+TypeScript). Runs in Expo Go today; the share extension will force a dev build.
 
-## Bringing an existing project in
+    npm install                    # from the repo root — this is a workspace
+    npm run mobile                 # expo start
+    npm run typecheck:mobile       # tsc, unused locals/params are errors
 
-1. Branch off `master`: `git switch -c mobile`
-2. Copy the project's contents **into this folder**, so `apps/mobile/package.json`
-   and `apps/mobile/app.json` sit here. Leave behind `node_modules/`, `ios/`,
-   `android/` and `.expo/` — they are regenerated, and gitignored anyway.
-3. In `apps/mobile/package.json`, set `"name": "@ruckus/mobile"` and add:
-   ```json
-   "dependencies": {
-     "@ruckus/api": "*",
-     "@ruckus/ingest": "*"
-   }
-   ```
-4. In the **root** `package.json`, add `"apps/mobile"` to `workspaces`.
-5. From the repo root: `npm install`, then `cd apps/mobile && npx expo run:ios`.
-6. Push the branch and open a PR.
+The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 
-Expo SDK 52+ detects the monorepo on its own. On an older SDK, Metro needs a
-`metro.config.js` that watches the repo root — ask before fighting it.
+## Layout
+
+    App.tsx                 fonts, providers, the navigator
+    src/
+      types/index.ts        the shapes agreed with the backend, plus Filter / Sort,
+                            CATEGORY_LABEL, CONFIDENT, PLAN_THRESHOLD — every shared
+                            constant and type lives here
+      api/client.ts         the single seam to the backend (USE_MOCKS is set here)
+      api/mockData.ts       one Den, four members, six places
+      state/StashContext.tsx the deep module: loads, filters (person × category × query),
+                            sorts, selects, and exposes derived views (visible,
+                            nearlyPlans, savedCountBy). Screens read; they don't derive.
+      state/stashCopy.ts    pure: filter state → kicker / headline / empty line
+      hooks/                useSheetGeometry (every detent number, one seam),
+                            useMapCamera (pan / zoom / recentre), useStashMarkers
+      navigation/           three tabs + OverlayHost for the save loop
+      screens/              one file per screen; composition only
+      components/           shared pieces; each is one thing
+      theme/tokens.ts       colour, type, spacing, motion, layout, glass
+      theme/lines.ts        Rascal's lines and the mono hints, all in one place
+      theme/motion.ts       easing curves, haptics, Reduce Motion / Transparency hooks
+      theme/critters.ts     the pre-rendered heads and Rascal's poses
+      lib/time.ts           `ago()` — the one relative-date formatter
+    assets/critters/        the five renders (from ../../design/boards/renders/)
+    assets/textures/        the grain tile
+
+## Rules the code keeps
+
+- **Tangerine means tappable** and nothing else. Titles stay ink.
+- **One pane of glass** — the Places sheet (`GlassSheetBackground`). Nothing else blurs.
+- **Rascal talks in a bubble only while doing something** — sniffing, the save.
+  Empty states show his line as plain text (`EmptyState`).
+- **Pins say almost nothing** (§12). Category is the glyph, never colour.
+  Avatars appear on pins only when filtered to one person.
+- **Every optional animation checks `useReduceMotion()`.** UI motion ≤ 300ms on
+  `EASE_OUT`; the sheet uses the iOS drawer curve; the only spring is the Saved cheer.
+- **Screens don't compute** — if a screen needs a derived list or a count, add it to
+  `StashContext` and read it.
+
+## Known gaps
+
+- **`src/api/client.ts` still runs on mocks (`USE_MOCKS = true`) and assumes REST
+  endpoints that don't exist.** The backend is `@ruckus/api` + `@ruckus/ingest`
+  (below). Wiring it is the next job — see "Wiring the backend".
+- Onboarding collects a name, critter and Den and still discards them.
+- No paywall. RevenueCat is a hard Shipaton requirement.
+- No share extension yet; `api.resolveSharedUrl` is a mock. Needs a dev build (§11.3).
+- Rascal has one render. `rascalSniff` and `rascalCheer` alias the peek pose until
+  the other two are rendered off the same rig.
+- The glass sheet blurs over `MapView`. Test the drag on a real device at all three
+  detents; Reduce Transparency's opaque path is the fallback.
+- Apple Maps basemap is unstyled; the `map*` and `dusk` tokens wait for MapLibre.
+- "Make it a Caper", "Remove from Stash", "Ruckus Pro" and "Switch Den" are no-ops.
+- No clustering. Add `supercluster` once a Stash passes ~50 pins.
+
+## Wiring the backend
+
+`src/api/client.ts` is the single seam. Every screen calls `api.*` and nothing
+else, so the swap is one file. What each call maps to:
+
+| `api.*` today (mock) | Replace with |
+| --- | --- |
+| `getDen`, `getStash(denId)` | `ruckus.dens.mine()` + `ruckus.dens.members()`, `ruckus.stash.list(denId, {lat, lng})` |
+| `resolveSharedUrl(url)` | `extractFromReel(url, { endpoint, geocodeEndpoint, accessToken })` → `result.candidates` |
+| `saveToStash({denId, placeId, sourceUrl})` | `ruckus.stash.save({ denId, places: picked, sourceUrl })` + `ruckus.confirmations.log(...)` |
+| `toggleInterest(stashId)` | `ruckus.stash.setWant(denId, placeId, want)` |
+| `searchPlaces(q)` | proxy `/geocode` (via `@ruckus/ingest`) |
+| `createDen(name)`, `getInviteLink(denId)` | `ruckus.dens.create(name)`, `ruckus.dens.invite(denId)` — handle `e.needsUpgrade` → paywall |
+| `addTake` / `updateTake` / `deleteTake` | **no backend yet** — comments per place need a table |
+| (none) | `ruckus.auth.sendCode` / `verifyCode` — the app has no sign-in screen yet |
+| (none) | `ruckus.stash.onChange(denId, reload)` — live updates |
+
+Shape differences to reconcile in `src/types/index.ts`: the backend's stash row
+is one row **per place** with everyone who saved it; the app's `StashItem` is
+one row per save with a single `savedBy`. `category` (`eat`/`drink`/`do`) and
+the human `note` line must come from `ResolvedPlace`/`saves` — check what
+`toStashRow` returns before mapping.
 
 ## Talking to the backend
 

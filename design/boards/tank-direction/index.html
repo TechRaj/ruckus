@@ -1,0 +1,448 @@
+<title>The Tank, Translated</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#FBFAF6; --raised:#F2EEE2; --sunk:#F5F2E9; --hair:#E5E0D4;
+    --ink:#242321; --ink2:#5E594F; --muted:#8A8478;
+    --flare:#FF6846; --flare-press:#E24E2E; --flare-wash:#FFE9E2;
+    --water:#C2E6EE; --water-deep:#0A2C2E; --aqua:#A7D8E5; --tank-cream:#FDF5E7; --coral:#D94E3B; --tank-ink:#303030;
+    --glass:rgba(251,250,246,.72); --glass-rim:rgba(255,255,255,.65);
+    --shadow:0 18px 40px rgba(36,35,33,.14);
+    --display:"Fredoka","Nunito","Helvetica Neue",Arial,sans-serif;
+    --body:"Nunito","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#1B1917; --raised:#252220; --sunk:#201D1B; --hair:#38332D;
+      --ink:#F2EDE3; --ink2:#C9C2B4; --muted:#8F887C;
+      --flare:#FF7A5C; --flare-press:#E24E2E; --flare-wash:#3A2620;
+      --water:#0F2E31; --glass:rgba(27,25,23,.66); --glass-rim:rgba(255,255,255,.14);
+      --shadow:0 18px 40px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#1B1917; --raised:#252220; --sunk:#201D1B; --hair:#38332D;
+    --ink:#F2EDE3; --ink2:#C9C2B4; --muted:#8F887C;
+    --flare:#FF7A5C; --flare-press:#E24E2E; --flare-wash:#3A2620;
+    --water:#0F2E31; --glass:rgba(27,25,23,.66); --glass-rim:rgba(255,255,255,.14);
+    --shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--flare);text-decoration:none}
+  a:hover{text-decoration:underline}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--flare);outline-offset:3px}
+  ::selection{background:var(--flare-wash);color:var(--ink)}
+
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  .wide{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  h1{font-family:var(--display);font-weight:600;font-size:clamp(44px,7vw,64px);line-height:1;margin:14px 0 18px;letter-spacing:0;text-wrap:balance}
+  h2{font-family:var(--display);font-weight:600;font-size:34px;line-height:1.1;margin:10px 0 18px;text-wrap:balance}
+  h3{font-family:var(--display);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 8px}
+  p{margin:0 0 1em;max-width:66ch}
+  .deck{font-size:21px;line-height:1.45;color:var(--ink2);max-width:60ch}
+  strong{font-weight:700}
+  em{font-style:italic}
+  code{font-family:var(--mono);font-size:.88em;background:var(--raised);padding:.1em .4em;border-radius:5px}
+  hr{border:0;border-top:1px solid var(--hair);margin:0}
+
+  header{padding:64px 0 40px}
+  section{padding:56px 0}
+  .note{border-left:4px solid var(--flare);background:var(--raised);padding:14px 18px;border-radius:0 12px 12px 0;margin:24px 0;max-width:66ch}
+  .note p{margin:0}
+
+  /* screenshot strip */
+  .strip{display:flex;gap:14px;overflow-x:auto;padding:6px 24px 18px;scroll-snap-type:x mandatory;margin:0 -24px}
+  .strip figure{flex:0 0 auto;margin:0;scroll-snap-align:start;width:min(520px,82vw)}
+  .strip figure.tall{width:min(240px,60vw)}
+  .strip img{width:100%;height:auto;display:block;border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--hair)}
+  figcaption{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:.02em}
+
+  /* observation grid */
+  .obs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px 36px;margin-top:28px}
+  .obs .kicker{display:block;margin-bottom:8px}
+  .obs p{font-size:16px;margin:0}
+
+  /* tokens table */
+  table{border-collapse:collapse;width:100%;font-size:15px}
+  th{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:left;padding:0 12px 10px 0;border-bottom:1px solid var(--hair)}
+  td{padding:11px 12px 11px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+  td code{white-space:nowrap}
+  .tbl{overflow-x:auto;margin:22px 0}
+  .sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:8px;border:1px solid rgba(0,0,0,.08)}
+
+  /* type triad */
+  .triad{display:grid;grid-template-columns:1fr;gap:0;border:1px solid var(--hair);border-radius:14px;overflow:hidden;margin:24px 0}
+  .triad > div{padding:22px 24px;border-bottom:1px solid var(--hair)}
+  .triad > div:last-child{border-bottom:0}
+  .triad .role{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .t-display{font-family:var(--display);font-weight:600;font-size:40px;line-height:1}
+  .t-body{font-size:17px}
+  .t-mono{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+  .t-mono-lc{font-family:var(--mono);font-size:14px;color:var(--ink2)}
+
+  /* three columns take/translate/leave */
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:24px}
+  .col{background:var(--raised);border-radius:14px;padding:20px 22px}
+  .col h3{font-size:20px}
+  .col ul{padding-left:18px;margin:8px 0 0}
+  .col li{margin:0 0 10px;font-size:15.5px}
+  .col li b{font-weight:700}
+
+  /* live glass demo */
+  .demo{position:relative;height:460px;border-radius:22px;overflow:hidden;border:1px solid var(--hair);box-shadow:var(--shadow);margin:26px 0 10px;
+    background-color:#F2EEE2;
+    background-image:
+      radial-gradient(ellipse at 70% 20%, rgba(194,230,238,.9) 0 18%, transparent 19%),
+      repeating-linear-gradient(0deg, transparent 0 78px, #FBFAF6 78px 92px),
+      repeating-linear-gradient(90deg, transparent 0 118px, #FBFAF6 118px 134px),
+      linear-gradient(#EEEADC,#EEEADC);}
+  :root[data-theme="dark"] .demo{background-color:#211E1B;background-image:
+      radial-gradient(ellipse at 70% 20%, rgba(15,46,49,.95) 0 18%, transparent 19%),
+      repeating-linear-gradient(0deg, transparent 0 78px, #2E2A26 78px 92px),
+      repeating-linear-gradient(90deg, transparent 0 118px, #2E2A26 118px 134px),
+      linear-gradient(#211E1B,#211E1B)}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .demo{background-color:#211E1B;background-image:
+      radial-gradient(ellipse at 70% 20%, rgba(15,46,49,.95) 0 18%, transparent 19%),
+      repeating-linear-gradient(0deg, transparent 0 78px, #2E2A26 78px 92px),
+      repeating-linear-gradient(90deg, transparent 0 118px, #2E2A26 118px 134px),
+      linear-gradient(#211E1B,#211E1B)}}
+  .demo::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .demo::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px rgba(36,35,33,.10)}
+  .pin{position:absolute;width:30px;height:30px;border-radius:50%;background:#5E594F;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+  .pin::after{content:"";position:absolute;left:50%;bottom:-7px;width:10px;height:10px;background:inherit;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+  .pin.on{background:var(--flare);width:40px;height:40px}
+  .demo .title{position:absolute;left:28px;top:26px}
+  .demo .title .kicker{color:var(--ink2)}
+  .demo .title b{display:block;font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margin-top:6px;color:var(--ink)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;height:200px;z-index:2;border-radius:26px 26px 0 0;
+    background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(110%);backdrop-filter:blur(20px) saturate(110%);
+    box-shadow:0 -1px 0 var(--glass-rim), inset 0 1px 0 var(--glass-rim), inset 0 -14px 24px rgba(8,30,36,.05), 0 -20px 50px rgba(36,35,33,.12);
+    padding:18px 26px 0}
+  .sheet .grab{width:44px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 18px}
+  .sheet .count{font-family:var(--display);font-weight:600;font-size:28px;line-height:1;margin-top:6px;color:var(--ink)}
+  .bubble{position:absolute;right:26px;top:118px;z-index:3;max-width:250px;padding:14px 18px;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-radius:52% 48% 55% 45% / 60% 55% 45% 40%;font-family:var(--mono);font-size:13.5px;line-height:1.45;color:var(--ink);box-shadow:inset 0 1px 0 var(--glass-rim),0 10px 26px rgba(36,35,33,.14)}
+  .chips{display:flex;gap:8px;margin-top:16px}
+  .chip{font-family:var(--body);font-weight:600;font-size:14px;padding:7px 13px;border-radius:999px;background:var(--raised);color:var(--ink2);border:1px solid var(--hair)}
+  .chip.on{background:var(--flare);color:#242321;border-color:var(--flare)}
+  .demo-cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px}
+
+  /* screen cards */
+  .screens{display:grid;gap:22px;margin-top:22px}
+  .screen{border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:var(--paper)}
+  .screen .head{padding:20px 22px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .screen .head .kicker{white-space:nowrap}
+  .screen .body{padding:0 22px 18px}
+  .screen .body p{font-size:15.5px}
+  .prompt{position:relative;background:var(--raised);border-top:1px solid var(--hair);padding:16px 22px 18px}
+  .prompt pre{margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--ink2);max-width:none}
+  .copy{position:absolute;right:14px;top:12px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--hair);background:var(--paper);color:var(--ink2);border-radius:999px;padding:6px 11px;cursor:pointer;transition:transform 120ms cubic-bezier(.23,1,.32,1),background 160ms ease}
+  .copy:active{transform:scale(.96)}
+  .copy.done{background:var(--flare);border-color:var(--flare);color:#242321}
+  .preamble{background:var(--raised);border-radius:14px;padding:18px 22px;position:relative;margin-top:18px}
+  .preamble pre{margin:0;white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;line-height:1.55;color:var(--ink2)}
+
+  /* motion table */
+  .motion td:first-child{color:var(--ink2)}
+  .motion td code{white-space:normal}
+
+  ol.order{padding-left:22px;margin:16px 0 0}
+  ol.order li{margin:0 0 12px;max-width:66ch}
+  .cost{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-left:8px}
+
+  footer{padding:40px 0 70px;color:var(--muted);font-size:14px}
+  footer p{margin:0 0 6px}
+
+  @media (max-width:640px){
+    body{font-size:16px}
+    .demo{height:420px}
+    .bubble{top:100px;max-width:200px;font-size:12.5px}
+  }
+  @media (prefers-reduced-motion: reduce){.copy{transition:none}}
+</style>
+
+<header class="wrap">
+  <div class="kicker">Ruckus · design pass · 16 September 2026</div>
+  <h1>The Tank, Translated</h1>
+  <p class="deck">What <a href="https://www.crechetank.com/">crechetank.com</a> is actually doing, which of it survives contact with Ruckus's own rules, and the screen set for a v1.1 that borrows the charm without the gloss.</p>
+  <div class="note"><p><strong>Timing.</strong> Submission is targeted for tomorrow. Nothing here is a launch dependency. Three of the moves below (a mono kicker token, a grain overlay, Rascal's bubble) are about half a day and could ride along; the glass sheet and the critter room are post-submission work.</p></div>
+</header>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">01 · What the tank is doing</div>
+    <h2>One world, two residents, and the copy is their conversation</h2>
+    <p>The whole site is a single WebGL aquarium. Sections aren't pages — they are layers faded in over the same scene while the camera dives deeper on scroll ("scroll to dive"). An axolotl and an octopus stay on screen the entire time, and almost every line of copy is delivered as one of them speaking. The site never explains itself in paragraphs; it has two characters with opinions instead.</p>
+  </div>
+  <div class="wide">
+    <div class="strip">
+      <figure><img src="img/loader.jpg" alt="Loader: a wave of aqua water rising behind the sliced CRECHE wordmark, READY 100%, and an ENTER pill"><figcaption>Loader — water fills, mono status, one pill. You have to knock to get in.</figcaption></figure>
+      <figure><img src="img/t-d-0.jpg" alt="Hero: giant coral display type reading Crèche Tank behind a pink axolotl and a red octopus, bubbles rising, glass tank edges refracting"><figcaption>Hero — display type sits <em>behind</em> the characters. Octopus says "No."</figcaption></figure>
+      <figure><img src="img/t-d-2.jpg" alt="About section: coral 'About' title on the left, three glass speech bubbles in mono on the right, both characters in the foreground"><figcaption>About — the about copy is a three-bubble dialogue, mono, on frosted glass blobs.</figcaption></figure>
+      <figure><img src="img/t-d-4.jpg" alt="Work section: a 3D cassette-player object floating with a project label, a vertical mono rail of project names on the right, characters lower-left"><figcaption>Work — each project is a floating object; a hairline rail in mono lists them. "Whenever we cannot decide… We fight."</figcaption></figure>
+      <figure><img src="img/t-d-7.jpg" alt="What's More section: pastel spheres floating with mono labels EMAIL, INSTAGRAM, LINKEDIN, ARE.NA, RED"><figcaption>Contact — links are pastel orbs with labels beneath. "Knock on the glass."</figcaption></figure>
+      <figure><img src="img/t-d-nav.jpg" alt="Navigation open: a frosted glass blob slides in from the right edge with ABOUT WORK MORE in mono"><figcaption>Nav — a frosted, refracting glass blob; the menu is three mono words.</figcaption></figure>
+      <figure class="tall"><img src="img/t-m-4.jpg" alt="Mobile view of the Work section: object above title, mono tags, serif blurb, characters at the bottom edge"><figcaption>Mobile — blur is switched off, blobs stack, characters hold the bottom edge.</figcaption></figure>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="obs">
+      <div><span class="kicker">Cast</span><p>The characters have a relationship, not just a presence. They disagree ("We fight."), they deflect ("No."), they answer for the studio. That is what makes it cute — personality through dialogue, not through big eyes.</p></div>
+      <div><span class="kicker">Staging</span><p>Characters live at the bottom edge, in front of everything, at toy scale. The biggest type on the page sits behind them. Small labels float around them like a museum vitrine.</p></div>
+      <div><span class="kicker">Type</span><p>Three faces, three jobs. <strong>Quedami</strong> (a quirky, hand-cut display) in coral for every title, huge, line-height .86. <strong>Crimson Text</strong> for long blurbs and italic taglines. <strong>IBM Plex Mono</strong> for everything the interface says — nav, tags, chips, meta, buttons, the dialogue bubbles, and lowercase hints ("scroll to dive", "sound on", "poke a creature").</p></div>
+      <div><span class="kicker">Colour</span><p>A world palette, not a UI palette. Deep teal ground <code>#0A2C2E</code>, rendered water around <code>#A7D8E5</code>, cream <code>#FDF5E7</code> for all light text, coral <code>#D94E3B</code> for all display type, and the characters themselves are the saturated notes (pink <code>#F186AF</code>, red). Contact orbs are pastel identity colours.</p></div>
+      <div><span class="kicker">Glass</span><p>Every surface is frosted glass built the same way: <code>blur(10px)</code>, a 3–20% radial tint, an SVG noise layer blended in, an inset depth shadow, a 1px white rim, and an <code>feDisplacementMap</code> refraction on the edges. Shapes are irregular blobs from masked border-images — nothing is a rounded rectangle. On mobile the blur is turned off.</p></div>
+      <div><span class="kicker">Motion</span><p>Slow and elegant, as a site can afford to be: sidebar 500ms on <code>cubic-bezier(.22,.61,.36,1)</code>, rail thumb 550ms, hover widens letter-spacing on menu links, ambient bob on orbs and bubbles, a chevron loop on the dive hint. Reduce Motion is honoured everywhere (bubbles, bars, hint all switch off).</p></div>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Tank token</th><th>Value</th><th>Job</th></tr></thead>
+        <tbody>
+          <tr><td><code>--c-red</code></td><td><span class="sw" style="background:#d94e3b"></span><code>#D94E3B</code></td><td>All display type. Never a button.</td></tr>
+          <tr><td><code>--c-cream</code></td><td><span class="sw" style="background:#fdf5e7"></span><code>#FDF5E7</code></td><td>Light text, wordmark, loader pill.</td></tr>
+          <tr><td><code>--c-blue</code> / <code>--c-teal</code></td><td><span class="sw" style="background:#a7d8e5"></span><code>#A7D8E5</code> · <span class="sw" style="background:#6fafad"></span><code>#6FAFAD</code></td><td>Water. Active rail chip. Meta lines in the panel.</td></tr>
+          <tr><td><code>html</code> background</td><td><span class="sw" style="background:#0a2c2e"></span><code>#0A2C2E</code></td><td>The deep end. Also the theme-colour.</td></tr>
+          <tr><td><code>--c-pink</code> / <code>--c-ink</code></td><td><span class="sw" style="background:#f186af"></span><code>#F186AF</code> · <span class="sw" style="background:#303030"></span><code>#303030</code></td><td>Axolotl / bubble tint; dark text on glass.</td></tr>
+          <tr><td><code>--glass-depth</code></td><td><code>inset 0 3px 7px #fff 5%, inset 0 -10px 18px #081E24 5%</code></td><td>The inner bevel that makes a blob read as glass.</td></tr>
+          <tr><td>Mono scale</td><td>10–13px, tracking .12–.3em, uppercase</td><td>Too small for an app; the <em>register</em> is the borrow, not the size.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">02 · Translate, don't transplant</div>
+    <h2>Ruckus already has rules the tank breaks</h2>
+    <p>The context doc forbids gloss ("the moment an asset goes shiny it flips into the aesthetic we rejected"), reserves tangerine for tappable things only, and wants the map readable under a sheet. The tank is glossy, floats everything, and blurs the whole world. So the borrow is the <em>staging, voice, and material recipe</em> — not the render style and not the aqua paint job.</p>
+    <div class="cols">
+      <div class="col">
+        <h3>Take</h3>
+        <ul>
+          <li><b>Dialogue as the interface voice.</b> Empty states and onboarding get a line from Rascal as plain text; the bubble is reserved for the two moments he is actually doing something — sniffing while a link resolves, and the save. Your reply is the button.</li>
+          <li><b>A third type voice.</b> Fredoka for display, Nunito for body, a mono for the machine: kickers, meta, hints, and Rascal. One token change on the kicker style does most of it.</li>
+          <li><b>The glass recipe</b>, applied to exactly one surface: the sheet. The map ghosts through at every detent — §4's "the map never fully dies", done as material.</li>
+          <li><b>Staging.</b> Characters at the bottom edge, in front, with the display title <em>behind</em> them. One place: the Saved moment.</li>
+          <li><b>Labelled heads in a room.</b> The contact orbs become the critter picker and the People screen — heads at one size, evenly placed, mono names beneath. Mixed sizes and scattered slots were tried and read as too much.</li>
+          <li><b>Grain and vignette</b> on the map so it stops being a flat diagram.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Translate</h3>
+        <ul>
+          <li><b>Aqua → water only.</b> Map water takes <code>#C2E6EE</code> by day. In Dusk the water goes <code>#0F2E31</code> — the tank at night. The aqua never touches UI chrome.</li>
+          <li><b>Blob bubbles vs. pill chips.</b> Rascal's bubble is an irregular blob (one hand-drawn 9-slice). Chips stay pills. The shape difference <em>is</em> the difference between voice and control.</li>
+          <li><b>Loader ritual → the Sniffing state.</b> No gate, ever. But "SNIFFING · 64%" in tabular mono with Rascal sniffing turns the one loading state into a small event.</li>
+          <li><b>Lowercase mono hints.</b> "scroll to dive" → "pull up for the list", "knock on the glass" → "paste a link". 13px, muted, never smaller.</li>
+          <li><b>Coral display type → stays ink.</b> Tangerine means tappable; a coral title would break that. Titles stay <code>#242321</code>.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Leave</h3>
+        <ul>
+          <li><b>Specular, glossy 3D.</b> Rascal stays matte and faceted.</li>
+          <li><b>Whole-scene blur and depth of field.</b> One <code>BlurView</code> on the sheet; content is never blurred.</li>
+          <li><b>Chromatic aberration</b> on glass edges. Fun on a site, noise in an app.</li>
+          <li><b>The entry gate, the sound toggle,</b> hover-only interactions.</li>
+          <li><b>A serif.</b> Three families is one too many in a mobile bundle. Nunito does body.</li>
+          <li><b>10px labels.</b> The register is borrowed, the size is not.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">03 · Ruckus v1.1 design bible</div>
+    <h2>Paper, one tangerine, a mono voice, and one pane of glass</h2>
+    <p>Platform mode: iOS-native. Theme: pristine light by day, deep dark at dusk. Structure: map-led with a detented sheet. Imagery: matte low-poly renders. Texture: ultra-subtle grain, one glass hero surface. Palette: warm neutral plus one accent. Everything in §10.3 of the context doc stands; the rows below are additions.</p>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>New token</th><th>Day</th><th>Dusk</th><th>Job</th></tr></thead>
+        <tbody>
+          <tr><td><code>water</code></td><td><span class="sw" style="background:#c2e6ee"></span><code>#C2E6EE</code></td><td><span class="sw" style="background:#0f2e31"></span><code>#0F2E31</code></td><td>Map water. Replaces <code>#DCE5E3</code>. The only place the tank's colour lands.</td></tr>
+          <tr><td><code>glass</code></td><td>paper @ 72% · blur 20</td><td><code>#1B1917</code> @ 66% · blur 20</td><td>The sheet, and Rascal's bubble. Nothing else.</td></tr>
+          <tr><td><code>glass-rim</code></td><td>white @ 65%, 1px top</td><td>white @ 14%, 1px top</td><td>The highlight that makes it read as a pane, not a scrim.</td></tr>
+          <tr><td><code>glass-depth</code></td><td colspan="2"><code>inset 0 1px 0 rim, inset 0 -14px 24px #081E24 5%</code></td><td>Straight from the tank.</td></tr>
+          <tr><td><code>grain</code></td><td colspan="2">220px tiled noise PNG, 4–6% opacity, multiply</td><td>Over the map and the sheet. Static image, not a filter.</td></tr>
+          <tr><td><code>mono</code></td><td colspan="2">IBM Plex Mono 500 · 12px caps .14em / 13–14px lowercase</td><td>Kickers, meta, hints, progress numbers, Rascal.</td></tr>
+          <tr><td><code>bubble</code></td><td colspan="2">One blob shape, glass fill, 14px mono, ink</td><td>Sniffing and Saved only. Everywhere else his lines are plain text.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="triad">
+      <div><div class="role">Display · Fredoka 600 · titles, counts, row names · no tracking</div><div class="t-display">6 good ideas</div></div>
+      <div><div class="role">Body · Nunito 400/500/600 · everything you read</div><div class="t-body">Dual Citizen Coffee Bar is on the map for Toronto Shenanigans. Ana and Sam want to go.</div></div>
+      <div><div class="role">Mono · IBM Plex Mono 500 · kickers, meta, hints, and Rascal</div><div class="t-mono">Your shared stash · 6 saved · 2 in a caper</div><div class="t-mono-lc" style="margin-top:8px">pull up for the list</div><div class="t-mono-lc" style="margin-top:8px">“That one's a ten-minute walk. I checked.”</div></div>
+    </div>
+
+    <p class="demo-cap">Live: the glass recipe over a stand-in map, in this page's CSS. Switch your theme to see Dusk.</p>
+    <div class="demo" aria-label="Demonstration of the frosted glass sheet over a map">
+      <div class="title"><span class="kicker">Toronto Shenanigans</span><b>Places</b></div>
+      <span class="pin" style="left:16%;top:36%"></span>
+      <span class="pin on" style="left:40%;top:24%"></span>
+      <span class="pin" style="left:62%;top:44%"></span>
+      <span class="pin" style="left:78%;top:30%"></span>
+      <span class="pin" style="left:30%;top:66%"></span>
+      <div class="bubble">Six of these are within a walk. Two are Ana's. One is a bad idea.</div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <span class="kicker">Your shared stash</span>
+        <div class="count">6 good ideas</div>
+        <div class="chips"><span class="chip on">Everyone</span><span class="chip">Today</span><span class="chip">Ana</span><span class="chip">Sam</span></div>
+      </div>
+    </div>
+    <p style="font-size:15px;color:var(--ink2)">The pins stay legible through the pane because the blur is on the sheet, not on the map. That's the whole trick, and it's why the tank switches blur off on phones: they blur the world. We blur one surface.</p>
+  </div>
+</section>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">04 · The screen set</div>
+    <h2>Seven screens, one product world</h2>
+    <p>These are image-direction prompts, written to the mobile art-direction skill's rules: one screen per image, phone mockup present but quiet, text comfortably large, the same design bible locked across the set. Paste the preamble first, then the screen. Generate each screen fresh — never crop one out of another.</p>
+
+    <div class="preamble">
+      <button class="copy" data-copy="pre">Copy</button>
+      <div class="kicker" style="margin-bottom:10px">Preamble · paste before every screen</div>
+<pre id="pre">iOS app screen presented inside a clean iPhone mockup: thin dark frame, centered, even margins on a plain warm off-white background, soft controlled shadow. The screen content is the hero; the phone is quiet.
+
+App: Ruckus — you save places you found in reels, and your friends in a "Den" turn them into plans. Mascot: Rascal, a raccoon rendered in matte low-poly 3D — flat faceted shading, one soft key light, soft ambient occlusion, no gloss, no specular highlights, no reflections.
+
+Visual system (lock this across every screen): warm paper UI — surfaces #FBFAF6, raised surfaces #F2EEE2, hairlines #E5E0D4, ink #242321, secondary ink #5E594F, muted #8A8478. Exactly one accent, tangerine #FF6846, used only on tappable things (primary button, selected pin, active chip, active tab); buttons are dark ink text on tangerine, never white text. Map water is pale aqua #C2E6EE; land #F2EEE2; roads #FBFAF6; parks #E6EBDC. Very faint film grain over map and sheet.
+
+Type: display is a rounded geometric sans like Fredoka, bold, no letter-spacing, used for screen titles (40px), sheet titles (28px) and row names. Body is a rounded humanist sans like Nunito. Small labels, kickers, hints and everything Rascal says are IBM Plex Mono — uppercase letterspaced for kickers, lowercase for hints — never smaller than 12px. All text comfortably readable.
+
+Surfaces: the bottom sheet is a single pane of frosted glass — paper at ~72% opacity, 20px blur, a 1px white rim highlight on its top edge, a soft inner depth shadow — and the map ghosts through it. Nothing else is glass. Rascal speaks in irregular soft blob-shaped bubbles (not pills, not rounded rectangles) filled with the same glass, mono text in ink. Filter chips are pills. Corner radius on cards is modest.
+
+Pins: teardrop — filled circle with a short tail, category glyph knocked out in paper, resting pins in #5E594F, selected pin larger in tangerine. Bottom tab bar: Home · Places · People, active tab in tangerine, home indicator visible, safe areas respected.
+
+Do not use: purple, gradients on UI, glassmorphism anywhere except the sheet and Rascal's bubble, glossy 3D, dashboards, stat cards, tiny text, emoji as icons, generic line-icon packs.</pre>
+    </div>
+
+    <div class="screens">
+
+      <div class="screen">
+        <div class="head"><h3>1 · Welcome</h3><span class="kicker">Onboarding · first screen</span></div>
+        <div class="body"><p>The loader's "knock" becomes the first line Rascal says. Big display type behind him, the way "Crèche Tank" sits behind the axolotl. One button.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s1">Copy</button><pre id="s1">Screen: Welcome. Warm paper background with faint grain and a very soft aqua glow low on the screen, like light through water. Rascal the matte low-poly raccoon sits at the bottom third, seen from the chest up, in front of the display title so the title is partly behind his ears: "Ruckus" in Fredoka at 64px, ink. Above the title a mono kicker: "A PLACES APP FOR FRIENDS". One blob-shaped glass speech bubble to Rascal's upper right, mono 14px: "You saw it in a reel. I'll remember where it is." Bottom: a full-width tangerine button with dark ink text "Let's go", and beneath it a lowercase mono hint in muted grey: "already in a den? join with a link". Calm, one focal point, lots of air.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>2 · Pick your critter</h3><span class="kicker">Onboarding · the orb pattern</span></div>
+        <div class="body"><p>The contact orbs, repurposed. Four critter heads floating in a room with mono names beneath, instead of four cards in a grid. Selection is a tangerine ring plus a bigger head, never colour alone.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s2">Copy</button><pre id="s2">Screen: Set yourself up. Top-left back chevron. Display title "Who are you in the den?" at 34px, ink. Beneath it a filled text field on raised paper with the name "Amelia", label above in mono kicker "YOUR NAME". The lower two-thirds of the screen is an open room: four matte low-poly critter heads float at slightly different heights and depths, as if suspended — a slate-blue raccoon, a blush-pink possum, a tan squirrel, a lilac skunk — each with its name beneath in mono uppercase letterspaced ("RACCOON", "POSSUM", "SQUIRREL", "SKUNK"), 12px. The raccoon is selected: slightly larger, with a thin tangerine ring around it and a small tangerine dot, casting a soft drop shadow. Faint grain and a soft vignette on the room. Bottom: tangerine button with ink text "That's me". Airy, toy-like, no cards, no boxes.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>3 · Places, peek</h3><span class="kicker">Home of the app · glass sheet</span></div>
+        <div class="body"><p>The current board with atmosphere: water goes aqua, the map gets grain and vignette, the sheet becomes a pane, Rascal keeps peeking. The one-line count stays a sentence.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s3">Copy</button><pre id="s3">Screen: Places at the peek detent. Full-screen map of a Toronto neighbourhood in the paper palette — land #F2EEE2, roads #FBFAF6, a lake edge in pale aqua #C2E6EE at the top right, parks #E6EBDC — with neighbourhood labels "BLOORCOURT" and "LITTLE ITALY" in mono, and faint film grain plus a soft vignette so the map feels like a place, not a diagram. Top-left over the map: mono kicker "TORONTO SHENANIGANS" then display title "Places" at 40px in ink. Seven teardrop pins in dark ink with paper glyphs (fork, wine glass, footprints); one selected pin, larger, tangerine. Two squircle map controls on the right (zoom, locate) with soft shadow and no border. A tangerine circular add button fixed at the bottom-right corner above the sheet. At the bottom a frosted glass sheet rises about 140pt — paper at 72%, the roads and one pin visibly ghosting through it, a 1px white rim on its top edge, a grab handle — containing mono kicker "YOUR SHARED STASH" and display text "6 good ideas" at 28px. Rascal peeks over the sheet's right edge: head and two paws, matte low-poly. Tab bar beneath: Home, Places (active, tangerine), People.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>4 · Places, half</h3><span class="kicker">Rows through glass · avatar chips</span></div>
+        <div class="body"><p>Chips are pills; the sheet is glass; the map still shows. Rows keep their three lines — name, neighbourhood and distance, and the human line — because that third line is the whole reason this isn't a bookmark folder.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s4">Copy</button><pre id="s4">Screen: Places at the half detent. The same map fills the top 45% of the screen, with the title "Places" and kicker "TORONTO SHENANIGANS" over it and the selected tangerine pin visible. The frosted glass sheet now covers the lower 55%: paper at 72% opacity with the map faintly ghosting through, 1px white rim on the top edge, grab handle. Inside, top to bottom: mono kicker "YOUR SHARED STASH", display "6 good ideas" at 28px; a row of pill chips — "Everyone" (active, tangerine with ink text), "Today", then three chips that are small critter heads with names "Ana", "Sam", "Jo"; then three list rows, each 68pt: a category mark on the left (the same glyph as the pin, in a dark circle) with a tiny critter head badged on its corner, then three text lines — row name in Fredoka 17px ("Dual Citizen"), "Bloorcourt · 12 min walk" in Nunito muted, and a human line in Nunito "Ana says the flat white is the whole point" — and on the right two small overlapping critter heads for who wants to go. The first row is selected with a 4pt tangerine rail on its left edge. Tangerine add button fixed bottom-right. Tab bar: Places active.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>5 · Add a place, resolving</h3><span class="kicker">The Sniffing state · loader ritual</span></div>
+        <div class="body"><p>The tank makes you wait for water to fill and shows you a number. Ruckus never gates, but the one loading state gets the same care: a tabular percentage in mono, Rascal sniffing, and a line from him.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s5">Copy</button><pre id="s5">Screen: Add a place, modal sheet covering the tab bar. Paper background, grab handle, mono kicker "ADD A PLACE" and display title "Paste a link" at 34px. A filled input on raised paper showing a truncated reel URL "instagram.com/reel/C8x…" with a small paste icon. Below it, centered in generous space: Rascal in a sniffing pose — nose down, one paw forward, matte low-poly — and beneath him a mono progress line in tabular figures "SNIFFING · 64%" with a thin hairline progress bar filled 64% in tangerine. One blob-shaped glass bubble beside Rascal, mono 14px: "Someone tagged a coffee bar. Give me a second." Lower on the sheet, three muted secondary options as plain text rows with hairlines: "Search a place", "Type it in" — the multi-source posture. No primary button while resolving. Calm and readable; the progress number is the focal point.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>6 · Saved</h3><span class="kicker">The one celebration · staging</span></div>
+        <div class="body"><p>The hero staging from the tank, used once: the critter in front, the display type behind. This is the only screen where the delight budget is spent, so it can afford a bigger gesture than the rest.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s6">Copy</button><pre id="s6">Screen: Saved, a modal sheet. Paper background with faint grain and a soft aqua glow rising from the bottom like light through water. The display title "In the Stash" is set very large, 56px Fredoka in ink, positioned in the middle of the screen — and Rascal, matte low-poly, cheering with both paws up, sits in front of and partly overlapping the title so the letters run behind his head and paws. A few small matte paper-coloured circles drift upward around him like bubbles, very subtle. Beneath: Nunito body text in two short lines "Dual Citizen Coffee Bar is on the map for Toronto Shenanigans." A single blob-shaped glass bubble at Rascal's shoulder, mono: "Told you I'd remember." Bottom: tangerine button with ink text "See it on the map", then a plain text link "Add another". One focal moment, lots of air, no confetti.</pre></div>
+      </div>
+
+      <div class="screen">
+        <div class="head"><h3>7 · The Den, at dusk</h3><span class="kicker">People screen · the tank at night</span></div>
+        <div class="body"><p>Where the tank's palette actually lands. People becomes a room you look into: the members float as critter heads with mono names, the lake behind goes deep teal, the paper goes lamplit. Tangerine is the only colour that shifts.</p></div>
+        <div class="prompt"><button class="copy" data-copy="s7">Copy</button><pre id="s7">Screen: People, in Dusk mode. Dark warm paper #1B1917 background, hairlines #38332D, ink text #F2EDE3, muted #8F887C, accent tangerine shifted to #FF7A5C. Top: mono kicker "YOUR DEN" and display title "Toronto Shenanigans" at 34px, with a small round den emblem beside it. The upper half is a dark room with faint grain: behind the members a soft band of deep teal water #0F2E31 with a barely-there horizon, like a tank at night. Four matte low-poly critter heads float at different heights with soft drop shadows — raccoon, possum, squirrel, skunk — each with a mono name beneath ("AMELIA", "ANA", "SAM", "JO") and a tiny mono count under that ("9 SAVED", "4 SAVED"…), 12px. Below the room, on the paper: a simple list with hairlines — "Invite someone" with a link icon, "Ruckus Pro" with a small tangerine dot, "Leave this den" muted. Tab bar: People active in tangerine. Cozy, lamplit, urban; nothing glossy.</pre></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">05 · Motion</div>
+    <h2>The tank can be slow. The app cannot.</h2>
+    <p>A studio site is seen once; the sheet is dragged a hundred times a day. So the borrow is the <em>character</em> of the motion — soft ease-outs, a little bob where nothing is being operated — at app speeds. Reviewed against the tank's actual values and the motion tokens already in the brief.</p>
+    <div class="tbl motion">
+      <table>
+        <thead><tr><th>Tank does</th><th>Ruckus does</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Sidebar slides in over <code>500ms cubic-bezier(.22,.61,.36,1)</code></td><td>Sheet detents on the gorhom spring, or <code>280ms cubic-bezier(0.32,0.72,0,1)</code> if timed. No overshoot.</td><td>UI stays under 300ms; the iOS drawer curve; things moving under a finger must not bounce.</td></tr>
+          <tr><td>About bubbles appear one after another as you scroll</td><td>Rascal's bubble: opacity 0→1 and <code>translateY(6px→0)</code>, 180ms ease-out. If two lines, the second lands +60ms. Enters and exits from the same edge.</td><td>Stagger 30–80ms; never from nothing; spatial consistency.</td></tr>
+          <tr><td>Orbs and bubbles bob on an ambient loop</td><td>Critter heads in the picker and the Den bob ±3px on a 3–4s sine, each with a random phase. Nowhere else. Off under Reduce Motion.</td><td>Rare screens can carry decoration; the map and sheet, seen hundreds of times, cannot.</td></tr>
+          <tr><td>Menu links widen letter-spacing on hover</td><td>No hover. Every pressable scales to <code>0.97</code> over 120ms ease-out and back on release.</td><td>Touch has no hover; press feedback is how the app says it heard you.</td></tr>
+          <tr><td>Loader: water fills, bubbles rise, then a gate</td><td>Sniffing: the percentage counts up in tabular mono, Rascal's sniff loops at ~1.2s, the bar fills with <code>linear</code>. Never longer than the real fetch. No gate anywhere.</td><td>Progress motion is constant motion → linear; a fast loop reads as fast.</td></tr>
+          <tr><td>Glass blur on every surface; disabled on phones</td><td>One <code>BlurView</code> on the sheet. Animate its <code>transform</code> only, never blur radius or opacity of the blur layer.</td><td>Only transform and opacity are free; a blur radius animating is a paint storm.</td></tr>
+          <tr><td>Rail thumb glides 550ms</td><td>Segmented control (distance / date) thumb: 200ms ease-out, clip-path on a duplicated active layer for the text colour.</td><td>Colour transitions on text look wrong; clip the copy instead.</td></tr>
+          <tr><td>Cheer at "Saved" — n/a</td><td>Rascal cheer as a pre-rendered frame sequence, 500–800ms with a <code>bounce: 0.2</code> spring on the scale, title fades up 40ms after.</td><td>The one rare moment; the only place bounce is allowed.</td></tr>
+          <tr><td>Reduce Motion kills bubbles, bars, hint</td><td>Reduce Motion: bob off, cheer becomes a crossfade, bubble becomes opacity-only, sheet still animates (it is spatial, not decorative).</td><td>Fewer and gentler, not zero.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<section>
+  <div class="wrap">
+    <div class="kicker">06 · Order of work</div>
+    <h2>Cheapest first, glass last</h2>
+    <ol class="order">
+      <li><strong>Mono kicker token.</strong> Swap the letterspaced Nunito kickers to IBM Plex Mono 500, 12px. One style change, every screen. <span class="cost">~1h</span></li>
+      <li><strong>Grain overlay and water colour.</strong> A 220px noise PNG at 5% over the map container; water polygons to <code>#C2E6EE</code>. <span class="cost">~1h</span></li>
+      <li><strong>Rascal's bubble.</strong> One blob PNG as a 9-slice, glass fill, mono text. Wire it into the empty state, Sniffing, and Saved with real lines. <span class="cost">half a day</span></li>
+      <li><strong>Write Rascal's lines.</strong> Deadpan, first person, short. He has opinions about the places. A dozen strings covers launch. <span class="cost">an hour with a coffee</span></li>
+      <li><strong>Glass sheet.</strong> <code>expo-blur</code> BlurView as the sheet background, rim highlight, inner depth. Test on device — this is the one that can stutter against the map. <span class="cost">a day, post-submission</span></li>
+      <li><strong>Critter room.</strong> Picker and People as floating heads with bob. Needs the four head renders you already have. <span class="cost">a day, post-submission</span></li>
+      <li><strong>Dusk.</strong> The tokens already exist; water to <code>#0F2E31</code> is the only new one. <span class="cost">v1.2</span></li>
+    </ol>
+  </div>
+</section>
+
+<footer class="wrap">
+  <p>Source: crechetank.com markup and stylesheet, fetched 16 Sep 2026; Ruckus context doc §4, §10, §12, §13; the 1 September design boards.</p>
+  <p>The tank's noise recipe and glass-depth shadow are quoted directly from its CSS. Everything else here is a translation.</p>
+</footer>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var el = document.getElementById(btn.dataset.copy);
+      var text = el ? el.textContent : '';
+      var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+      try { navigator.clipboard.writeText(text).then(done, done); } catch(e){ done(); }
+    });
+  });
+</script>

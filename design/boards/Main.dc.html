@@ -1,0 +1,283 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400..600&family=Nunito:wght@400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0;background:#FBFAF6;}
+*{box-sizing:border-box;}
+a{color:#E24E2E;text-decoration:none;}
+a:hover{color:#FF6846;}
+input{font:inherit;color:inherit;background:none;border:0;outline:none;}
+@media (prefers-reduced-motion: reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;}}
+</style>
+</helmet>
+<div style="position:relative;width:390px;height:844px;overflow:hidden;background:#F0ECE0;font-family:'Nunito',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#242321;-webkit-font-smoothing:antialiased">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="g-eat"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 3v5.4a1.6 1.6 0 0 0 3.2 0V3"/><path d="M8 9.8V21"/><path d="M16.6 3c-1.9 0-3.1 2-3.1 4.4s1.2 4 3.1 4 3.1-1.6 3.1-4S18.5 3 16.6 3Z"/><path d="M16.6 11.6V21"/></g></g><g id="g-drink"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 4.4h14.8L12 12.6V19"/><path d="M8.4 19h7.2"/></g></g><g id="g-do"><g fill="currentColor"><g transform="rotate(-16 8.6 11)"><ellipse cx="8.6" cy="11.6" rx="3.1" ry="4.3"/><circle cx="5.6" cy="5.9" r="1.15"/><circle cx="8.6" cy="5.1" r="1.2"/><circle cx="11.5" cy="5.9" r="1.15"/></g><g transform="rotate(14 15.6 16)"><ellipse cx="15.6" cy="16.4" rx="3.1" ry="4.3"/><circle cx="12.6" cy="10.7" r="1.15"/><circle cx="15.6" cy="9.9" r="1.2"/><circle cx="18.5" cy="10.7" r="1.15"/></g></g></g><g id="g-spark"><g fill="currentColor"><path d="M13.4 2.4 15.1 8l5.6 1.7-5.6 1.7-1.7 5.6-1.7-5.6L6.1 9.7 11.7 8Z"/><path d="M6.2 14.6 7.1 17l2.4.9-2.4.9-.9 2.4-.9-2.4L2.9 18l2.4-.9Z"/></g></g>
+<g id="e-lantern"><path d="M20 3 33 12v18L20 37 7 30V12Z" fill="#E0C67C"/><path d="M20 3 33 12v18L20 37Z" fill="#CBB167"/><path d="M20 13 26 17v8l-6 4-6-4v-8Z" fill="#FBFAF6" opacity=".55"/></g>
+<g id="e-acorn"><path d="M20 37 8 24l4-8h16l4 8Z" fill="#D3A78E"/><path d="M20 37 32 24l-4-8h-8Z" fill="#BE9179"/><path d="M6 13h28l-4 5H10Z" fill="#8A8478"/></g>
+<g id="e-moon"><path d="M27 4 34 20l-7 16-9-8 4-8-4-8Z" fill="#A9B6C6"/><path d="M27 4 34 20l-7 16Z" fill="#93A0B1"/><circle cx="12" cy="12" r="3" fill="#A9B6C6"/></g>
+<g id="e-peak"><path d="M20 5 36 34H4Z" fill="#9EC4C2"/><path d="M20 5 36 34H20Z" fill="#86ADAB"/><path d="M20 5 27 18h-14Z" fill="#FBFAF6" opacity=".7"/></g>
+<g id="e-leaf"><path d="M20 3 34 20 20 37 6 20Z" fill="#A8C4A2"/><path d="M20 3 34 20 20 37Z" fill="#93AF8D"/><path d="M20 6v28" stroke="#FBFAF6" stroke-width="1.6" opacity=".6"/></g>
+<g id="p-paw" fill="currentColor"><ellipse cx="6.2" cy="9" rx="3.2" ry="4.2"/><ellipse cx="13" cy="5.2" rx="3.2" ry="4.4"/><ellipse cx="20.2" cy="5.8" rx="3.2" ry="4.4"/><ellipse cx="26.2" cy="10.4" rx="3" ry="3.9"/><path d="M15.6 12.2c4.9 0 8.6 3.1 8.6 7.2 0 3.4-2.8 5.6-6.2 5.6-2.1 0-2.6-.9-4.6-.9s-2.7.9-4.8.9c-3.3 0-6-2.2-6-5.6 0-4.1 4.4-7.2 9.6-7.2Z"/></g>
+</defs></svg><div onPointerDown="{{mapDown}}" style="position:absolute;inset:0;touch-action:none;cursor:grab;transform:translate({{map.x}}px,{{map.y}}px) scale({{map.z}});transform-origin:0 0;transition:{{motion.map}}">
+<svg width="390" height="844" viewBox="0 0 390 844" style="position:absolute;inset:0;display:block">
+<rect x="-260" y="-260" width="910" height="1364" fill="#F0ECE0"/>
+<path d="M300-40C330 40 372 70 420 44V-40Z" fill="#C2E6EE"/>
+<path d="M-40 760C30 730 90 770 150 740 210 712 250 760 300 900H-40Z" fill="#C2E6EE"/>
+<rect x="36" y="122" width="152" height="126" rx="3" fill="#E3EBDC"/>
+<rect x="252" y="228" width="146" height="140" rx="3" fill="#E3EBDC"/>
+<rect x="20" y="600" width="130" height="98" rx="3" fill="#E3EBDC"/>
+<g stroke="#DBD5C7" stroke-width="1.6" stroke-dasharray="7 7" fill="none"><path d="M128-20V860"/><path d="M246-20V860"/><path d="M354-20V860"/><path d="M-20 232H410"/><path d="M-20 408H410"/><path d="M-20 586H410"/></g>
+<g stroke="#FBFAF6" stroke-width="15" fill="none" stroke-linecap="round"><path d="M70-20V860"/><path d="M186-20V860"/><path d="M304-20V860"/><path d="M-20 150H410"/><path d="M-20 322H410"/><path d="M-20 500H410"/><path d="M-20 676H410"/></g>
+<g stroke="#FBFAF6" stroke-width="17" fill="none" stroke-linecap="round"><path d="M-24 250C70 206 176 268 268 214 322 182 366 196 414 178"/><path d="M-24 560C92 528 196 606 300 566 348 548 380 552 414 542"/></g>
+<text x="112" y="192" text-anchor="middle" font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" font-weight="500" letter-spacing="1.4" fill="#A79F91">BLOORCOURT</text><text x="212" y="468" text-anchor="middle" font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" font-weight="500" letter-spacing="1.4" fill="#A79F91">LITTLE ITALY</text><text x="85" y="656" text-anchor="middle" font-family="'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" font-weight="500" letter-spacing="1.4" fill="#A79F91">TRINITY</text></svg>
+<sc-for list="{{pins}}" as="p" hint-placeholder-count="6">
+<div onClick="{{p.pick}}" style="position:absolute;left:{{p.left}}px;top:{{p.top}}px;transition:{{motion.pin}}">
+<sc-if value="{{p.dim}}" hint-placeholder-val="{{false}}"><div style="width:14px;height:14px;border-radius:999px;background:#C9C3B5;box-shadow:0 1px 2px rgba(36,35,33,.14)"></div></sc-if>
+<sc-if value="{{p.show}}" hint-placeholder-val="{{true}}">
+<div style="position:relative;width:{{p.w}}px;height:{{p.h}}px;filter:{{p.shadow}}">
+<svg width="{{p.w}}" height="{{p.h}}" viewBox="0 0 40 52" style="display:block"><path d="M11 34h18l-9 18Z" fill="{{p.bg}}"/><circle cx="20" cy="20" r="20" fill="{{p.bg}}"/></svg>
+<div style="position:absolute;left:0;right:0;top:{{p.gt}}px;display:flex;justify-content:center;color:{{p.fg}}"><svg width="{{p.g}}" height="{{p.g}}" viewBox="0 0 24 24" style="display:block"><use href="{{p.gref}}"/></svg></div>
+<sc-if value="{{p.caper}}" hint-placeholder-val="{{false}}"><div style="position:absolute;top:1px;right:-1px;width:11px;height:11px;border-radius:999px;background:#FF6846;box-shadow:0 0 0 2px #F0ECE0"></div></sc-if>
+<sc-if value="{{p.showAv}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:-14px;top:-20px"><sc-if value="{{p.isRaccoon}}" hint-placeholder-val="{{true}}"><img src="critter-raccoon.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{p.isPossum}}" hint-placeholder-val="{{false}}"><img src="critter-possum.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{p.isSquirrel}}" hint-placeholder-val="{{false}}"><img src="critter-squirrel.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{p.isSkunk}}" hint-placeholder-val="{{false}}"><img src="critter-skunk.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if></div></sc-if>
+</div></sc-if></div></sc-for></div><div style="position:absolute;inset:0;pointer-events:none;opacity:0.5;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")"></div><div style="position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px rgba(36,35,33,.10)"></div>
+<div style="position:absolute;top:59px;left:0;right:0;padding:14px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+<div><div style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:500;letter-spacing:.14em;color:#8A8478">TORONTO SHENANIGANS</div><div style="height:6px"></div><div style="font-family:'Fredoka','Nunito',-apple-system,system-ui,sans-serif;font-size:40px;font-weight:600;letter-spacing:-0.32px;line-height:1.12;color:#242321">Places</div></div>
+<div style="padding-top:14px;color:#242321"></div></div>
+<div style="position:absolute;right:16px;top:288px;display:flex;flex-direction:column;gap:14px;align-items:flex-end">
+<div style="width:52px;border-radius:16px;background:#FBFAF6;box-shadow:0 2px 12px rgba(36,35,33,.10);color:#5E594F">
+<div onClick="{{zoomIn}}" style="height:52px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M12 5v14M5 12h14"/></svg></div>
+<div style="height:1px;background:#E5E0D4;margin:0 10px"></div>
+<div onClick="{{zoomOut}}" style="height:52px;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M5 12h14"/></svg></div></div>
+<div onClick="{{recenter}}"><div style="width:52px;height:52px;flex:none;border-radius:16px;background:#FBFAF6;display:flex;align-items:center;justify-content:center;color:#5E594F;box-shadow:0 2px 12px rgba(36,35,33,.10)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M20.8 3.2 3.6 10.1l7.2 2.9 2.9 7.2Z"/></svg></div></div></div>
+<div style="position:absolute;left:0;right:0;top:{{sheet.top}}px;bottom:83px;background:rgba(251,250,246,.72);-webkit-backdrop-filter:blur(20px) saturate(110%);backdrop-filter:blur(20px) saturate(110%);border-radius:28px 28px 0 0;box-shadow:0 -1px 0 rgba(255,255,255,.65),inset 0 1px 0 rgba(255,255,255,.65), inset 0 -14px 24px rgba(8,30,36,.05),0 -20px 50px rgba(36,35,33,.12);overflow:hidden;display:flex;flex-direction:column;transition:{{motion.sheet}}">
+<div style="position:absolute;inset:0;pointer-events:none;opacity:0.35;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")"></div>
+<div onPointerDown="{{handleDown}}" role="button" aria-label="Move the sheet" style="padding:10px 0 12px;flex:none;touch-action:none;cursor:grab;position:relative"><div style="width:44px;height:5px;border-radius:3px;background:{{handleColour}};margin:0 auto;transition:{{motion.tap}}"></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 20px 16px;flex:none;position:relative">
+<div><div style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:500;letter-spacing:.14em;color:#8A8478">{{kicker}}</div><div style="height:6px"></div><div style="font-family:'Fredoka','Nunito',-apple-system,system-ui,sans-serif;font-size:28px;font-weight:600;letter-spacing:-.22px;line-height:1.12;color:#242321">{{headline}}</div></div>
+<sc-if value="{{isOpen}}" hint-placeholder-val="{{true}}"><div style="display:flex;background:#F2EEE2;border-radius:14px;padding:4px;flex:none">
+<div style="height:38px;padding:0 13px;border-radius:11px;display:flex;align-items:center;gap:6px;background:#FBFAF6;box-shadow:0 1px 3px rgba(36,35,33,.10);color:#242321;font-size:14px;font-weight:600"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M20.8 3.2 3.6 10.1l7.2 2.9 2.9 7.2Z"/></svg>Nearby</div>
+<div style="height:38px;padding:0 13px;border-radius:11px;display:flex;align-items:center;gap:6px;color:#8A8478;font-size:14px;font-weight:600"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><rect x="3.4" y="5" width="17.2" height="16" rx="2.6"/><path d="M3.4 9.6h17.2M8 3v4M16 3v4"/></svg>Date</div></div></sc-if></div>
+<sc-if value="{{isPeek}}" hint-placeholder-val="{{false}}"><div style="padding:0 20px;position:relative"><div style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:400;line-height:18px;color:#8A8478;">pull up for the list</div></div></sc-if>
+<sc-if value="{{isOpen}}" hint-placeholder-val="{{true}}"><div style="display:flex;align-items:center;height:62px;flex:none">
+<div style="position:relative;flex:1;overflow:hidden;height:46px"><div style="display:flex;gap:9px;padding-left:20px;height:46px">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="8">
+<sc-if value="{{c.isRule}}" hint-placeholder-val="{{false}}"><div style="width:1px;height:28px;background:#E5E0D4;flex:none;margin:9px 3px 0"></div></sc-if>
+<sc-if value="{{c.isChip}}" hint-placeholder-val="{{true}}">
+<div onClick="{{c.pick}}" style="height:46px;border-radius:23px;display:flex;align-items:center;gap:{{c.gap}}px;padding:{{c.pad}};background:{{c.bg}};border:1.5px solid {{c.bd}};color:{{c.fg}};flex:none;transition:{{motion.tap}}">
+<sc-if value="{{c.isEveryone}}" hint-placeholder-val="{{true}}"><div style="display:flex">
+<sc-for list="{{c.stack}}" as="s" hint-placeholder-count="3"><div style="margin-left:{{s.ml}}px"><sc-if value="{{s.isRaccoon}}" hint-placeholder-val="{{true}}"><img src="critter-raccoon.png" alt="" style="width:32px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{s.isPossum}}" hint-placeholder-val="{{false}}"><img src="critter-possum.png" alt="" style="width:32px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{s.isSquirrel}}" hint-placeholder-val="{{false}}"><img src="critter-squirrel.png" alt="" style="width:32px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{s.isSkunk}}" hint-placeholder-val="{{false}}"><img src="critter-skunk.png" alt="" style="width:32px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if></div></sc-for></div></sc-if>
+<sc-if value="{{c.isToday}}" hint-placeholder-val="{{false}}"><svg width="19" height="19" viewBox="0 0 24 24" style="display:block;color:{{c.sparkle}}"><use href="#g-spark"/></svg></sc-if>
+<sc-if value="{{c.isPerson}}" hint-placeholder-val="{{false}}"><div style="display:flex"><sc-if value="{{c.isRaccoon}}" hint-placeholder-val="{{true}}"><img src="critter-raccoon.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{c.isPossum}}" hint-placeholder-val="{{false}}"><img src="critter-possum.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{c.isSquirrel}}" hint-placeholder-val="{{false}}"><img src="critter-squirrel.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{c.isSkunk}}" hint-placeholder-val="{{false}}"><img src="critter-skunk.png" alt="" style="width:34px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if></div></sc-if>
+<sc-if value="{{c.isCat}}" hint-placeholder-val="{{false}}"><svg width="19" height="19" viewBox="0 0 24 24" style="display:block;color:{{c.sparkle}}"><use href="{{c.gref}}"/></svg></sc-if>
+<span style="font-size:15px;font-weight:{{c.weight}}">{{c.label}}</span></div></sc-if>
+</sc-for></div>
+<div style="position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,rgba(251,250,246,0),#FBFAF6)"></div></div>
+<div style="padding:0 16px 0 6px"><div onClick="{{add}}" style="width:46px;height:46px;flex:none;border-radius:999px;background:#FF6846;color:#242321;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M12 5v14M5 12h14"/></svg></div></div></div><div style="height:1px;background:#E5E0D4;flex:none;margin-top:4px"></div><div id="rk-list" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+<div id="row-{{r.id}}" onClick="{{r.pick}}" style="display:flex;align-items:center;gap:14px;height:80px;padding:0 20px 0 {{r.padL}}px;background:{{r.bg}};border-bottom:1px solid {{r.bd}};position:relative;transition:{{motion.tap}}">
+<sc-if value="{{r.sel}}" hint-placeholder-val="{{false}}"><div style="position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 3px 3px 0;background:#FF6846"></div></sc-if>
+<div style="width:56px;height:56px;flex:none;border-radius:17px;background:#F2EEE2;display:flex;align-items:center;justify-content:center;color:#242321"><svg width="25" height="25" viewBox="0 0 24 24" style="display:block"><use href="{{r.gref}}"/></svg></div>
+<div style="flex:1;min-width:0">
+<div style="font-family:'Fredoka','Nunito',-apple-system,system-ui,sans-serif;font-size:18px;font-weight:600;letter-spacing:-.1px;color:#242321;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.name}}</div>
+<div style="font-size:13px;font-weight:500;color:#8A8478;margin-top:1px">{{r.meta}}</div>
+<div style="font-size:14px;font-weight:500;color:#5E594F;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.blurb}}</div></div>
+<div style="display:flex;flex:none"><sc-if value="{{r.isRaccoon}}" hint-placeholder-val="{{true}}"><img src="critter-raccoon.png" alt="" style="width:44px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{r.isPossum}}" hint-placeholder-val="{{false}}"><img src="critter-possum.png" alt="" style="width:44px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{r.isSquirrel}}" hint-placeholder-val="{{false}}"><img src="critter-squirrel.png" alt="" style="width:44px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if><sc-if value="{{r.isSkunk}}" hint-placeholder-val="{{false}}"><img src="critter-skunk.png" alt="" style="width:44px;height:auto;display:block;filter:drop-shadow(0 1px 2px rgba(36,35,33,.18))"/></sc-if></div></div>
+</sc-for>
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:36px 28px"><svg width="34" height="32" viewBox="0 0 30 28" style="display:block;color:#E5E0D4"><use href="#p-paw"/></svg><div style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:400;line-height:18px;color:#8A8478;text-align:center;color:#5E594F">{{emptyLine}}</div></div></sc-if>
+<sc-if value="{{atEnd}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 0"><svg width="32" height="30" viewBox="0 0 30 28" style="display:block;color:#E5E0D4"><use href="#p-paw"/></svg><div style="font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:400;line-height:18px;color:#8A8478;">that's the whole stash.</div></div></sc-if></div></sc-if>
+</div>
+<div style="position:absolute;left:250px;top:{{rascal.top}}px;transition:{{motion.sheet}};pointer-events:none;z-index:3"><img src="rascal-peek.png" alt="Rascal" style="width:112px;height:auto;display:block;opacity:{{rascal.o}};transition:{{motion.tap}}"/></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:83px;background:#FBFAF6;border-top:1px solid #E5E0D4;display:flex;padding:9px 0 34px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#8A8478">
+<div style="position:relative;width:24px;height:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M3.6 10.4 12 3.4l8.4 7v9.2a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z"/><path d="M9.4 21.6v-6.4h5.2v6.4"/></svg><div style="position:absolute;top:-1px;right:-3px;width:8px;height:8px;border-radius:999px;background:#FF6846;box-shadow:0 0 0 2px #FBFAF6"></div></div>
+<div style="font-size:11.5px;font-weight:600;letter-spacing:.1px">Home</div></div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#FF6846">
+<div style="position:relative;width:24px;height:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><path d="M12 21.6c4.5-4.7 6.7-8.2 6.7-10.7a6.7 6.7 0 1 0-13.4 0c0 2.5 2.2 6 6.7 10.7Z"/><circle cx="12" cy="10.7" r="2.4"/></svg></div>
+<div style="font-size:11.5px;font-weight:700;letter-spacing:.1px">Places</div></div><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#8A8478">
+<div style="position:relative;width:24px;height:24px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:none"><circle cx="9.2" cy="8.6" r="3.6"/><path d="M2.8 20.2c0-3.6 2.9-5.9 6.4-5.9s6.4 2.3 6.4 5.9"/><circle cx="17.5" cy="10.5" r="2.8"/><path d="M17 15.1c2.6.3 4.3 2.3 4.3 5.1"/></svg></div>
+<div style="font-size:11.5px;font-weight:600;letter-spacing:.1px">People</div></div></div></div>
+</x-dc>
+<script data-dc-script data-props='{"reduceMotion":{"editor":"boolean","default":false,"section":"Motion"},"$preview":{"width":390,"height":844}}'>
+var PLACES = [{"id":"s1","name":"Bar Raval","hood":"Little Italy","km":"1.2 km","cat":"drink","by":"mia","going":["mia","amelia","josh"],"x":160,"y":196,"blurb":"Tiny plates, big Friday energy"},{"id":"s6","name":"Grey Gardens","hood":"Kensington","km":"2.0 km","cat":"eat","by":"josh","going":["josh","mia","zoe"],"x":236,"y":130,"blurb":"Josh won't shut up about the pierogi"},{"id":"s3","name":"Bellwoods Brewery","hood":"Ossington","km":"2.4 km","cat":"drink","by":"josh","going":["josh","zoe"],"x":290,"y":228,"blurb":"Patio, and you can take cans home"},{"id":"s4","name":"Trinity Bellwoods","hood":"Dundas West","km":"3.1 km","cat":"do","by":"zoe","going":["zoe","amelia"],"x":112,"y":322,"blurb":"Blanket, snacks, three hours gone"},{"id":"s2","name":"Dual Citizen","hood":"King West","km":"1.8 km","cat":"eat","by":"amelia","going":["amelia"],"x":64,"y":262,"blurb":"The coffee that started all this"},{"id":"s5","name":"Sanagan's","hood":"Kensington","km":"2.7 km","cat":"eat","by":"mia","going":["mia"],"x":318,"y":296,"blurb":"Butcher counter, sandwiches at the back"}];
+var WHO = {"amelia":"raccoon","mia":"possum","josh":"squirrel","zoe":"skunk"};
+var NAME = {"amelia":"Amelia","mia":"Mia","josh":"Josh","zoe":"Zoe"};
+var CATLABEL = {"eat":"Food","drink":"Drinks","do":"Outdoors"};
+var AVBG = {"raccoon":"#DEE4EA","possum":"#F7E3E5","squirrel":"#EFDDD1","skunk":"#E4DCEC"};
+var TOPS = [624, 365, 91];
+function withFlags(o, person) {
+  var w = WHO[person];
+  o.isRaccoon = w === 'raccoon'; o.isPossum = w === 'possum';
+  o.isSquirrel = w === 'squirrel'; o.isSkunk = w === 'skunk';
+  return o;
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { detent: 1, filter: null, cat: null, sel: 's1', z: 1, mx: 0, my: 0, drag: null };
+    this._moved = false;
+  }
+  rm() {
+    if (this.props.reduceMotion) return true;
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  componentDidUpdate(pp, ps) {
+    if (ps.sel !== this.state.sel && this.state.sel) {
+      var el = document.getElementById('row-' + this.state.sel);
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', behavior: this.rm() ? 'auto' : 'smooth' });
+    }
+  }
+  handleDown(e) {
+    var self = this, y0 = e.clientY, t0 = TOPS[self.state.detent], moved = false, last = t0;
+    function mv(ev) {
+      if (Math.abs(ev.clientY - y0) > 3) moved = true;
+      last = Math.max(91, Math.min(624, t0 + (ev.clientY - y0)));
+      self.setState({ drag: last });
+    }
+    function up() {
+      window.removeEventListener('pointermove', mv);
+      window.removeEventListener('pointerup', up);
+      if (!moved) { self.setState({ drag: null, detent: (self.state.detent + 1) % 3 }); return; }
+      var best = 0, bd = 1e9;
+      for (var i = 0; i < 3; i++) { var d = Math.abs(TOPS[i] - last); if (d < bd) { bd = d; best = i; } }
+      self.setState({ drag: null, detent: best });
+    }
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  }
+  mapDown(e) {
+    var self = this, x0 = e.clientX, y0 = e.clientY, mx = self.state.mx, my = self.state.my;
+    self._moved = false;
+    function mv(ev) {
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 5) self._moved = true;
+      self.setState({ mx: mx + (ev.clientX - x0), my: my + (ev.clientY - y0) });
+    }
+    function up() { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); }
+    window.addEventListener('pointermove', mv);
+    window.addEventListener('pointerup', up);
+  }
+  zoom(f) {
+    var z0 = this.state.z, z = Math.max(0.7, Math.min(2.2, z0 * f)), cx = 195, cy = 280;
+    this.setState({ z: z, mx: cx - (cx - this.state.mx) * (z / z0), my: cy - (cy - this.state.my) * (z / z0) });
+  }
+  pick(p) {
+    if (this._moved) { this._moved = false; return; }
+    if (this.state.sel === p.id) { this.setState({ sel: null }); return; }
+    var d = this.state.detent === 0 ? 1 : this.state.detent, z = this.state.z;
+    this.setState({ sel: p.id, detent: d, mx: 195 - p.x * z, my: TOPS[d] * 0.5 - p.y * z });
+  }
+  renderVals() {
+    var self = this, st = this.state, rm = this.rm();
+    var top = st.drag != null ? st.drag : TOPS[st.detent];
+    var open = top < 560;
+    var motion = rm
+      ? { sheet: 'none', pin: 'none', map: 'none', tap: 'none' }
+      : { sheet: (st.drag != null ? 'none' : 'top 280ms cubic-bezier(.22,.61,.36,1)'),
+          pin: 'left 130ms ease-out, top 130ms ease-out',
+          map: 'transform 320ms cubic-bezier(.22,.61,.36,1)',
+          tap: 'background-color 130ms ease-out, border-color 130ms ease-out, opacity 200ms ease-out' };
+
+    // one dimming rule: a pin collapses to a dot when the person OR the category filter excludes it
+    function excluded(p) {
+      return (st.filter != null && st.filter !== 'today' && p.by !== st.filter) || (st.cat != null && p.cat !== st.cat);
+    }
+    var pins = PLACES.map(function (p) {
+      var sel = st.sel === p.id, dim = excluded(p);
+      var w = sel ? 52 : 40, h = Math.round(w * 52 / 40), g = Math.round(w * 0.55);
+      var o = {
+        left: dim ? p.x - 7 : p.x - w / 2, top: dim ? p.y - 14 : p.y - h,
+        w: w, h: h, g: g, gt: Math.round(w * 0.5 - g / 2), gref: '#g-' + p.cat,
+        dim: dim, show: !dim,
+        bg: sel ? '#FF6846' : '#242321', fg: sel ? '#242321' : '#FBFAF6',
+        shadow: sel ? 'drop-shadow(0 5px 9px rgba(36,35,33,.26))' : 'drop-shadow(0 2px 4px rgba(36,35,33,.18))',
+        caper: !sel && p.going.length >= 3,
+        showAv: !dim && st.filter != null && st.filter !== 'today' && p.by === st.filter,
+        pick: function () { self.pick(p); }
+      };
+      return withFlags(o, p.by);
+    });
+
+    var people = ['mia', 'josh', 'zoe'];
+    var defs = [{ kind: 'everyone', key: null, label: 'Everyone' }, { kind: 'today', key: 'today', label: 'Today' }]
+      .concat(people.map(function (k) { return { kind: 'person', key: k, label: NAME[k] }; }))
+      .concat([{ kind: 'rule' }])
+      .concat(['eat', 'drink', 'do'].map(function (k) { return { kind: 'cat', key: k, label: CATLABEL[k] }; }));
+    var chips = defs.map(function (c) {
+      if (c.kind === 'rule') return { isRule: true, isChip: false, stack: [] };
+      var on = c.kind === 'everyone' ? st.filter == null : (c.kind === 'cat' ? st.cat === c.key : st.filter === c.key);
+      var pad = c.kind === 'everyone' ? '0 18px 0 6px' : (c.kind === 'person' ? '0 18px 0 7px' : (c.kind === 'cat' ? '0 18px 0 15px' : '0 18px'));
+      var o = {
+        isRule: false, isChip: true,
+        label: c.label, pad: pad, gap: (c.kind === 'today' || c.kind === 'cat') ? 8 : 9,
+        isEveryone: c.kind === 'everyone', isToday: c.kind === 'today', isPerson: c.kind === 'person', isCat: c.kind === 'cat',
+        gref: c.kind === 'cat' ? '#g-' + c.key : '',
+        weight: c.kind === 'everyone' ? 700 : 600,
+        bg: on ? '#FF6846' : '#FBFAF6', bd: on ? '#FF6846' : '#E5E0D4', fg: on ? '#242321' : '#5E594F',
+        sparkle: on ? '#242321' : '#8A8478',
+        stack: ['amelia', 'mia', 'josh'].map(function (p, i) {
+          return withFlags({ ml: i ? -13 : 0 }, p);
+        }),
+        pick: c.kind === 'cat'
+          ? function () { self.setState({ cat: on ? null : c.key, sel: null, detent: st.detent === 0 ? 1 : st.detent }); }
+          : function () { self.setState({ filter: on ? null : c.key, sel: null, detent: st.detent === 0 ? 1 : st.detent }); }
+      };
+      return withFlags(o, (c.kind === 'person') ? c.key : 'amelia');
+    });
+
+    // person AND category compose; Today is a projection of the same list (three or more want to go)
+    var visible = PLACES.filter(function (p) {
+      if (excluded(p)) return false;
+      if (st.filter === 'today' && p.going.length < 3) return false;
+      return true;
+    });
+    var rows = visible.map(function (p) {
+      var sel = st.sel === p.id;
+      var o = {
+        id: p.id, name: p.name, blurb: p.blurb, meta: p.hood + ' \u00b7 ' + p.km,
+        gref: '#g-' + p.cat, sel: sel,
+        bg: sel ? '#FFE9E2' : 'transparent', bd: sel ? 'transparent' : '#E5E0D4', padL: sel ? 16 : 20,
+        pick: function () { self.pick(p); }
+      };
+      return withFlags(o, p.by);
+    });
+
+    var who = st.filter && st.filter !== 'today' ? NAME[st.filter] : null;
+    var catWord = st.cat ? CATLABEL[st.cat].toLowerCase() : null;
+    var kicker = who ? (who + "'s " + (catWord || 'picks'))
+      : (st.filter === 'today' ? 'happening today' + (catWord ? ' · ' + catWord : '')
+      : (catWord ? catWord + ' in the stash' : 'your shared stash'));
+    // Rascal's line for an empty list — lowercase, first person, one sentence
+    var emptyLine = who && catWord ? who.toLowerCase() + " hasn't saved any " + catWord + " yet."
+      : who ? who.toLowerCase() + " hasn't saved anything yet."
+      : catWord ? 'no ' + catWord + ' saved yet.'
+      : st.filter === 'today' ? "nothing's turning into a plan yet."
+      : 'nothing saved yet.';
+    return {
+      sheet: { top: Math.round(top) }, map: { x: Math.round(st.mx), y: Math.round(st.my), z: st.z },
+      rascal: { top: Math.round(top) - 90, o: open ? 0 : 1 },
+      motion: motion, pins: pins, chips: chips, rows: rows,
+      isOpen: open, isPeek: !open, empty: rows.length === 0, atEnd: rows.length > 0, emptyLine: emptyLine,
+      handleColour: st.drag != null ? '#8A8478' : '#E5E0D4',
+      kicker: kicker.toUpperCase(),
+      headline: rows.length === 0 ? 'nothing here' : rows.length + (rows.length === 1 ? ' good idea' : ' good ideas'),
+      zoomIn: function () { self.zoom(1.4); },
+      zoomOut: function () { self.zoom(1 / 1.4); },
+      recenter: function () { self.setState({ z: 1, mx: 0, my: 0 }); },
+      add: function () { self.setState({ detent: 1 }); },
+      handleDown: function (e) { self.handleDown(e); },
+      mapDown: function (e) { self.mapDown(e); }
+    };
+  }
+}
+</script>
+</body>
+</html>

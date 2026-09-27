@@ -11,8 +11,9 @@ Read §5 before touching `packages/ingest/`.
 | --- | --- |
 | `packages/ingest` | `@ruckus/ingest` — reel URL → scored place candidates. No UI. |
 | `apps/proxy` | Model proxy. Keeps the API key off the device. |
-| `apps/mobile` | Expo dev build. Not yet scaffolded. |
+| `apps/mobile` | `@ruckus/mobile` — the Expo app. Runs on mocks until `src/api/client.ts` is wired to `@ruckus/api`. |
 | `tools/harness` | Batch-test the shipping path over 30 real reels. |
+| `design/boards` | The design source: generated `.dc.html` boards, the build scripts, full-res renders. `design/*.png` are Figma exports. |
 
 ## Setup
 
