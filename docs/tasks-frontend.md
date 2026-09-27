@@ -74,8 +74,8 @@ paywall and Customer Center, entitlement **`ruckus_pro`**. What's left:
 1. **The webhook has to live in Amelia's RevenueCat project**, not Karthik's —
    it's how the server learns someone is Pro and lifts the Den limit. Karthik
    sets it up (add him as a collaborator), then "Send test event" should return 200.
-2. Open the paywall whenever `e.needsUpgrade` is true (creating or joining a 3rd
-   Den), not only from the People row.
+2. Open the paywall whenever `e.needsUpgrade` is true (creating or joining a 4th
+   Den, or the owner saving a 26th place), not only from the People row.
 3. After a purchase the app knows instantly; the server finds out by webhook a
    few seconds later. If a Den action fails with `den_limit_reached` right after
    buying, wait a moment and retry once before showing an error.

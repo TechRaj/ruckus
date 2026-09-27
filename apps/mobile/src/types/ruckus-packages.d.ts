@@ -7,7 +7,7 @@
 
 declare module '@ruckus/api' {
   export type RuckusErrorCode =
-    | 'not_signed_in' | 'not_a_member' | 'den_limit_reached'
+    | 'not_signed_in' | 'not_a_member' | 'den_limit_reached' | 'place_limit_reached' | 'den_full'
     | 'invite_invalid' | 'invite_expired' | 'invite_used_up'
     | 'place_missing_id' | 'place_not_in_stash' | 'no_places' | 'too_many_places'
     | 'bad_push_token' | 'bad_platform'
@@ -84,6 +84,8 @@ declare module '@ruckus/api' {
       leave(denId: string): Promise<void>;
       mine(): Promise<DenRow[]>;
       members(denId: string): Promise<MemberRow[]>;
+      /** placeLimit is null once the Den's owner has Pro. */
+      capacity(denId: string): Promise<{ places: number; placeLimit: number | null; iOwnIt: boolean }>;
     };
     stash: {
       list(denId: string, pos?: { lat?: number; lng?: number }): Promise<StashRow[]>;

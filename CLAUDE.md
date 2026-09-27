@@ -73,8 +73,10 @@ Ruckus is the central object, not a screen. Everything is scoped to a group — 
 **People** — friends, messaging, temp group chats that auto-archive after the event.
 
 **Monetisation** — designed as of the 2 Sept Figma, contrary to earlier notes
-here. **Ruckus Pro: "Unlimited Dens, no ads."** So the free tier is capped on
-Den count and carries ads; Pro removes both. Two consequences: the free cap has
+here. **Ruckus Pro: "Unlimited Dens, no ads."** Free tier (decided 28 Sept):
+**3 Dens per person, 25 places per Den.** Pro lifts both. The place cap follows
+the Den **owner's** Pro — a member who isn't the owner gets "ask the owner to
+upgrade", not the paywall. Two consequences: the free cap has
 to be at least 1 Den with a visible upgrade path, and **a Den count of exactly
 one cannot be the shipped scope** — the paywall has nothing to sell if you can
 never have a second Den. Entry point is a row on the People screen.

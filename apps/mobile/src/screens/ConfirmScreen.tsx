@@ -39,7 +39,7 @@ export function ConfirmScreen({
   onClose: () => void;
   onSaved: (name: string) => void;
 }) {
-  const { den, addToStash } = useStash();
+  const { den, addToStash, isPro, openPro } = useStash();
   const [mode, setMode] = useState<Mode>(startInSearch ? 'search' : 'resolving');
   const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null);
   const [results, setResults] = useState<PlaceCandidate[]>([]);
@@ -47,6 +47,8 @@ export function ConfirmScreen({
   const [chosen, setChosen] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** Why a save was refused when it isn't a failure: the Den hit its free cap. */
+  const [limitNote, setLimitNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (startInSearch || !sharedUrl) return;
@@ -75,11 +77,24 @@ export function ConfirmScreen({
     if (!chosen) return;
     const all = [...(candidates ?? []), ...results];
     const name = all.find(c => c.placeId === chosen)?.name ?? 'That place';
-    setMode('saving');
+    const back = candidates ? 'pick' : 'search';
+    setMode('saving'); setLimitNote(null);
     try {
       await addToStash(chosen, sharedUrl);
       onSaved(name);
-    } catch {
+    } catch (err) {
+      // A full Den isn't a failed lookup - keep the pick on screen, don't
+      // send them to "search instead".
+      const e = err as { code?: string; needsUpgrade?: boolean; message?: string };
+      if (e.needsUpgrade) {
+        setMode(back);
+        // Just bought Pro: the app knows at once, the server a few seconds later
+        // by webhook. Don't reopen the paywall on someone who has already paid.
+        if (isPro) setLimitNote('Your upgrade is on its way. Try again in a few seconds.');
+        else await openPro();
+        return;
+      }
+      if (e.code === 'den_full') { setMode(back); setLimitNote(e.message ?? 'This Den is full.'); return; }
       setFailed(true);
     }
   }
@@ -223,6 +238,7 @@ export function ConfirmScreen({
             <IconChevronDown size={14} />
           </View>
         </View>
+        {limitNote ? <Hint style={styles.limitNote}>{limitNote}</Hint> : null}
         <PrimaryButton
           label="Add to Stash"
           onPress={save}
@@ -235,6 +251,7 @@ export function ConfirmScreen({
 }
 
 const styles = StyleSheet.create({
+  limitNote: { textAlign: 'center', marginBottom: space.sm },
   centre: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     gap: space.sm, paddingHorizontal: space.xl, paddingBottom: 40,

@@ -31,11 +31,11 @@ Writes go through functions, so the rules that RLS can't express are enforced in
 
 | Function | `@ruckus/api` | Enforces |
 | --- | --- | --- |
-| `create_den` | `dens.create` | the free-tier Den limit |
+| `create_den` | `dens.create` | the free-tier Den limit (3) |
 | `create_invite` | `dens.invite` | members only; reuses the live code |
 | `join_den` | `dens.join` | expiry, max uses, the Den limit; idempotent |
 | `leave_den` | `dens.leave` | hands ownership on; deletes an empty Den |
-| `save_places` | `stash.save` | membership; upserts the place; keeps event dates |
+| `save_places` | `stash.save` | membership; upserts the place; keeps event dates; 25 places per free Den |
 | `den_stash` | `stash.list` | membership; one row per place, with distance and who wants to go |
 | `set_want_to_go` | `stash.setWant` | membership |
 | `set_take` | `takes.set` | membership; the place is in this Den's Stash; 1–280 chars; replaces yours |
@@ -52,6 +52,8 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
 | `code` | Show |
 | --- | --- |
 | `den_limit_reached` | the **Ruckus Pro paywall** (`error.needsUpgrade` is `true`) |
+| `place_limit_reached` | the **paywall** — you own the Den and it has 25 places |
+| `den_full` | *"Ask its owner to upgrade"* — the Den is full and it isn't yours, so buying Pro wouldn't help |
 | `invite_invalid` / `invite_expired` / `invite_used_up` | the join screen, with the message |
 | `not_a_member` | usually a stale Den id — go back to the Den list |
 | `place_missing_id` | route to search: the pipeline couldn't pin it |
@@ -60,8 +62,11 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
 
 ## Rules worth knowing
 
-- **Free tier: 2 Dens, created or joined.** Change it in one place:
-  `den_limit_for()` in the migration. Pro means no limit.
+- **Free tier: 3 Dens per person (created or joined), 25 places per Den.**
+  Pro lifts both. The place cap follows the Den **owner's** Pro, not the saver's.
+  Change the numbers in `den_limit_for()` and `den_place_limit()`
+  (`20260928150000_free_tier_limits.sql`). `dens.capacity(denId)` returns
+  `{ places, placeLimit, iOwnIt }` for a "18 of 25" display.
 - **Only the RevenueCat webhook sets `is_pro`.** Users can't, even on their own
   row — column grants block it. The app must call
   `Purchases.logIn(supabaseUserId)` after sign-in so purchases map to a user.

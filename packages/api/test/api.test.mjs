@@ -25,6 +25,10 @@ test('the paywall error is recognisable', () => {
   assert.equal(e.needsUpgrade, true);
   assert.equal(e.message, ERRORS.den_limit_reached);
   assert.equal(new RuckusError('invite_expired').needsUpgrade, false);
+  // the 26th place: the owner can fix it by upgrading, a member can't
+  assert.equal(new RuckusError('place_limit_reached').needsUpgrade, true);
+  assert.equal(new RuckusError('den_full').needsUpgrade, false);
+  assert.match(new RuckusError('den_full').message, /owner/);
 });
 
 test('saving nothing fails before it reaches the network', () => {

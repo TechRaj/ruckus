@@ -140,7 +140,7 @@ async function main() {
     try { den = await owner.api.dens.create(DEN_NAME); }
     catch (e) {
       if (e.code === 'den_limit_reached') {
-        console.error(`\n${owner.email} is already in 2 Dens (the free limit). Leave one, or make them Pro, and re-run.`);
+        console.error(`\n${owner.email} is already in 3 Dens (the free limit). Leave one, or make them Pro, and re-run.`);
         process.exit(1);
       }
       throw e;
@@ -154,7 +154,7 @@ async function main() {
   for (const p of people.slice(1)) {
     try { await p.api.dens.join(code); }
     catch (e) {
-      console.error(`  ${p.email} couldn't join: ${e.code}${e.code === 'den_limit_reached' ? ' (already in 2 Dens)' : ''}`);
+      console.error(`  ${p.email} couldn't join: ${e.code}${e.code === 'den_limit_reached' ? ' (already in 3 Dens)' : ''}`);
     }
   }
   console.log(`  ${people.length} members, invite code ${code}\n`);

@@ -124,8 +124,11 @@ async function main() {
 
   await carol.dens.create('One');
   await carol.dens.create('Two');
-  try { await carol.dens.create('Three'); ok(false, 'the free limit holds'); }
-  catch (e) { ok(e.code === 'den_limit_reached' && e.needsUpgrade, 'the third Den raises the paywall error'); }
+  await carol.dens.create('Three');
+  try { await carol.dens.create('Four'); ok(false, 'the free limit holds'); }
+  catch (e) { ok(e.code === 'den_limit_reached' && e.needsUpgrade, 'the fourth Den raises the paywall error'); }
+  const cap = await alice.dens.capacity(den.id);
+  ok(cap.placeLimit === 25 && cap.iOwnIt && cap.places === 2, `a free Den reports its capacity (${cap.places} of ${cap.placeLimit})`);
 
   const conf = await alice.confirmations.log({
     mode: 'choose', chosen: [0], engine: 'model',
@@ -144,7 +147,7 @@ async function cleanup() {
   for (const id of created) await admin.auth.admin.deleteUser(id);
   const { data: dens } = await admin.from('dens').select('id, den_members(count)').like('name', `%${stamp}%`);
   for (const d of dens ?? []) await admin.from('dens').delete().eq('id', d.id);
-  await admin.from('dens').delete().in('name', ['One', 'Two']).is('created_by', null);
+  await admin.from('dens').delete().in('name', ['One', 'Two', 'Three']).is('created_by', null);
   await admin.from('places').delete().like('google_place_id', `e2e_${stamp}_%`);
 }
 

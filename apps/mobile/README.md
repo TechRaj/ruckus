@@ -167,7 +167,7 @@ const stop = ruckus.stash.onChange(denId, reload);           // a friend's save 
 try {
   await ruckus.dens.create(name);      // or ruckus.dens.join(code)
 } catch (e) {
-  if (e.needsUpgrade) showPaywall();   // free tier is 2 Dens
+  if (e.needsUpgrade) showPaywall();   // free tier: 3 Dens, 25 places per Den
   else showError(e.message);           // every RuckusError has a readable message
 }
 ```

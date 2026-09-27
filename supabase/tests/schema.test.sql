@@ -287,7 +287,8 @@ select t.throws('insert into public.dens (name) values (''sneaky'')', 'row-level
 select t.login('carol');
 select t.ok((public.create_den('One')).name = 'One', 'free user: first Den');
 select t.ok((public.create_den('Two')).name = 'Two', 'free user: second Den');
-select t.throws('select public.create_den(''Three'')', 'den_limit_reached', 'free user: third Den hits the paywall');
+select t.ok((public.create_den('Three')).name = 'Three', 'free user: third Den');
+select t.throws('select public.create_den(''Four'')', 'den_limit_reached', 'free user: fourth Den hits the paywall');
 select t.throws(format('select public.join_den(%L)', t.get('code')), 'den_limit_reached',
                 'joining counts toward the limit too');
 
@@ -295,7 +296,7 @@ reset role;
 update public.profiles set is_pro = true where id = t.id('carol');   -- what the RevenueCat webhook does
 set role authenticated;
 select t.login('carol');
-select t.ok((public.create_den('Three')).name = 'Three', 'Pro user: no limit');
+select t.ok((public.create_den('Four')).name = 'Four', 'Pro user: no Den limit');
 
 -- ------------------------------------------------------- invite lifecycle
 reset role;
@@ -523,6 +524,50 @@ select t.ok((select count(*) from public.event_reminder_sends where recipient_id
             'you cannot read anyone else''s reminder history');
 select public.unregister_push_token('ExponentPushToken[alicealicealicealice]');
 select t.ok((select count(*) from public.device_push_tokens) = 0, 'signing out removes your token');
+
+-- ------------------------------------------------ 25 places per Den (free)
+-- a place json with a made-up Google id, for filling a Den
+reset role;
+create function t.places(n int, prefix text) returns jsonb language sql as $$
+  select jsonb_agg(jsonb_build_object('googlePlaceId', prefix || i, 'name', 'Place ' || i, 'kind', 'venue',
+                                      'coordinate', jsonb_build_object('lat', 43.6, 'lng', -79.4)))
+  from generate_series(1, n) i
+$$;
+grant execute on function t.places(int, text) to authenticated;
+set role authenticated;
+
+select t.login('erin');
+do $$
+declare d public.dens; c record;
+begin
+  d := public.create_den('Big Den');
+  perform t.put('big', d.id::text);
+  perform t.put('big_code', public.create_invite(d.id));
+  perform public.save_places(d.id, t.places(20, 'cap_a_'));
+  perform public.save_places(d.id, t.places(5, 'cap_b_'));
+  select * into c from public.den_capacity(d.id);
+  perform t.ok(c.places = 25 and c.place_limit = 25 and c.i_own_it, 'a free Den fills to 25 places');
+end $$;
+select t.throws(format('select public.save_places(%L, %L)', t.get('big'), t.places(1, 'cap_c_')),
+                'place_limit_reached', 'the owner''s 26th place hits the paywall');
+select t.ok((select count(*) from public.save_places(t.get('big')::uuid, t.places(1, 'cap_a_'))) = 1,
+            're-saving a place already in the Den still works when it''s full');
+
+select t.login('carol');   -- Pro, but not the owner of this Den
+select null from public.join_den(t.get('big_code'));
+select t.throws(format('select public.save_places(%L, %L)', t.get('big'), t.places(1, 'cap_d_')),
+                'den_full', 'a member who isn''t the owner is told to ask the owner, even when they''re Pro');
+select t.ok((select count(*) from public.save_places(t.get('big')::uuid, t.places(1, 'cap_b_'))) = 1,
+            '...but can still save a place the Den already has');
+select t.ok(not (select i_own_it from public.den_capacity(t.get('big')::uuid)), 'capacity tells a member the upgrade isn''t theirs');
+
+reset role;
+update public.profiles set is_pro = true where id = t.id('erin');   -- the owner upgrades
+set role authenticated;
+select t.login('carol');
+select t.ok((select count(*) from public.save_places(t.get('big')::uuid, t.places(1, 'cap_d_'))) = 1,
+            'once the owner is Pro, everyone in the Den can go past 25');
+select t.ok((select place_limit from public.den_capacity(t.get('big')::uuid)) is null, 'and capacity reports no limit');
 
 -- ---------------------------------------------------------- leaving a Den
 select t.login('alice');

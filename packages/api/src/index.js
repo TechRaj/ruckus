@@ -28,7 +28,9 @@ import { createClient } from '@supabase/supabase-js';
 export const ERRORS = {
   not_signed_in:      'Sign in to do that.',
   not_a_member:       "You're not in that Den.",
-  den_limit_reached:  "You've hit the free Den limit.",      // -> show the Ruckus Pro paywall
+  den_limit_reached:  "Free accounts can be in 3 Dens.",      // -> show the Ruckus Pro paywall
+  place_limit_reached: "This Den has hit 25 places.",         // you own it -> show the paywall
+  den_full:           "This Den has hit 25 places. Ask its owner to upgrade.",  // not yours: no paywall
   invite_invalid:     "That code doesn't match any Den.",
   invite_expired:     'That invite has expired. Ask for a new one.',
   invite_used_up:     'That invite has been used too many times. Ask for a new one.',
@@ -56,7 +58,7 @@ export class RuckusError extends Error {
     this.name = 'RuckusError';
     this.code = code;
     /** true when the right response is the Ruckus Pro paywall */
-    this.needsUpgrade = code === 'den_limit_reached';
+    this.needsUpgrade = code === 'den_limit_reached' || code === 'place_limit_reached';
     if (cause) this.cause = cause;
   }
 }
@@ -178,7 +180,7 @@ export function createRuckus({ url, anonKey, storage } = {}) {
   /* ---------------------------------------------------------------- dens -- */
 
   const dens = {
-    /** Throws RuckusError with needsUpgrade=true when the free limit is hit. */
+    /** Throws RuckusError with needsUpgrade=true past the free 3 Dens. */
     create: (name, crest) => rpc('create_den', { p_name: name, p_crest: crest ?? null }),
 
     /** The Den's live 6-character code; the same code comes back until it expires. */
@@ -204,6 +206,16 @@ export function createRuckus({ url, anonKey, storage } = {}) {
         joinedAt: r.joined_at,
         memberCount: r.dens?.den_members?.[0]?.count ?? 1,
       }));
+    },
+
+    /**
+     * How full the Den is: `{ places, placeLimit, iOwnIt }`. placeLimit is null
+     * when the owner has Pro. Only the owner can lift it - show them the
+     * paywall, show everyone else "ask the owner".
+     */
+    async capacity(denId) {
+      const [row] = await rpc('den_capacity', { p_den: denId });
+      return { places: row?.places ?? 0, placeLimit: row?.place_limit ?? null, iOwnIt: Boolean(row?.i_own_it) };
     },
 
     /** Everyone in a Den, for the People screen. */
@@ -248,6 +260,8 @@ export function createRuckus({ url, anonKey, storage } = {}) {
      * Save what the user picked on the confirm screen - a SaveIntent from
      * CLAUDE.md §9. `places` are ResolvedPlace objects exactly as
      * @ruckus/ingest returns them; pass only the ones the user ticked.
+     * Past 25 places in a free Den it throws place_limit_reached (you own the
+     * Den: needsUpgrade) or den_full (you don't: ask the owner).
      */
     save({ denId, places, note, engine, sourceUrl, sourceKind = 'instagram' }) {
       if (!places?.length) throw new RuckusError('no_places');
