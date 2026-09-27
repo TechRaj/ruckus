@@ -11,6 +11,7 @@
  */
 
 import { refineWithGeocode, tierOf, explain } from './confidence.js';
+import { proxyHeaders } from './extract-llm.js';
 
 // Call time, not module load - see the note in extract-llm.js.
 const geocodeEndpoint = () =>
@@ -38,7 +39,7 @@ const wantsCitySuffix = kind => kind === 'venue' || kind === 'accommodation';
 async function lookup(query, city, opts) {
   const res = await fetch(opts.geocodeEndpoint ?? geocodeEndpoint(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...proxyHeaders(opts) },
     signal: opts.signal,
     body: JSON.stringify({ query, city }),
   });

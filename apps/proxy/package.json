@@ -9,6 +9,7 @@
     "start:prod": "node proxy.mjs"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "@ruckus/ingest": "*"
   }
 }

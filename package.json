@@ -14,7 +14,10 @@
     "proxy": "npm run start -w @ruckus/proxy",
     "harness": "npm run start -w @ruckus/harness",
     "design": "node --env-file=.env tools/figma-export.mjs",
-    "test": "node --test packages/ingest/test/"
+    "test": "node --test packages/*/test/*.test.mjs",
+    "test:db": "bash supabase/tests/run.sh",
+    "e2e:db": "node --env-file=.env tools/e2e-supabase.mjs",
+    "db:push": "bash supabase/push.sh"
   },
   "license": "MIT",
   "description": "Collect places you find on Instagram Reels and turn them into plans with friends."

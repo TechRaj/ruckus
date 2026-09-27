@@ -18,6 +18,8 @@
  */
 
 import express from 'express';
+import { timingSafeEqual } from 'node:crypto';
+import { SYSTEM } from '@ruckus/ingest';
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -53,8 +55,78 @@ function rateLimited(key) {
   return list.length > MAX_PER_WINDOW;
 }
 
+
+/* ------------------------------------------------------------------ *
+ * Who is allowed to spend the budget.
+ *
+ * The app sends the signed-in user's Supabase access token, which we check
+ * with Supabase Auth. Nothing baked into the app binary is enough, because
+ * anything in the binary can be read out of it. Our own tooling (the
+ * harness) sends PROXY_SECRET instead.
+ *
+ * Enforced whenever it CAN be - i.e. once SUPABASE_URL or PROXY_SECRET is
+ * set. With neither, the proxy runs open and says so loudly at boot, which is
+ * only acceptable on a laptop.
+ * ------------------------------------------------------------------ */
+
+const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/$/, '');
+const AUTH_ENFORCED = Boolean(SUPABASE_URL || process.env.PROXY_SECRET);
+if (!AUTH_ENFORCED) {
+  console.warn('!! proxy is OPEN: set SUPABASE_URL (+ SUPABASE_ANON_KEY) or PROXY_SECRET before deploying');
+}
+
+const safeEqual = (a, b) => {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && timingSafeEqual(x, y);
+};
+
+// token -> { userId, until }. Checking costs a round trip to Supabase, and
+// the share extension makes several proxy calls per reel with the same token.
+const verified = new Map();
+const VERIFY_TTL_MS = 5 * 60_000;
+
+async function userFromToken(token) {
+  const hit = verified.get(token);
+  if (hit && hit.until > Date.now()) return hit.userId;
+  if (!SUPABASE_URL) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: process.env.SUPABASE_ANON_KEY ?? '', Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return null;
+    const { id } = await r.json();
+    if (!id) return null;
+    if (verified.size > 5_000) verified.clear();
+    verified.set(token, { userId: id, until: Date.now() + VERIFY_TTL_MS });
+    return id;
+  } catch {
+    return null;   // Supabase unreachable: fail closed, not open
+  }
+}
+
+async function requireCaller(req, res, next) {
+  if (!AUTH_ENFORCED) { req.caller = req.ip; return next(); }
+
+  const key = req.headers['x-ruckus-key'];
+  if (key && process.env.PROXY_SECRET && safeEqual(key, process.env.PROXY_SECRET)) {
+    req.caller = 'tooling';
+    return next();
+  }
+  const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1];
+  const userId = bearer ? await userFromToken(bearer) : null;
+  if (!userId) return res.status(401).json({ error: 'sign in required' });
+  req.caller = userId;   // rate limits are per user, not per shared IP
+  next();
+}
+
+app.use(['/extract', '/geocode', '/alarm'], requireCaller);
+
 app.post('/extract', async (req, res) => {
-  const { system, message } = req.body ?? {};
+  // The client used to send `system` and we trusted it, which made this a free
+  // general-purpose chatbot on our key for anyone who found the URL. The
+  // prompt now lives here; anything the client sends as `system` is ignored.
+  const { message } = req.body ?? {};
+  const system = SYSTEM;
   if (typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'message required' });
   }
@@ -62,8 +134,7 @@ app.post('/extract', async (req, res) => {
     return res.status(413).json({ error: 'message too long' });
   }
 
-  const who = req.headers['x-device-id'] || req.ip;
-  if (rateLimited(who)) {
+  if (rateLimited(req.caller)) {
     return res.status(429).json({ error: 'slow down' });
   }
 
@@ -183,7 +254,7 @@ function normalisePlace(p) {
 }
 
 app.post('/geocode', async (req, res) => {
-  if (rateLimited(req.ip)) return res.status(429).json({ error: 'slow down' });
+  if (rateLimited(req.caller)) return res.status(429).json({ error: 'slow down' });
 
   const { query, city, bias } = req.body ?? {};
   if (typeof query !== 'string' || !query.trim()) {
@@ -284,12 +355,86 @@ app.post('/alarm', (req, res) => {
   res.json({ ok: true });
 });
 
+
+/* ------------------------------------------------------------------ *
+ * /webhooks/revenuecat - the only thing that ever sets profiles.is_pro.
+ *
+ * The database uses is_pro to lift the free Den limit, and users cannot set
+ * it themselves (column grants in the migration). RevenueCat calls this on
+ * every purchase event; we write the result with the service role key.
+ *
+ * Needs, on Railway: REVENUECAT_WEBHOOK_AUTH (the exact Authorization value
+ * you type into RevenueCat's webhook settings), SUPABASE_URL and
+ * SUPABASE_SERVICE_ROLE_KEY. The app must call Purchases.logIn(supabaseUserId)
+ * after sign-in, or events arrive with an anonymous id we cannot map to a user.
+ * ------------------------------------------------------------------ */
+
+const GRANTS_PRO = new Set([
+  'INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'NON_RENEWING_PURCHASE',
+  'PRODUCT_CHANGE', 'SUBSCRIPTION_EXTENDED', 'TEMPORARY_ENTITLEMENT_GRANT',
+]);
+const ENDS_PRO = new Set(['EXPIRATION']);
+// CANCELLATION and BILLING_ISSUE deliberately change nothing: a cancelled
+// subscription keeps working until it expires, and EXPIRATION tells us when.
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+app.post('/webhooks/revenuecat', async (req, res) => {
+  const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
+  if (!expected || !SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: 'webhook not configured' });
+  }
+  if (!safeEqual(req.headers.authorization ?? '', expected)) {
+    return res.status(401).json({ error: 'bad auth' });
+  }
+
+  const ev = req.body?.event ?? {};
+  const pro = GRANTS_PRO.has(ev.type) ? true : ENDS_PRO.has(ev.type) ? false : null;
+  // 200 on everything we choose to ignore, or RevenueCat retries it forever
+  if (pro === null) return res.json({ ok: true, ignored: ev.type ?? 'unknown' });
+
+  const userId = [ev.app_user_id, ev.original_app_user_id, ...(ev.aliases ?? [])]
+    .find(id => typeof id === 'string' && UUID.test(id));
+  if (!userId) {
+    console.warn(`[revenuecat] ${ev.type} for an anonymous id - is Purchases.logIn() being called?`);
+    return res.json({ ok: true, ignored: 'anonymous user' });
+  }
+
+  // Events can arrive out of order. Only apply one newer than what we have,
+  // so a late RENEWAL can't resurrect Pro after an EXPIRATION.
+  const at = new Date(ev.event_timestamp_ms ?? Date.now()).toISOString();
+  const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}` +
+              `&or=(pro_updated_at.is.null,pro_updated_at.lt.${encodeURIComponent(at)})`;
+  try {
+    const r = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ is_pro: pro, pro_updated_at: at }),
+    });
+    if (!r.ok) {
+      console.error('[revenuecat] supabase', r.status, (await r.text()).slice(0, 200));
+      return res.status(500).json({ error: 'write failed' });   // RevenueCat will retry
+    }
+    console.log(`[revenuecat] ${ev.type} -> is_pro=${pro} for ${userId.slice(0, 8)}…`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[revenuecat]', err.message);
+    res.status(500).json({ error: 'write failed' });
+  }
+});
+
 app.get('/health', (_, res) => {
   const total = alarms.wrapperFail + alarms.wrapperOk;
   res.json({
     ok: true,
     model: MODEL,
     geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
+    auth: AUTH_ENFORCED ? 'enforced' : 'OPEN',
     wrapper: { ...alarms, failRate: total ? +(alarms.wrapperFail / total).toFixed(3) : null },
   });
 });

@@ -28,10 +28,25 @@ export { confirmationMode, refineWithGeocode, explain } from './confidence.js';
 // That failure is silent and expensive: the fetch hits the placeholder host,
 // throws, and extractPlaces() quietly returns heuristic results that look
 // plausible. It cost a whole 14-URL run on 12 Sept.
+/**
+ * Who is calling the proxy. The app passes the signed-in user's Supabase
+ * access token (`opts.accessToken`); our own tooling sets PROXY_SECRET. The
+ * proxy refuses anything with neither.
+ */
+export function proxyHeaders(opts = {}) {
+  if (opts.accessToken) return { Authorization: `Bearer ${opts.accessToken}` };
+  const secret = typeof process !== 'undefined' ? process.env?.PROXY_SECRET : undefined;
+  return secret ? { 'x-ruckus-key': secret } : {};
+}
+
 const extractEndpoint = () =>
   process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
 
-const SYSTEM = `You identify places from Instagram Reel metadata for a saved-places app.
+// Exported for the proxy, which is the only thing that sends it. The client
+// used to send this with every request and the proxy trusted it - so anyone
+// who reached the proxy could swap in their own instructions and use the
+// OpenRouter key as a free chatbot. Now the prompt lives server-side.
+export const SYSTEM = `You identify places from Instagram Reel metadata for a saved-places app.
 
 You get a caption, the creator's handle, any @handles tagged in it with their
 resolved profile names, and the hashtags. You never see the video.
@@ -194,12 +209,9 @@ export async function extractPlaces(parsed, resolvedNames = {}, opts = {}) {
   try {
     const res = await fetch(opts.endpoint ?? extractEndpoint(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       signal: opts.signal,
-      body: JSON.stringify({
-        system: SYSTEM,
-        message: buildUserMessage(parsed, resolvedNames),
-      }),
+      headers: { 'Content-Type': 'application/json', ...proxyHeaders(opts) },
+      body: JSON.stringify({ message: buildUserMessage(parsed, resolvedNames) }),
     });
     if (!res.ok) throw new Error(`extract proxy ${res.status}`);
 

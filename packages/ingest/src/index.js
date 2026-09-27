@@ -29,7 +29,7 @@ export {
   resolveHandle,
 } from './instagram.js';
 
-export { extractPlaces } from './extract-llm.js';
+export { extractPlaces, SYSTEM, proxyHeaders } from './extract-llm.js';
 export { geocodeCandidates, normaliseCity } from './geocode.js';
 export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode, explain } from './confidence.js';
 export { rankCandidates } from './ranker.js';
@@ -48,6 +48,8 @@ const MAX_HANDLES = 3;
  * @param {string} url          the shared reel URL
  * @param {object} [opts]
  * @param {AbortSignal} [opts.signal]  abort the whole pipeline
+ * @param {string} [opts.accessToken]  the signed-in user's Supabase access token;
+ *        the proxy refuses requests without one
  * @param {string} [opts.userCity]     hint for the heuristic fallback
  * @param {boolean} [opts.geocode=true] set false to stop before geocoding -
  *        only useful offline, since without it there is no placeId and so

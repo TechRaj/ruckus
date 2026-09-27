@@ -67,7 +67,7 @@ const wantsCitySuffix = kind => kind === 'venue' || kind === 'accommodation';
 async function geocode(query, city) {
   const r = await fetch(ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(process.env.PROXY_SECRET ? { 'x-ruckus-key': process.env.PROXY_SECRET } : {}) },
     body: JSON.stringify({ query, city }),
   });
   if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 120)}`);
