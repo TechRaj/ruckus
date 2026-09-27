@@ -10,10 +10,10 @@ dev build; the rest work in the simulator.
 ## Before you start
 
 - `npm install` at the repo root, then `npm run mobile` / `npm run typecheck:mobile`.
-- `apps/mobile/.env` needs four values — Karthik sends them (not over chat):
-  `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`,
-  `EXPO_PUBLIC_PROXY_URL`, `EXPO_PUBLIC_REVENUECAT_KEY`. Nothing else goes in the
-  app: every `EXPO_PUBLIC_` value is readable by anyone who downloads it.
+- Keys live in **one `.env` at the repo root** (Karthik sends it, not over chat).
+  `apps/mobile/.env` is a link to it, created when you first run the app; delete
+  any old `apps/mobile/.env` of your own. The app uses the four `EXPO_PUBLIC_`
+  lines — anything with that prefix is readable by anyone who downloads the app.
 - Error handling: every backend failure is a `RuckusError`. Match on `e.code`,
   show `e.message`, and `e.needsUpgrade === true` means show the paywall. Full
   list in `supabase/README.md`.

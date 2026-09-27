@@ -172,19 +172,24 @@ Full list of functions and error codes: `supabase/README.md`.
 
 ## `.env` for the app
 
-Expo only exposes variables prefixed `EXPO_PUBLIC_`, and everything prefixed
-that way ends up **inside the app** — readable by anyone who downloads it. Only
-these four belong there:
+There is **one `.env`, at the repo root**. `apps/mobile/.env` is a link to it,
+made automatically when the app starts (`tools/link-mobile-env.mjs`). If you
+already have a real `apps/mobile/.env`, delete it so the link can be made.
+
+The app uses the four `EXPO_PUBLIC_` lines at the bottom of the root file:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=
-EXPO_PUBLIC_SUPABASE_ANON_KEY=
+EXPO_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+EXPO_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 EXPO_PUBLIC_PROXY_URL=https://ruckus-production-1747.up.railway.app
 EXPO_PUBLIC_REVENUECAT_KEY=
 ```
 
-Never the service role key, the OpenRouter key, the Places key or
-`PROXY_SECRET`. Those live on the proxy.
+Expo builds only `EXPO_PUBLIC_*` into the app, and anyone who downloads it can
+read those values. The service role key, OpenRouter and Places keys and
+`PROXY_SECRET` sit in the same file but never reach the app — as long as nobody
+gives them the prefix. After changing `.env`, restart with `npm run mobile -- -c`:
+the values are baked in at build time.
 
 ## Ask before building
 
