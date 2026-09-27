@@ -19,7 +19,7 @@ import { useStash } from '../state/StashContext';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, stash, savedCountBy, signOut } = useStash();
+  const { den, stash, savedCountBy, signOut, isPro, openPro } = useStash();
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -85,12 +85,12 @@ export function PeopleScreen() {
         <Pressable
           style={({ pressed }) => [styles.pro, pressed && { backgroundColor: colors.paperSunk }]}
           accessibilityRole="button"
-          onPress={() => {}}
+          onPress={openPro}
         >
           <Emblem name="moon" size={32} />
           <View style={{ flex: 1 }}>
             <Text style={styles.proTitle}>Ruckus Pro</Text>
-            <Text style={styles.meta}>Unlimited Dens, no ads</Text>
+            <Text style={styles.meta}>{isPro ? 'Manage your plan' : 'Unlimited Dens, no ads'}</Text>
           </View>
           <IconChevronRight />
         </Pressable>

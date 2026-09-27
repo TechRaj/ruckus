@@ -1,7 +1,8 @@
 # apps/mobile
 
 `@ruckus/mobile` — the Ruckus iOS app. React Native on Expo SDK 57 (RN 0.86,
-TypeScript). Runs in Expo Go today; the share extension will force a dev build.
+TypeScript). Runs in Expo Go today, with RevenueCat in its preview mock; real
+purchases and the share extension need the dev build (`npm run ios`).
 
     npm install                    # from the repo root — this is a workspace
     npm run mobile                 # expo start
@@ -20,6 +21,8 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
       api/client.ts         picks the adapter: mock without keys, real with them
       api/mock.ts           in-memory adapter (mockData.ts holds the fixtures)
       api/ruckus.ts         the real adapter over @ruckus/api + @ruckus/ingest
+      billing/purchases.ts  Ruckus Pro: the only file that knows RevenueCat exists —
+                            configure, identify, paywall, Customer Center
       state/StashContext.tsx the deep module: loads, filters (person × category × query),
                             sorts, selects, and exposes derived views (visible,
                             nearlyPlans, savedCountBy). Screens read; they don't derive.
@@ -56,14 +59,19 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 - The real adapter has been written against the package types but **not yet run
   against the Supabase project** — needs `apps/mobile/.env` filled in, then a
   pass through sign-in → Den → share → save on a device.
-- No paywall. RevenueCat is a hard Shipaton requirement.
+- The paywall opens from the Ruckus Pro row on People, but nothing calls it on
+  `needsUpgrade` yet — there's no way to make a second Den (Switch Den is a
+  no-op). When there is: `showPaywallIfNeeded()`, then retry. `is_pro` lands by
+  webhook a few seconds after the purchase, so the retry needs a short backoff.
+- No ads. RevenueCat tracks ads, it doesn't serve them; "no ads" needs an ad
+  SDK first, gated on `isPro` from `useStash()`.
 - No share extension yet; `api.resolveSharedUrl` is a mock. Needs a dev build (§11.3).
 - Rascal has one render. `rascalSniff` and `rascalCheer` alias the peek pose until
   the other two are rendered off the same rig.
 - The glass sheet blurs over `MapView`. Test the drag on a real device at all three
   detents; Reduce Transparency's opaque path is the fallback.
 - Apple Maps basemap is unstyled; the `map*` and `dusk` tokens wait for MapLibre.
-- "Make it a Caper", "Remove from Stash", "Ruckus Pro" and "Switch Den" are no-ops.
+- "Make it a Caper", "Remove from Stash" and "Switch Den" are no-ops.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
 
 ## The backend seam
@@ -93,7 +101,6 @@ place** with everyone who saved it; `StashItem` takes the first saver as
   session.
 - `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the
   pick-several screen isn't designed yet.
-- `Purchases.logIn(userId)` after sign-in — RevenueCat isn't installed yet.
 - Onboarding creates one Den; `dens.mine()[0]` is the active Den. Switching
   Dens is a no-op.
 
@@ -124,7 +131,7 @@ export const ruckus = createRuckus({
 ```js
 await ruckus.auth.sendCode(email, { displayName });
 const userId = await ruckus.auth.verifyCode(email, code);
-await Purchases.logIn(userId);   // RevenueCat: ties purchases to this user, or Pro never unlocks
+// StashContext then calls identify(userId) -> Purchases.logIn, or Pro never unlocks
 ```
 
 **Shared link -> confirm screen:**

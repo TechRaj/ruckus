@@ -13,6 +13,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { api } from '../api/client';
+import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
 
 export type Overlay =
@@ -46,6 +47,10 @@ interface StashState {
   /** How many places each member has stashed. */
   savedCountBy: Map<string, number>;
   overlay: Overlay;
+  /** The RevenueCat entitlement — instant, and what the app shows. The Den limit is the server's. */
+  isPro: boolean;
+  /** The paywall, or the Customer Center for someone who's already Pro. */
+  openPro: () => Promise<void>;
   setFilter: (f: Filter) => void;
   setCategory: (c: Category | null) => void;
   setQuery: (q: string) => void;
@@ -77,6 +82,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [sort, setSort] = useState<Sort>('nearby');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
+  const [isPro, setIsPro] = useState(false);
 
   const loadStash = useCallback(async (denId: string) => {
     setLoading(true);
@@ -94,6 +100,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await api.auth.userId();
       setCurrentUserId(me);
+      /** Not awaited: billing being slow or down never holds up the session. */
+      identify(me).then(setIsPro);
       if (!me) { setSession('signedOut'); setDen(null); setStash([]); return; }
       const dens = await api.myDens();
       if (dens.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
@@ -106,6 +114,12 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   }, [loadStash]);
 
   useEffect(() => { refreshSession(); }, [refreshSession]);
+  useEffect(() => onProChange(setIsPro), []);
+
+  const openPro = useCallback(async () => {
+    if (isPro) return showCustomerCenter();
+    if (await showPaywall()) setIsPro(true);
+  }, [isPro]);
 
   /** A friend's save or vote arrives without a pull-to-refresh. */
   useEffect(() => {
@@ -203,6 +217,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,
     currentUserId,
     visible, nearlyPlans, memberById, savedCountBy, overlay,
+    isPro, openPro,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,
     toggleInterest,

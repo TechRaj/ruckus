@@ -8,7 +8,11 @@ import {
 import { IBMPlexMono_400Regular, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { StashProvider } from './src/state/StashContext';
+import { configureBilling } from './src/billing/purchases';
 import { colors } from './src/theme/tokens';
+
+/** Before the first render, so the session's logIn never races it. */
+configureBilling();
 
 export default function App() {
   /**
