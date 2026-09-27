@@ -58,6 +58,8 @@ declare module '@ruckus/api' {
     wantCount: number;
     iWant: boolean;
     wanters: { id: string; displayName: string; avatar: string | null }[];
+    /** One line per person, oldest first. */
+    takes: { userId: string; text: string; at: string }[];
   }
 
   export interface Ruckus {
@@ -92,6 +94,11 @@ declare module '@ruckus/api' {
       setWant(denId: string, placeId: string, want: boolean): Promise<number>;
       remove(saveId: string): Promise<void>;
       onChange(denId: string, cb: () => void): () => void;
+    };
+    /** One take per person per place per Den; set again to replace yours. */
+    takes: {
+      set(denId: string, placeId: string, text: string): Promise<unknown>;
+      remove(denId: string, placeId: string): Promise<void>;
     };
     confirmations: {
       log(args: { mode: string; offered: unknown[]; chosen?: number[]; engine?: string | null }): Promise<unknown>;

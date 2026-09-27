@@ -94,8 +94,6 @@ place** with everyone who saved it; `StashItem` takes the first saver as
 
 **Still open on the backend side** — ask before working around:
 
-- Comments (`takes`) have no table. The real adapter keeps them in memory per
-  session.
 - `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the
   pick-several screen isn't designed yet.
 - Onboarding creates one Den; `dens.mine()[0]` is the active Den. Switching

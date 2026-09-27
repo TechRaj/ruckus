@@ -7,15 +7,13 @@
  * with everyone who saved it; the app's StashItem is that row with the
  * first saver as `savedBy`, `distanceM` formatted, and his free-text
  * category folded into eat / drink / do for the pin glyph.
- *
- * Comments are kept in memory per session until there is a table.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
 import { createRuckus, DenRow, MemberRow, StashRow } from '@ruckus/api';
 import { ExtractResult, ResolvedPlace, extractFromReel, geocodeCandidates } from '@ruckus/ingest';
 import { Api, ResolveResult } from './types';
-import { Category, Critter, Den, Member, PlaceCandidate, StashItem, Take } from '../types';
+import { Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
 
 const env = {
   url: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
@@ -53,10 +51,6 @@ export function toCategory(kind: StashRow['kind'], text: string | null | undefin
 const formatDistance = (m: number | null) =>
   m == null ? '' : m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1)} km`;
 
-/** Comments have no table yet; they live here for the session. */
-const takes = new Map<string, Take[]>();
-const takeKey = (denId: string, placeId: string) => `${denId}:${placeId}`;
-
 function toStashItem(r: StashRow, denId: string): StashItem | null {
   if (!r.coordinate) return null;   // can't be pinned; the backend routed it to search anyway
   return {
@@ -77,7 +71,7 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
     note: r.note ?? '',
     distance: formatDistance(r.distanceM),
     address: r.address ?? undefined,
-    takes: takes.get(takeKey(denId, r.placeId)) ?? [],
+    takes: r.takes,
   };
 }
 
@@ -196,20 +190,9 @@ export const ruckusApi: Api = {
     unregisterPushToken: token => ruckus.notifications.unregisterPushToken(token),
   },
 
-  async addTake(denId, placeId, text) {
-    const me = await ruckus.auth.userId();
-    if (!me) throw new Error('not_signed_in');
-    const k = takeKey(denId, placeId);
-    takes.set(k, [...(takes.get(k) ?? []), { userId: me, text, at: new Date().toISOString() }]);
-  },
-  async updateTake(denId, placeId, text) {
-    const me = await ruckus.auth.userId();
-    const k = takeKey(denId, placeId);
-    takes.set(k, (takes.get(k) ?? []).map(t => (t.userId === me ? { ...t, text } : t)));
-  },
-  async deleteTake(denId, placeId) {
-    const me = await ruckus.auth.userId();
-    const k = takeKey(denId, placeId);
-    takes.set(k, (takes.get(k) ?? []).filter(t => t.userId !== me));
-  },
+  // One take per person per place: add and update are the same write. Both
+  // reach the other phones through onStashChange, like saves and votes.
+  async addTake(denId, placeId, text) { await ruckus.takes.set(denId, placeId, text); },
+  async updateTake(denId, placeId, text) { await ruckus.takes.set(denId, placeId, text); },
+  async deleteTake(denId, placeId) { await ruckus.takes.remove(denId, placeId); },
 };

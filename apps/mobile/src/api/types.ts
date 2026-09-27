@@ -53,7 +53,7 @@ export interface Api {
     unregisterPushToken(token: string): Promise<void>;
   };
 
-  /** Comments. No table on the backend yet — the real adapter keeps them in memory. */
+  /** Comments: one per person per place. Stored in the `takes` table; add and update are the same write. */
   addTake(denId: string, placeId: string, text: string): Promise<void>;
   updateTake(denId: string, placeId: string, text: string): Promise<void>;
   deleteTake(denId: string, placeId: string): Promise<void>;
