@@ -1,7 +1,7 @@
 {
   "name": "@ruckus/mobile",
   "version": "0.1.0",
-  "main": "expo/AppEntry.js",
+  "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
