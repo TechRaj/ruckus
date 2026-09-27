@@ -18,7 +18,7 @@ Stateless — no database, no sessions. Scale it or restart it freely.
 
 ## Deploying to Railway
 
-From the repo root, not this folder — the build needs the workspace.
+Deploy from the repo root — `railway.json` lives there and the build needs the workspace lockfile.
 
 ```bash
 railway login
