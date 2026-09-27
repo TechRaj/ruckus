@@ -178,9 +178,10 @@ Full list of functions and error codes: `supabase/README.md`.
 
 ## `.env` for the app
 
-There is **one `.env`, at the repo root**. `apps/mobile/.env` is a link to it,
-made automatically when the app starts (`tools/link-mobile-env.mjs`). If you
-already have a real `apps/mobile/.env`, delete it so the link can be made.
+There is **one `.env`, at the repo root**. `apps/mobile/.env` is **generated**
+from it every time the app starts (`tools/sync-mobile-env.mjs`) and holds only the
+`EXPO_PUBLIC_` values. Edit the root file, never the generated one. (It isn't a
+symlink because Metro doesn't follow symlinks — the app silently got no config.)
 
 The app uses the four `EXPO_PUBLIC_` lines at the bottom of the root file:
 
@@ -188,13 +189,13 @@ The app uses the four `EXPO_PUBLIC_` lines at the bottom of the root file:
 EXPO_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
 EXPO_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 EXPO_PUBLIC_PROXY_URL=https://ruckus-production-1747.up.railway.app
-EXPO_PUBLIC_REVENUECAT_KEY=
+EXPO_PUBLIC_REVENUECAT_KEY=${REVENUE_CAT_API_KEY}
 ```
 
 Expo builds only `EXPO_PUBLIC_*` into the app, and anyone who downloads it can
 read those values. The service role key, OpenRouter and Places keys and
-`PROXY_SECRET` sit in the same file but never reach the app — as long as nobody
-gives them the prefix. After changing `.env`, restart with `npm run mobile -- -c`:
+`PROXY_SECRET` stay in the root file and never reach the generated one — as long
+as nobody gives them the prefix. After changing `.env`, restart with `npm run mobile -- -c`:
 the values are baked in at build time.
 
 ## Ask before building

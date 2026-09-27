@@ -11,8 +11,8 @@ dev build; the rest work in the simulator.
 
 - `npm install` at the repo root, then `npm run mobile` / `npm run typecheck:mobile`.
 - Keys live in **one `.env` at the repo root** (Karthik sends it, not over chat).
-  `apps/mobile/.env` is a link to it, created when you first run the app; delete
-  any old `apps/mobile/.env` of your own. The app uses the four `EXPO_PUBLIC_`
+  `apps/mobile/.env` is generated from it each time the app starts; delete any old
+  hand-written `apps/mobile/.env` of your own. The app uses the four `EXPO_PUBLIC_`
   lines — anything with that prefix is readable by anyone who downloads the app.
 - Error handling: every backend failure is a `RuckusError`. Match on `e.code`,
   show `e.message`, and `e.needsUpgrade === true` means show the paywall. Full

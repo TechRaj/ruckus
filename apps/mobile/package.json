@@ -6,8 +6,8 @@
     "start": "expo start",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
-    "prestart": "node ../../tools/link-mobile-env.mjs",
-    "preios": "node ../../tools/link-mobile-env.mjs"
+    "prestart": "node ../../tools/sync-mobile-env.mjs",
+    "preios": "node ../../tools/sync-mobile-env.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/fredoka": "^0.4.1",
