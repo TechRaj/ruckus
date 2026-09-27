@@ -31,3 +31,12 @@ test('saving nothing fails before it reaches the network', () => {
   const r = createRuckus({ url: 'https://x.supabase.co', anonKey: jwt('anon') });
   assert.throws(() => r.stash.save({ denId: 'd', places: [] }), e => e.code === 'no_places');
 });
+
+test('a wrong sign-in code says so, instead of "something went wrong"', async () => {
+  // what supabase-js returns for a mistyped or expired code
+  const r = createRuckus({ url: 'https://x.supabase.co', anonKey: jwt('anon') });
+  r.supabase.auth.verifyOtp = async () => ({ data: null, error: Object.assign(new Error('Token has expired or is invalid'), { code: 'otp_expired', status: 403 }) });
+  await assert.rejects(r.auth.verifyCode('a@b.co', '123456'), e => e.code === 'code_invalid' && /didn't work/.test(e.message));
+  r.supabase.auth.signInWithOtp = async () => ({ data: null, error: Object.assign(new Error('rate limit'), { code: 'over_email_send_rate_limit', status: 429 }) });
+  await assert.rejects(r.auth.sendCode('a@b.co'), e => e.code === 'too_many_codes');
+});

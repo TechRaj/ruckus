@@ -35,6 +35,10 @@ export const ERRORS = {
   place_missing_id:   "We couldn't pin that place. Try searching for it.",
   place_not_in_stash: "That place isn't in this Den's Stash.",
   take_empty:         'Write something first.',
+  // sign-in: these come from Supabase Auth, not our database
+  code_invalid:       "That code didn't work. Check it, or ask for a new one.",
+  too_many_codes:     "That's a lot of codes. Wait a minute, then try again.",
+  email_invalid:      "That doesn't look like an email address.",
   take_too_long:      'Keep it under 280 characters.',
   no_places:          'Pick at least one place to save.',
   too_many_places:    'That is a lot of places. Save fewer at once.',
@@ -58,8 +62,24 @@ export class RuckusError extends Error {
 }
 
 /** Turn a supabase-js error into a RuckusError, keeping the stable key. */
+/**
+ * Supabase Auth's own error codes, mapped onto ours. Without this, a mistyped
+ * sign-in code showed "Something went wrong" - the first thing every new user
+ * does, and the least helpful thing to tell them.
+ */
+const AUTH_ERRORS = {
+  otp_expired: 'code_invalid',            // wrong digits and expired codes look the same
+  otp_disabled: 'code_invalid',
+  over_email_send_rate_limit: 'too_many_codes',
+  over_request_rate_limit: 'too_many_codes',
+  email_address_invalid: 'email_invalid',
+  validation_failed: 'email_invalid',
+};
+
 function asRuckusError(err) {
   if (err instanceof RuckusError) return err;
+  if (err?.code && AUTH_ERRORS[err.code]) return new RuckusError(AUTH_ERRORS[err.code], err);
+  if (/token has expired or is invalid/i.test(err?.message ?? '')) return new RuckusError('code_invalid', err);
   const msg = String(err?.message ?? '');
   // plpgsql `raise exception 'den_limit_reached'` reaches us as that exact message
   const code = Object.keys(ERRORS).find(k => msg === k || msg.startsWith(`${k}\n`));
