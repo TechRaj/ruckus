@@ -100,6 +100,11 @@ export async function extractFromReel(url, opts = {}) {
     confirmMode: confirm.mode,
     confirmOptions: confirm.options,
     engine: ranked.engine,     // 'model' | 'heuristic' - which path actually ran
+    // true when the proxy refused because this user hit today's cap. Results
+    // may still be present (the offline ranker ran), but they are worse, and
+    // the app should say why rather than let them look like a bad guess.
+    limited: Boolean(ranked.limited) ||
+             candidates.some(c => c.geocodeError === 'daily_limit_reached'),
     notes: ranked.notes ?? null,
     extractedAt: new Date().toISOString(),
   };

@@ -124,6 +124,49 @@ async function requireCaller(req, res, next) {
 
 app.use(['/extract', '/geocode', '/alarm'], requireCaller);
 
+/* ------------------------------------------------------------------ *
+ * Daily spend cap, per signed-in user.
+ *
+ * The per-minute rate limit stops bursts; this stops one account quietly
+ * running up the OpenRouter and Places bills over a day. A reel costs one
+ * /extract and up to eight /geocode calls, so the defaults allow ~100 reels
+ * a day per person - far more than anyone shares, far less than a script.
+ *
+ * In memory, so it resets on redeploy and is per-instance. Fine for one box;
+ * move it to a Supabase table if Railway ever runs two.
+ * ------------------------------------------------------------------ */
+
+const DAILY = {
+  extract: Number(process.env.DAILY_EXTRACT_MAX || 100),
+  geocode: Number(process.env.DAILY_GEOCODE_MAX || 800),
+};
+let usageDay = '';
+const usage = new Map();   // caller -> { extract, geocode }
+
+const today = () => new Date().toISOString().slice(0, 10);   // UTC day
+
+function dailyCap(kind) {
+  return (req, res, next) => {
+    // our own tooling (the harness, e2e) is how we measure; don't cap it
+    if (req.caller === 'tooling') return next();
+
+    const day = today();
+    if (day !== usageDay) { usage.clear(); usageDay = day; }
+
+    const u = usage.get(req.caller) ?? { extract: 0, geocode: 0 };
+    if (u[kind] >= DAILY[kind]) {
+      // a stable key the app can match on, same as the database's errors
+      return res.status(429).json({ error: 'daily_limit_reached', kind, limit: DAILY[kind] });
+    }
+    u[kind]++;
+    usage.set(req.caller, u);
+    next();
+  };
+}
+
+app.use('/extract', dailyCap('extract'));
+app.use('/geocode', dailyCap('geocode'));
+
 app.post('/extract', async (req, res) => {
   // The client used to send `system` and we trusted it, which made this a free
   // general-purpose chatbot on our key for anyone who found the URL. The
@@ -474,6 +517,16 @@ app.get('/health', (_, res) => {
     geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
     reminders: Boolean(SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.PROXY_SECRET),
     auth: AUTH_ENFORCED ? 'enforced' : 'OPEN',
+    usageToday: (() => {
+      if (usageDay !== today()) return { day: today(), users: 0, extract: 0, geocode: 0, atLimit: 0 };
+      let extract = 0, geocode = 0, atLimit = 0;
+      for (const u of usage.values()) {
+        extract += u.extract; geocode += u.geocode;
+        if (u.extract >= DAILY.extract || u.geocode >= DAILY.geocode) atLimit++;
+      }
+      // counts only: no user ids on an unauthenticated endpoint
+      return { day: usageDay, users: usage.size, extract, geocode, atLimit, limits: DAILY };
+    })(),
     wrapper: { ...alarms, failRate: total ? +(alarms.wrapperFail / total).toFixed(3) : null },
   });
 });

@@ -39,6 +39,20 @@ export function proxyHeaders(opts = {}) {
   return secret ? { 'x-ruckus-key': secret } : {};
 }
 
+/**
+ * A non-2xx from the proxy, carrying its stable error key (e.g.
+ * `daily_limit_reached`) as `.code` so callers can react to it rather than
+ * parse a message.
+ */
+export async function proxyError(route, res) {
+  let code = null;
+  try { code = (await res.json())?.error ?? null; } catch { /* not JSON */ }
+  const err = new Error(`${route} proxy ${res.status}${code ? ` ${code}` : ''}`);
+  err.code = code;
+  err.status = res.status;
+  return err;
+}
+
 const extractEndpoint = () =>
   process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
 
@@ -213,7 +227,7 @@ export async function extractPlaces(parsed, resolvedNames = {}, opts = {}) {
       headers: { 'Content-Type': 'application/json', ...proxyHeaders(opts) },
       body: JSON.stringify({ message: buildUserMessage(parsed, resolvedNames) }),
     });
-    if (!res.ok) throw new Error(`extract proxy ${res.status}`);
+    if (!res.ok) throw await proxyError('extract', res);
 
     // model + cost come back from the proxy so a multi-model comparison run
     // can tell which model actually answered and what it spent.
@@ -233,6 +247,8 @@ export async function extractPlaces(parsed, resolvedNames = {}, opts = {}) {
     // The heuristic ranker is worse but it is not nothing.
     const fallback = heuristicRank(parsed, resolvedNames, opts);
     return { ...fallback, notes: null, engine: 'heuristic', model: null, cost: null,
-             error: String(err.message) };
+             error: String(err.message),
+             // the fallback still runs, but the app should say why results got worse
+             limited: err.code === 'daily_limit_reached' };
   }
 }

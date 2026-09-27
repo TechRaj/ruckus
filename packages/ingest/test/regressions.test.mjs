@@ -265,6 +265,24 @@ describe('geocode stage', () => {
     assert.deepEqual(p.coordinate, { lat: 43.6, lng: -79.3 });
   });
 
+  test('a daily limit is reported as such, not as a failed lookup', async () => {
+    // the proxy caps each user per day; the app has to be able to say "you've
+    // hit today's limit" instead of showing a bad guess with no explanation
+    const server = createServer((_, res) => {
+      res.statusCode = 429;
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ error: 'daily_limit_reached', kind: 'geocode', limit: 800 }));
+    });
+    await new Promise(r => server.listen(0, r));
+    try {
+      const out = await geocodeCandidates(
+        [{ name: 'Somewhere', kind: 'venue', score: 9, reasons: [], codes: [], geocodeQuery: 'Somewhere' }],
+        {}, { geocodeEndpoint: `http://127.0.0.1:${server.address().port}/geocode` });
+      assert.equal(out.length, 1, 'the candidate survives');
+      assert.equal(out[0].geocodeError, 'daily_limit_reached');
+    } finally { server.close(); }
+  });
+
   test('a dead geocode endpoint does not lose the candidate', async () => {
     const out = await geocodeCandidates(
       [{ name: 'Somewhere', kind: 'venue', score: 9, reasons: [], codes: [], geocodeQuery: 'Somewhere' }],

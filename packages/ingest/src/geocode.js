@@ -11,7 +11,7 @@
  */
 
 import { refineWithGeocode, tierOf, explain } from './confidence.js';
-import { proxyHeaders } from './extract-llm.js';
+import { proxyHeaders, proxyError } from './extract-llm.js';
 
 // Call time, not module load - see the note in extract-llm.js.
 const geocodeEndpoint = () =>
@@ -43,7 +43,7 @@ async function lookup(query, city, opts) {
     signal: opts.signal,
     body: JSON.stringify({ query, city }),
   });
-  if (!res.ok) throw new Error(`geocode proxy ${res.status}`);
+  if (!res.ok) throw await proxyError('geocode', res);
   return (await res.json()).results ?? [];
 }
 
@@ -77,7 +77,7 @@ export async function geocodeCandidates(candidates, ctx = {}, opts = {}) {
       try {
         results = await lookup(c.geocodeQuery || c.name, wantsCitySuffix(c.kind) ? city : null, opts);
       } catch (err) {
-        error = err.message;
+        error = err.code ?? err.message;   // 'daily_limit_reached' stays matchable
       }
 
       const refined = refineWithGeocode(
