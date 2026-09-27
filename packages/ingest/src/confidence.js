@@ -16,7 +16,18 @@
  * `explain(codes)` turns them into the one line the confirm card shows.
  */
 
-const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+// Fold accents before stripping, or they vanish instead of flattening:
+// "Forêt" became "fort" and "Café 23" became "caf23", so correct pins scored
+// as partial matches. Found by the 27 Sept labelled run.
+//
+// The combining-mark range is spelled out rather than written as \p{M}: this
+// file runs inside the app on Hermes, and a regex feature the engine lacks is
+// a parse error that takes the whole package down, not just this line.
+const norm = s => {
+  const str = String(s || '');
+  const folded = typeof str.normalize === 'function' ? str.normalize('NFD') : str;
+  return folded.replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+};
 
 /**
  * Crude token overlap, enough to tell "Thindi Café" from "Thai Basil".
@@ -201,22 +212,25 @@ export function explain(codes = []) {
  * ------------------------------------------------------------------ */
 
 /**
- * Thresholds. These were set against PRE-geocode scores, which topped out
- * around 12; with the geocode phase running the scale reaches 17 and the old
- * 9/4 split graded 61 of 70 candidates "high" - the confirm screen would have
- * auto-picked almost everything, which is the failure §5.8 exists to prevent.
+ * Thresholds, set from the labelled run of 27 Sept (70 places, hand-checked).
  *
- * Re-cut against the 3 Sep run's distribution: roughly 40% single-tap,
- * 50% pick-from-three, 10% fall through to search.
+ * The model's extraction was right or nearly right on all 70: 67 correct,
+ * 3 partial, 0 wrong. What the score separates is whether the PIN is right:
  *
- * This is fitted to the SHAPE of the distribution, not to accuracy - nobody
- * has filled in `correct?` yet. Once a run is labelled, set these against the
- * rows where a high score was wrong and a low score was right. Until then they
- * are a better guess, not a measurement.
+ *   score >= 10   61 places, 61 correct pins (4 differed only by an accent)
+ *   score <  8     8 places,  7 wrong pins (Bow Lake -> Bow Glacier Falls)
+ *
+ * The old 13 cut-off sent 34 correct pins to "pick one of three". Most were
+ * lakes and trails that only lost points for being a region (-1) and for a
+ * coarse city label (-1) - neither says anything about being right.
+ *
+ * Fitted to one corpus of 30 reels. Re-check against the confirm-screen logs
+ * (§5.8) once real users are picking: if position #1 wins ~90% of the time in
+ * 'choose', the high line can come down further.
  */
 export function tierOf(score) {
-  if (score >= 13) return 'high';
-  if (score >= 8) return 'medium';
+  if (score >= 10) return 'high';
+  if (score >= 7) return 'medium';
   return 'low';
 }
 

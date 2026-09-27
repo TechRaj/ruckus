@@ -301,7 +301,21 @@ imports `@ruckus/ingest` and nothing below it.
 
 **The measurement loop:** edit `extract-llm.js` or the prompt → `npm run proxy` in one terminal, `npm run harness` in another → read `tools/harness/results/` → fill `correct?` → repeat. The harness imports `@ruckus/ingest`, so a fix there is a fix in the app.
 
-**The loop is not closed yet.** `correct?` is empty in every run to date, so the 93% in §6 is a count of *rows that produced a place*, not of rows that produced the *right* place. Labelling one run by hand is the highest-value unblocked task in the repo — every threshold in `confidence.js` is a guess until it exists.
+**The loop was closed on 27 Sept.** 70 places from the 30-reel corpus were
+checked by hand against the reels: **67 correct, 3 partial, 0 wrong.** The
+model's extraction is not the weak point. The pin is — and the score separates
+right pins from wrong ones cleanly:
+
+| Tier | Score | Places | Pins |
+| --- | --- | --- | --- |
+| high | 10+ | 61 | all right |
+| medium | 7–9 | 4 | all right |
+| low | below 7 | 5 | all wrong (Bow Lake → Bow Glacier Falls) |
+
+Thresholds in `confidence.js` are set from this. The labels judge what the model
+read, not where Google pinned it — keep that distinction when re-labelling. The
+next measurement comes free from real users: `confirmations` records which option
+people pick (§5.8).
 
 ---
 
@@ -367,7 +381,9 @@ Friends, calendar, and messaging all assume the core loop works. Don't build the
 ## 10. Open questions
 
 - **Multi-place reels.** `confirmMode: 'multi'` fires on itinerary reels. Does a travel reel become one save with several pins, several independent saves, or a **Caper**? The naming table already has the word and nothing uses it. This is a schema decision and it blocks the confirm screen.
-- **Tune the score thresholds** in `confidence.js`. The weights are guesses; they're tunable now because every input is a checkable fact rather than a model mood. Fill `correct?` on a run and adjust.
+- ~~**Tune the score thresholds**~~ — **done 27 Sept** from the labelled run (§8).
+  Next check comes from `confirmations`: if users pick option #1 ~90% of the time
+  in `choose`, lower the high line again.
 - ~~**Regions vs venues.**~~ **Answered 3 Sept.** All 70 candidates from the
   full run geocoded, including all 34 regions — Moraine Lake, Peyto Lake and
   Mont Saint-Michel all return real place ids. Regions are places; treat them

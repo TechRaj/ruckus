@@ -4,10 +4,10 @@ node_modules/
 .DS_Store
 __pycache__/
 
-# harness output. Keep a run only once its 'correct?' column is filled in
-# by hand - an unlabelled CSV is not a measurement.
-tools/harness/results/*.csv
-!tools/harness/results/*.labelled.csv
+# Harness output, labelled or not. Every file here holds full captions and
+# creator handles - reproduction and personal data under CLAUDE.md §7 - and
+# this repo is public. Share results by summary numbers, never the files.
+tools/harness/results/
 
 # expo / rn
 apps/mobile/.expo/

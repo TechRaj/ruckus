@@ -154,13 +154,22 @@ describe('scoring (§5.7)', () => {
     assert.equal(post.geo, null);
   });
 
-  test('tiers are cut for the post-geocode scale', () => {
-    // 9/4 graded 61 of 70 candidates "high" once geocoding ran
+  test('tiers are cut where the labelled run put them', () => {
+    // 27 Sept: every place at 10+ had the right pin; below 8, 7 of 8 were wrong
     assert.equal(tierOf(17), 'high');
-    assert.equal(tierOf(13), 'high');
-    assert.equal(tierOf(12), 'medium');
-    assert.equal(tierOf(8), 'medium');
-    assert.equal(tierOf(7), 'low');
+    assert.equal(tierOf(10), 'high');
+    assert.equal(tierOf(9), 'medium');
+    assert.equal(tierOf(7), 'medium');
+    assert.equal(tierOf(6), 'low');
+  });
+
+  test('accents fold instead of vanishing', () => {
+    // "Forêt" normalised to "fort", so a correct pin scored as a partial match
+    for (const [model, google] of [['Cafe Foret', 'Cafe Forêt'], ['Café 23', 'Cafe23'], ['Reykjavik', 'Reykjavík']]) {
+      const pre = scoreCandidate({ name: model, evidence: model, kind: 'venue' }, { caption: model }, {});
+      const post = refineWithGeocode(pre, { name: model }, [{ name: google, address: 'x', city: 'y' }], null);
+      assert.ok(post.codes.includes('geocode_name_match'), `${model} vs ${google}`);
+    }
   });
 });
 
