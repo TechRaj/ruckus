@@ -20,7 +20,8 @@
     "e2e:db": "node --env-file=.env tools/e2e-supabase.mjs",
     "db:push": "bash supabase/push.sh",
     "mobile": "npm run start -w @ruckus/mobile",
-    "typecheck:mobile": "npm run typecheck -w @ruckus/mobile"
+    "typecheck:mobile": "npm run typecheck -w @ruckus/mobile",
+    "seed:demo": "node --env-file=.env tools/seed-demo.mjs"
   },
   "license": "MIT",
   "description": "Collect places you find on Instagram Reels and turn them into plans with friends."
