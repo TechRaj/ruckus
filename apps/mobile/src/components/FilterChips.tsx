@@ -22,7 +22,7 @@ export function FilterChips({
   members: Member[];
   active: Filter;
   onChange: (f: Filter) => void;
-  currentUserId: string;
+  currentUserId: string | null;
   category: Category | null;
   onCategory: (c: Category | null) => void;
 }) {

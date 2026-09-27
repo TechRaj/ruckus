@@ -41,10 +41,14 @@ export interface PlaceCandidate {
   reason?: string;
 }
 
-/** A place saved into a Den's Stash. */
+/**
+ * A place in a Den's Stash — one row per place, however many people saved it.
+ * `id` is the place id; the backend dedupes across reels on it.
+ */
 export interface StashItem {
   id: string;
   denId: string;
+  /** Whoever saved it first. */
   savedBy: string;
   placeId: string;
   name: string;
@@ -55,7 +59,10 @@ export interface StashItem {
   /** The original reel or link. Deep-linked out, never embedded (§5.6). */
   sourceUrl: string | null;
   savedAt: string;
-  /** User ids who have said they want to go. */
+  /** How many people in the Den want to go, and whether I'm one of them. */
+  wantCount: number;
+  iWant: boolean;
+  /** Who wants to go, when the backend tells us. Faces are drawn from this; counts never depend on it. */
   interested: string[];
   /** One human line about why it is saved — §13.6. The point of the app. */
   note: string;
@@ -81,7 +88,7 @@ export interface Den {
 
 /** Three or more people want to go: nearly a plan. Drives Today, the Caper dot, and Home. */
 export const PLAN_THRESHOLD = 3;
-export const isNearlyAPlan = (item: StashItem) => item.interested.length >= PLAN_THRESHOLD;
+export const isNearlyAPlan = (item: StashItem) => item.wantCount >= PLAN_THRESHOLD;
 
 /**
  * The two filter axes on the Stash — §4. People first: Everyone / Today /

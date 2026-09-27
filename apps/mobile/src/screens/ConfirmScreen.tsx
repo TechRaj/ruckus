@@ -52,8 +52,10 @@ export function ConfirmScreen({
     if (startInSearch || !sharedUrl) return;
     let live = true;
     api.resolveSharedUrl(sharedUrl)
-      .then(c => {
+      .then(({ candidates: c, mode: m }) => {
         if (!live) return;
+        /** Nothing pinnable: skip straight to search rather than show an empty pick. */
+        if (m === 'search' || c.length === 0) { setMode('search'); return; }
         setCandidates(c);
         setChosen(c[0]?.placeId ?? null);
         setMode('pick');

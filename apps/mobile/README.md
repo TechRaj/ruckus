@@ -16,8 +16,10 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
       types/index.ts        the shapes agreed with the backend, plus Filter / Sort,
                             CATEGORY_LABEL, CONFIDENT, PLAN_THRESHOLD — every shared
                             constant and type lives here
-      api/client.ts         the single seam to the backend (USE_MOCKS is set here)
-      api/mockData.ts       one Den, four members, six places
+      api/types.ts          the Api interface every screen builds against
+      api/client.ts         picks the adapter: mock without keys, real with them
+      api/mock.ts           in-memory adapter (mockData.ts holds the fixtures)
+      api/ruckus.ts         the real adapter over @ruckus/api + @ruckus/ingest
       state/StashContext.tsx the deep module: loads, filters (person × category × query),
                             sorts, selects, and exposes derived views (visible,
                             nearlyPlans, savedCountBy). Screens read; they don't derive.
@@ -26,6 +28,7 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
                             useMapCamera (pan / zoom / recentre), useStashMarkers
       navigation/           three tabs + OverlayHost for the save loop
       screens/              one file per screen; composition only
+                            (SignIn → Onboarding → tabs, gated by session)
       components/           shared pieces; each is one thing
       theme/tokens.ts       colour, type, spacing, motion, layout, glass
       theme/lines.ts        Rascal's lines and the mono hints, all in one place
@@ -50,10 +53,9 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 
 ## Known gaps
 
-- **`src/api/client.ts` still runs on mocks (`USE_MOCKS = true`) and assumes REST
-  endpoints that don't exist.** The backend is `@ruckus/api` + `@ruckus/ingest`
-  (below). Wiring it is the next job — see "Wiring the backend".
-- Onboarding collects a name, critter and Den and still discards them.
+- The real adapter has been written against the package types but **not yet run
+  against the Supabase project** — needs `apps/mobile/.env` filled in, then a
+  pass through sign-in → Den → share → save on a device.
 - No paywall. RevenueCat is a hard Shipaton requirement.
 - No share extension yet; `api.resolveSharedUrl` is a mock. Needs a dev build (§11.3).
 - Rascal has one render. `rascalSniff` and `rascalCheer` alias the peek pose until
@@ -64,28 +66,36 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 - "Make it a Caper", "Remove from Stash", "Ruckus Pro" and "Switch Den" are no-ops.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
 
-## Wiring the backend
+## The backend seam
 
-`src/api/client.ts` is the single seam. Every screen calls `api.*` and nothing
-else, so the swap is one file. What each call maps to:
+`src/api/client.ts` picks an adapter for the `Api` interface in `src/api/types.ts`:
 
-| `api.*` today (mock) | Replace with |
+| | |
 | --- | --- |
-| `getDen`, `getStash(denId)` | `ruckus.dens.mine()` + `ruckus.dens.members()`, `ruckus.stash.list(denId, {lat, lng})` |
-| `resolveSharedUrl(url)` | `extractFromReel(url, { endpoint, geocodeEndpoint, accessToken })` → `result.candidates` |
-| `saveToStash({denId, placeId, sourceUrl})` | `ruckus.stash.save({ denId, places: picked, sourceUrl })` + `ruckus.confirmations.log(...)` |
-| `toggleInterest(stashId)` | `ruckus.stash.setWant(denId, placeId, want)` |
-| `searchPlaces(q)` | proxy `/geocode` (via `@ruckus/ingest`) |
-| `createDen(name)`, `getInviteLink(denId)` | `ruckus.dens.create(name)`, `ruckus.dens.invite(denId)` — handle `e.needsUpgrade` → paywall |
-| `addTake` / `updateTake` / `deleteTake` | **no backend yet** — comments per place need a table |
-| (none) | `ruckus.auth.sendCode` / `verifyCode` — the app has no sign-in screen yet |
-| (none) | `ruckus.stash.onChange(denId, reload)` — live updates |
+| `src/api/mock.ts` | in-memory. Used when `EXPO_PUBLIC_SUPABASE_URL` is unset — Expo Go with no keys. Sign in with any email and any six digits, make a Den, six places appear. |
+| `src/api/ruckus.ts` | `@ruckus/api` (Supabase) + `@ruckus/ingest` (proxy). The only file that knows either package exists; all shape translation lives here. |
 
-Shape differences to reconcile in `src/types/index.ts`: the backend's stash row
-is one row **per place** with everyone who saved it; the app's `StashItem` is
-one row per save with a single `savedBy`. `category` (`eat`/`drink`/`do`) and
-the human `note` line must come from `ResolvedPlace`/`saves` — check what
-`toStashRow` returns before mapping.
+`src/types/ruckus-packages.d.ts` types the two JS packages for TypeScript —
+extend it as you reach for more of them.
+
+Shape translation in `ruckus.ts`: the backend's stash row is one row **per
+place** with everyone who saved it; `StashItem` takes the first saver as
+`savedBy`, formats `distanceM`, and folds the model's free-text category into
+`eat / drink / do` for the pin glyph (`toCategory`). `stash.save` wants the
+`ResolvedPlace` objects back verbatim, so the last resolve is cached by place id.
+
+**Still open on the backend side** — ask before working around:
+
+- `den_stash()` returns `want_count` but not *who*. The app draws critter faces
+  from `interested[]`, so faces degrade to a count until the RPC returns wanter
+  ids.
+- Comments (`takes`) have no table. The real adapter keeps them in memory per
+  session.
+- `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the
+  pick-several screen isn't designed yet.
+- `Purchases.logIn(userId)` after sign-in — RevenueCat isn't installed yet.
+- Onboarding creates one Den; `dens.mine()[0]` is the active Den. Switching
+  Dens is a no-op.
 
 ## Talking to the backend
 

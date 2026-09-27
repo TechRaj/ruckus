@@ -11,8 +11,8 @@
  */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconHome, IconPeople, IconPin } from '../components/Icons';
 import { OverlayHost } from './OverlayHost';
@@ -20,6 +20,8 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
 import { PlacesScreen } from '../screens/PlacesScreen';
+import { SignInScreen } from '../screens/SignInScreen';
+import { useStash } from '../state/StashContext';
 import { colors, layout, type } from '../theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -36,10 +38,15 @@ function tabItem(label: string, Icon: (p: { size?: number; color?: string }) => 
 }
 
 export function RootNavigator() {
-  const [onboarded, setOnboarded] = useState(false);
+  const { session } = useStash();
   const insets = useSafeAreaInsets();
 
-  if (!onboarded) return <OnboardingScreen onDone={() => setOnboarded(true)} />;
+  /** Signed out → sign in. Signed in with no Den → onboarding. Otherwise the app. */
+  if (session === 'loading') {
+    return <View style={styles.splash}><ActivityIndicator color={colors.inkMuted} /></View>;
+  }
+  if (session === 'signedOut') return <SignInScreen />;
+  if (session === 'noDen') return <OnboardingScreen />;
 
   return (
     <NavigationContainer>
@@ -66,6 +73,7 @@ export function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
+  splash: { flex: 1, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   bar: {
     backgroundColor: colors.paper,
     borderTopColor: colors.hairline,

@@ -4,7 +4,7 @@
  * name in display type, sitting straight over the map.
  */
 import React from 'react';
-import { StyleSheet, Text, TextInput, TextStyle, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
 import { colors, radius, shadow, space, type } from '../theme/tokens';
 import { IconCalendar, IconNav } from './Icons';
@@ -60,8 +60,9 @@ export function SortToggle({ value, onChange }: { value: Sort; onChange: (v: Sor
 }
 
 export function Field({
-  label, value, onChangeText, placeholder,
-}: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string }) {
+  label, value, onChangeText, placeholder, ...input
+}: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string }
+  & Pick<TextInputProps, 'keyboardType' | 'autoCapitalize' | 'autoComplete' | 'textContentType' | 'autoFocus' | 'maxLength'>) {
   return (
     <View>
       <Kicker>{label}</Kicker>
@@ -71,6 +72,7 @@ export function Field({
         placeholder={placeholder}
         placeholderTextColor={colors.inkMuted}
         style={styles.field}
+        {...input}
       />
     </View>
   );

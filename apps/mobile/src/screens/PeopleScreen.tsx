@@ -19,7 +19,7 @@ import { useStash } from '../state/StashContext';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, stash, savedCountBy } = useStash();
+  const { den, stash, savedCountBy, signOut } = useStash();
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -96,6 +96,7 @@ export function PeopleScreen() {
         </Pressable>
 
         <TextButton label="Switch Den" onPress={() => {}} muted />
+        <TextButton label="Sign out" onPress={signOut} muted />
       </View>
     </ScrollView>
   );

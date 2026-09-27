@@ -1,19 +1,18 @@
 /**
- * Shared selection, filter, and overlay state.
+ * Shared session, selection, filter, and overlay state — the deep module.
  *
- * §4 calls two-way pin/row sync "the real engineering cost of the pattern and
- * the thing that feels broken if half-built." The fix is that neither the map
- * nor the list owns selection — both observe this.
+ * Screens read derived views from here (visible, nearlyPlans, savedCountBy)
+ * and call verbs; they never derive or fetch themselves. §4 calls two-way
+ * pin/row sync "the real engineering cost of the pattern" — the fix is that
+ * neither the map nor the list owns selection; both observe this.
  *
- * The overlay lives here too, because the save loop can be opened from three
- * places (the sheet header, Home, and eventually the share extension) and none
- * of them should own it.
+ * Session is a small state machine: signed out → no Den yet → ready. The
+ * navigator shows sign-in, onboarding, or the tabs accordingly.
  */
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { api } from '../api/client';
-import { MOCK_USER_ID } from '../api/mockData';
 import { Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
 
 export type Overlay =
@@ -23,7 +22,10 @@ export type Overlay =
   | { kind: 'detail'; id: string }
   | { kind: 'saved'; name: string };
 
+export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
+
 interface StashState {
+  session: Session;
   loading: boolean;
   error: string | null;
   den: Den | null;
@@ -35,7 +37,7 @@ interface StashState {
   query: string;
   sort: Sort;
   selectedId: string | null;
-  currentUserId: string;
+  currentUserId: string | null;
   /** The list after both filter axes, the query, and the sort. */
   visible: StashItem[];
   /** Places with three or more people in — Today's list, Home's card. */
@@ -55,11 +57,16 @@ interface StashState {
   deleteTake: (id: string) => void;
   addToStash: (placeId: string, sourceUrl: string | null) => Promise<StashItem>;
   openOverlay: (o: Overlay) => void;
+  /** After sign-in, onboarding, or a join: re-read who I am and which Den. */
+  refreshSession: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const Ctx = createContext<StashState | null>(null);
 
 export function StashProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<Session>('loading');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [den, setDen] = useState<Den | null>(null);
@@ -71,14 +78,11 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
 
-  const load = useCallback(async () => {
+  const loadStash = useCallback(async (denId: string) => {
     setLoading(true);
     setError(null);
     try {
-      const d = await api.getDen('den_1');
-      const s = await api.getStash(d.id);
-      setDen(d);
-      setStash(s);
+      setStash(await api.getStash(denId));
     } catch {
       setError("Couldn't load your Stash.");
     } finally {
@@ -86,7 +90,28 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const refreshSession = useCallback(async () => {
+    try {
+      const me = await api.auth.userId();
+      setCurrentUserId(me);
+      if (!me) { setSession('signedOut'); setDen(null); setStash([]); return; }
+      const dens = await api.myDens();
+      if (dens.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
+      setDen(dens[0]);
+      setSession('ready');
+      await loadStash(dens[0].id);
+    } catch {
+      setSession('signedOut');
+    }
+  }, [loadStash]);
+
+  useEffect(() => { refreshSession(); }, [refreshSession]);
+
+  /** A friend's save or vote arrives without a pull-to-refresh. */
+  useEffect(() => {
+    if (!den) return;
+    return api.onStashChange(den.id, () => { loadStash(den.id); });
+  }, [den, loadStash]);
 
   const memberById = useMemo(
     () => new Map((den?.members ?? []).map(m => [m.userId, m])),
@@ -120,76 +145,63 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       : list;
   }, [stash, filter, category, query, sort]);
 
-  const setFilter = useCallback((f: Filter) => {
-    setFilterState(f);
-    setSelectedId(null);
-  }, []);
+  const setFilter = useCallback((f: Filter) => { setFilterState(f); setSelectedId(null); }, []);
+  const setCategory = useCallback((c: Category | null) => { setCategoryState(c); setSelectedId(null); }, []);
 
-  const setCategory = useCallback((c: Category | null) => {
-    setCategoryState(c);
-    setSelectedId(null);
+  /** Optimistic: the change shows at once and the Stash reloads only on failure. */
+  const patch = useCallback((id: string, fn: (s: StashItem) => StashItem) => {
+    setStash(prev => prev.map(s => (s.id === id ? fn(s) : s)));
   }, []);
+  const orReload = useCallback(async (p: Promise<unknown>) => {
+    try { await p; } catch { if (den) loadStash(den.id); }
+  }, [den, loadStash]);
 
-  const toggleInterest = useCallback(async (id: string) => {
-    setStash(prev => prev.map(s => {
-      if (s.id !== id) return s;
-      const has = s.interested.includes(MOCK_USER_ID);
-      return {
-        ...s,
-        interested: has
-          ? s.interested.filter(u => u !== MOCK_USER_ID)
-          : [...s.interested, MOCK_USER_ID],
-      };
+  const toggleInterest = useCallback((id: string) => {
+    const item = stash.find(s => s.id === id);
+    if (!item || !den || !currentUserId) return;
+    const want = !item.iWant;
+    patch(id, s => ({
+      ...s, iWant: want, wantCount: Math.max(0, s.wantCount + (want ? 1 : -1)),
+      interested: want ? [...new Set([...s.interested, currentUserId])] : s.interested.filter(u => u !== currentUserId),
     }));
-    try {
-      await api.toggleInterest(id);
-    } catch {
-      load();
-    }
-  }, [load]);
+    orReload(api.setWant(den.id, item.placeId, want));
+  }, [stash, den, currentUserId, patch, orReload]);
 
-  /** Optimistic, like toggleInterest: the line appears at once and reloads only on failure. */
-  const addTake = useCallback(async (id: string, text: string) => {
-    const take = { userId: MOCK_USER_ID, text, at: new Date().toISOString() };
-    setStash(prev => prev.map(s => (s.id === id ? { ...s, takes: [...s.takes, take] } : s)));
-    try {
-      await api.addTake(id, text);
-    } catch {
-      load();
-    }
-  }, [load]);
+  const addTake = useCallback((id: string, text: string) => {
+    if (!den || !currentUserId) return;
+    const take = { userId: currentUserId, text, at: new Date().toISOString() };
+    patch(id, s => ({ ...s, takes: [...s.takes, take] }));
+    orReload(api.addTake(den.id, id, text));
+  }, [den, currentUserId, patch, orReload]);
 
-  const updateTake = useCallback(async (id: string, text: string) => {
-    setStash(prev => prev.map(s => (s.id === id
-      ? { ...s, takes: s.takes.map(t => (t.userId === MOCK_USER_ID ? { ...t, text } : t)) }
-      : s)));
-    try {
-      await api.updateTake(id, text);
-    } catch {
-      load();
-    }
-  }, [load]);
+  const updateTake = useCallback((id: string, text: string) => {
+    if (!den || !currentUserId) return;
+    patch(id, s => ({ ...s, takes: s.takes.map(t => (t.userId === currentUserId ? { ...t, text } : t)) }));
+    orReload(api.updateTake(den.id, id, text));
+  }, [den, currentUserId, patch, orReload]);
 
-  const deleteTake = useCallback(async (id: string) => {
-    setStash(prev => prev.map(s => (s.id === id
-      ? { ...s, takes: s.takes.filter(t => t.userId !== MOCK_USER_ID) }
-      : s)));
-    try {
-      await api.deleteTake(id);
-    } catch {
-      load();
-    }
-  }, [load]);
+  const deleteTake = useCallback((id: string) => {
+    if (!den || !currentUserId) return;
+    patch(id, s => ({ ...s, takes: s.takes.filter(t => t.userId !== currentUserId) }));
+    orReload(api.deleteTake(den.id, id));
+  }, [den, currentUserId, patch, orReload]);
 
   const addToStash = useCallback(async (placeId: string, sourceUrl: string | null) => {
-    const saved = await api.saveToStash({ denId: den?.id ?? 'den_1', placeId, sourceUrl });
+    if (!den) throw new Error('not_a_member');
+    const saved = await api.saveToStash({ denId: den.id, placeId, sourceUrl });
     setStash(prev => (prev.some(s => s.placeId === saved.placeId) ? prev : [saved, ...prev]));
     return saved;
   }, [den]);
 
+  const signOut = useCallback(async () => {
+    await api.auth.signOut();
+    setOverlay({ kind: 'none' });
+    await refreshSession();
+  }, [refreshSession]);
+
   const value: StashState = {
-    loading, error, den, stash, filter, category, query, sort, selectedId,
-    currentUserId: MOCK_USER_ID,
+    session, loading, error, den, stash, filter, category, query, sort, selectedId,
+    currentUserId,
     visible, nearlyPlans, memberById, savedCountBy, overlay,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,
@@ -197,6 +209,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     addTake, updateTake, deleteTake,
     addToStash,
     openOverlay: setOverlay,
+    refreshSession,
+    signOut,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

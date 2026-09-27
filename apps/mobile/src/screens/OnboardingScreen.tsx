@@ -10,6 +10,8 @@ import {
   Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api } from '../api/client';
+import { useStash } from '../state/StashContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Field, Hint, Kicker } from '../components/Chrome';
@@ -22,17 +24,50 @@ import { lines } from '../theme/lines';
 import { colors, launchCritters, space, type } from '../theme/tokens';
 import { Critter as CritterName } from '../types';
 
-type Step = 'welcome' | 'you' | 'den';
+type Step = 'welcome' | 'you' | 'den' | 'join';
 
-export function OnboardingScreen({ onDone }: { onDone: () => void }) {
+/**
+ * Shown once you're signed in but in no Den yet. Both steps keep what they
+ * collect (§13.2): the name and critter go to your profile, the Den is
+ * created or joined, and the session refreshes into the app.
+ */
+export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { refreshSession } = useStash();
   const [step, setStep] = useState<Step>('welcome');
   const [name, setName] = useState('');
   const [critter, setCritter] = useState<CritterName>('raccoon');
   const [denName, setDenName] = useState('');
   const [emblem, setEmblem] = useState<string>('lantern');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pad = { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 };
+
+  const attempt = async (work: () => Promise<unknown>) => {
+    setBusy(true); setError(null);
+    try {
+      await work();
+      return true;
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message.toLowerCase() : 'something went wrong. try again.');
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** "That's me": the profile is saved now, so a later crash loses nothing. */
+  const saveProfile = async () => {
+    if (await attempt(() => api.profile.update({ displayName: name.trim(), critter }))) setStep('den');
+  };
+  const createDen = async () => {
+    if (await attempt(() => api.createDen(denName.trim(), emblem))) await refreshSession();
+  };
+  const joinDen = async () => {
+    if (await attempt(() => api.joinDen(code))) await refreshSession();
+  };
 
   if (step === 'welcome') {
     return (
@@ -54,7 +89,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
           <Text style={styles.tagline}>Places worth leaving the group chat for.</Text>
         </View>
         <PrimaryButton label="Get started" onPress={() => setStep('you')} />
-        <Pressable onPress={onDone} style={styles.joinHint} accessibilityRole="button">
+        <Pressable onPress={() => setStep('join')} style={styles.joinHint} accessibilityRole="button">
           <Hint style={{ textAlign: 'center' }}>{lines.hint.joinLink}</Hint>
         </Pressable>
       </View>
@@ -79,11 +114,33 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
             onPick={k => setCritter(k as CritterName)}
           />
         </ScrollView>
+        {error ? <Hint style={styles.error}>{error}</Hint> : null}
         <PrimaryButton
           label="That's me"
-          onPress={() => setStep('den')}
-          disabled={name.trim().length === 0}
+          onPress={saveProfile}
+          loading={busy}
+          disabled={busy || name.trim().length === 0}
         />
+      </View>
+    );
+  }
+
+  if (step === 'join') {
+    return (
+      <View style={[styles.root, pad]}>
+        <Back onPress={() => setStep('welcome')} />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <Text style={styles.headline}>Join a Den</Text>
+          <Text style={styles.sub}>The six-character code from your friend's invite link.</Text>
+          <View style={{ height: 28 }} />
+          <Field
+            label="Invite code" value={code} onChangeText={setCode} placeholder="8FK2QD"
+            autoCapitalize="characters" autoComplete="off" maxLength={8} autoFocus
+          />
+          {error ? <Hint style={styles.error}>{error}</Hint> : null}
+        </ScrollView>
+        <PrimaryButton label="Join" onPress={joinDen} loading={busy} disabled={busy || code.trim().length < 6} />
+        <TextButton label="Make a new Den instead" onPress={() => setStep('you')} muted />
       </View>
     );
   }
@@ -122,13 +179,15 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
           <PawPrint size={26} />
           <Hint style={{ flex: 1 }}>{lines.hint.moreDens}</Hint>
         </View>
+        {error ? <Hint style={styles.error}>{error}</Hint> : null}
       </ScrollView>
       <PrimaryButton
         label="Create the Den"
-        onPress={onDone}
-        disabled={denName.trim().length === 0}
+        onPress={createDen}
+        loading={busy}
+        disabled={busy || denName.trim().length === 0}
       />
-      <TextButton label="I have an invite link instead" onPress={onDone} />
+      <TextButton label="I have an invite code instead" onPress={() => setStep('join')} />
     </View>
   );
 }
@@ -154,6 +213,7 @@ const styles = StyleSheet.create({
   },
   tagline: { ...type.body, fontSize: 17, lineHeight: 24, color: colors.inkSecondary, marginTop: 12, maxWidth: 300 },
   joinHint: { height: 44, justifyContent: 'center' },
+  error: { color: colors.flare, marginTop: space.md },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xl },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -11 },
   headline: { ...type.display, color: colors.ink, marginTop: 10 },

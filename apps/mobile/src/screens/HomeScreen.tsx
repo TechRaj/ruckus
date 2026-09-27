@@ -44,10 +44,14 @@ export function HomeScreen() {
                 <Text style={styles.planPlace}>{s.name}</Text>
                 <Text style={styles.planMeta}>{s.neighbourhood} · {s.distance}</Text>
               </View>
-              <CritterStack
-                members={s.interested.map(id => memberById.get(id)).filter(Boolean) as Member[]}
-                size={32}
-              />
+              {s.interested.length > 0 ? (
+                <CritterStack
+                  members={s.interested.map(id => memberById.get(id)).filter(Boolean) as Member[]}
+                  size={32}
+                />
+              ) : (
+                <Kicker>{`${s.wantCount} in`}</Kicker>
+              )}
             </View>
           ))}
           <View style={{ height: space.lg }} />

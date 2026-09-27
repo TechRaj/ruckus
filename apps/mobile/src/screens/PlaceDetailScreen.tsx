@@ -42,7 +42,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
 
   const savedBy = memberById.get(item.savedBy);
   const going = item.interested.map(u => memberById.get(u)).filter(Boolean) as Member[];
-  const isIn = item.interested.includes(currentUserId);
+  const isIn = item.iWant;
   const mine = item.takes.find(t => t.userId === currentUserId);
   /** The field shows once you're in and haven't commented, or while editing yours. */
   const showField = (isIn && !mine) || editing;
@@ -106,7 +106,9 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
         <View style={{ height: space.xl }} />
         <View style={styles.takesHead}>
           <Kicker>{`Comments · ${item.takes.length}`}</Kicker>
-          {going.length > 0 ? <CritterStack members={going} size={26} /> : null}
+          {going.length > 0
+            ? <CritterStack members={going} size={26} />
+            : item.wantCount > 0 ? <Kicker>{`${item.wantCount} want to go`}</Kicker> : null}
         </View>
         {item.takes.length === 0 ? (
           <EmptyState line={lines.noTakes} />
