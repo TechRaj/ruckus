@@ -9,8 +9,8 @@ __pycache__/
 # this repo is public. Share results by summary numbers, never the files.
 tools/harness/results/
 
-# expo / rn
-apps/mobile/.expo/
+# expo / rn - .expo/ is per-machine state, wherever expo was started from
+.expo/
 apps/mobile/ios/
 apps/mobile/android/
 *.log

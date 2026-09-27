@@ -102,6 +102,8 @@ async function main() {
 
   ok((await alice.stash.setWant(den.id, dual.placeId, true)) === 1, 'alice wants to go');
   ok((await bob.stash.setWant(den.id, dual.placeId, true)) === 2, 'bob wants to go');
+  const faces = (await alice.stash.list(den.id)).find(r => r.placeId === dual.placeId)?.wanters ?? [];
+  ok(faces.length === 2 && faces[0].displayName === 'Amelia', 'the app is told who wants to go, oldest vote first');
 
   await alice.takes.set(den.id, dual.placeId, 'get the cortado');
   await alice.takes.set(den.id, dual.placeId, 'actually, the oat flat white');
