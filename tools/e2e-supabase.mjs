@@ -103,6 +103,16 @@ async function main() {
   ok((await alice.stash.setWant(den.id, dual.placeId, true)) === 1, 'alice wants to go');
   ok((await bob.stash.setWant(den.id, dual.placeId, true)) === 2, 'bob wants to go');
 
+  await alice.takes.set(den.id, dual.placeId, 'get the cortado');
+  await alice.takes.set(den.id, dual.placeId, 'actually, the oat flat white');
+  await bob.takes.set(den.id, dual.placeId, 'patio is the move');
+  const withTakes = (await bob.stash.list(den.id)).find(r => r.placeId === dual.placeId);
+  ok(withTakes?.takes.length === 2, 'both friends\' takes arrive on the Stash row');
+  ok(withTakes?.takes.some(t => t.text === 'actually, the oat flat white'), 'setting a take again replaces it');
+  await bob.takes.remove(den.id, dual.placeId);
+  ok((await alice.stash.list(den.id)).find(r => r.placeId === dual.placeId)?.takes.length === 1, 'a take can be removed');
+  await rejects(carol.takes.set(den.id, dual.placeId, 'hi'), 'not_a_member', 'a stranger cannot leave a take');
+
   await rejects(carol.stash.list(den.id), 'not_a_member', 'a stranger cannot read the Stash');
   ok((await carol.dens.mine()).length === 0, 'a stranger sees no Dens');
   await rejects(carol.dens.join('ZZZZZZ'), 'invite_invalid', 'a wrong code is refused with a usable error');

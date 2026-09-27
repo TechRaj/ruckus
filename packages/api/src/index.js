@@ -34,6 +34,8 @@ export const ERRORS = {
   invite_used_up:     'That invite has been used too many times. Ask for a new one.',
   place_missing_id:   "We couldn't pin that place. Try searching for it.",
   place_not_in_stash: "That place isn't in this Den's Stash.",
+  take_empty:         'Write something first.',
+  take_too_long:      'Keep it under 280 characters.',
   no_places:          'Pick at least one place to save.',
   too_many_places:    'That is a lot of places. Save fewer at once.',
   bad_push_token:     "That device couldn't be registered for reminders.",
@@ -203,8 +205,23 @@ export function createRuckus({ url, anonKey, storage } = {}) {
      * Pass the viewer's position for Nearby; sort by `whenStart` for Date.
      */
     async list(denId, { lat, lng } = {}) {
-      const rows = await rpc('den_stash', { p_den: denId, p_lat: lat ?? null, p_lng: lng ?? null });
-      return rows.map(toStashRow);
+      // Takes live in their own table and are attached here rather than inside
+      // den_stash(), so the two can change independently. Both reads are
+      // guarded by the same membership rule, and they run in parallel.
+      const [rows, takeRows] = await Promise.all([
+        rpc('den_stash', { p_den: denId, p_lat: lat ?? null, p_lng: lng ?? null }),
+        run(supabase.from('takes')
+          .select('place_id, profile_id, body, created_at')
+          .eq('den_id', denId)
+          .order('created_at')),
+      ]);
+      const takesByPlace = new Map();
+      for (const t of takeRows) {
+        const list = takesByPlace.get(t.place_id) ?? [];
+        list.push({ userId: t.profile_id, text: t.body, at: t.created_at });
+        takesByPlace.set(t.place_id, list);
+      }
+      return rows.map(r => ({ ...toStashRow(r), takes: takesByPlace.get(r.place_id) ?? [] }));
     },
 
     /**
@@ -234,7 +251,7 @@ export function createRuckus({ url, anonKey, storage } = {}) {
     },
 
     /**
-     * Call `cb` whenever anyone in the Den saves, removes or votes on a place,
+     * Call `cb` whenever anyone in the Den saves, removes, votes on or comments on a place,
      * so a friend's pin appears without a pull-to-refresh. Re-fetch with
      * list() inside the callback; the event only says *that* something changed.
      * Returns an unsubscribe function.
@@ -244,9 +261,24 @@ export function createRuckus({ url, anonKey, storage } = {}) {
         .channel(`den:${denId}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'saves', filter: `den_id=eq.${denId}` }, () => cb())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'want_to_go', filter: `den_id=eq.${denId}` }, () => cb())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'takes', filter: `den_id=eq.${denId}` }, () => cb())
         .subscribe();
       return () => { supabase.removeChannel(channel); };
     },
+  };
+
+  /* --------------------------------------------------------------- takes -- */
+
+  const takes = {
+    /**
+     * Your one line about a place in the Den. Setting it again replaces it -
+     * there's one take per person per place, so there are no take ids.
+     * Arrives on every row from stash.list() as `takes: [{ userId, text, at }]`.
+     */
+    set: (denId, placeId, text) => rpc('set_take', { p_den: denId, p_place: placeId, p_body: text }),
+
+    /** Remove yours. Fine to call when you have none. */
+    remove: (denId, placeId) => rpc('delete_take', { p_den: denId, p_place: placeId }),
   };
 
   /* ------------------------------------------------------- confirmations -- */
@@ -277,7 +309,7 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       rpc('unregister_push_token', { p_token: token }),
   };
 
-  return { supabase, auth, profile, dens, stash, confirmations, notifications };
+  return { supabase, auth, profile, dens, stash, takes, confirmations, notifications };
 }
 
 /** snake_case row from den_stash() -> the camelCase shape screens use */

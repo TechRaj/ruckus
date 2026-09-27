@@ -22,6 +22,7 @@ through `@ruckus/api` — screens never name a table or write SQL.
 | `places` | one row per real place, keyed by Google place id | anyone signed in — it's public map data |
 | `saves` | person + place + Den + reel, with the event date if any | members of that Den |
 | `want_to_go` | votes per place per Den | members |
+| `takes` | one line per person per place per Den | members |
 | `device_push_tokens` | Expo push tokens, one row per device | only you |
 | `event_reminder_sends` | one row per reminder attempt, no token | only you, for your own alerts |
 | `confirmations` | what the confirm screen offered and what was picked (§5.8) | only you |
@@ -37,6 +38,8 @@ Writes go through functions, so the rules that RLS can't express are enforced in
 | `save_places` | `stash.save` | membership; upserts the place; keeps event dates |
 | `den_stash` | `stash.list` | membership; one row per place, with distance and who wants to go |
 | `set_want_to_go` | `stash.setWant` | membership |
+| `set_take` | `takes.set` | membership; the place is in this Den's Stash; 1–280 chars; replaces yours |
+| `delete_take` | `takes.remove` | membership; only ever your own; no error if you had none |
 | `register_push_token` | `notifications.registerPushToken` | the signed-in user; a token moves to the account that registers it |
 | `unregister_push_token` | `notifications.unregisterPushToken` | your own token |
 | `log_confirmation` | `confirmations.log` | strips captions and `evidence` before storing |
@@ -53,6 +56,7 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
 | `not_a_member` | usually a stale Den id — go back to the Den list |
 | `place_missing_id` | route to search: the pipeline couldn't pin it |
 | `not_signed_in` | the sign-in screen |
+| `take_empty` / `take_too_long` | inline under the comment box |
 
 ## Rules worth knowing
 

@@ -208,6 +208,56 @@ select t.login('carol');
 select t.throws(format('select public.set_want_to_go(%L, %L, true)', t.get('den'), t.get('dual')),
                 'not_a_member', 'an outsider cannot vote');
 
+-- ------------------------------------------------------------------ takes
+select t.login('alice');
+-- two separate statements: each is its own transaction, like two real taps
+do $$
+declare first public.takes;
+begin
+  first := public.set_take(t.get('den')::uuid, t.get('dual')::uuid, '  get the oat flat white  ');
+  perform t.ok(first.body = 'get the oat flat white', 'alice leaves a take, trimmed');
+  perform t.put('take_created', first.created_at::text);
+  perform t.put('take_updated', first.updated_at::text);
+end $$;
+do $$
+declare again public.takes;
+begin
+  again := public.set_take(t.get('den')::uuid, t.get('dual')::uuid, 'actually the cortado');
+  perform t.ok((select count(*) from public.takes where profile_id = t.id('alice')) = 1, 'a second take replaces the first');
+  perform t.ok(again.body = 'actually the cortado'
+               and again.created_at = t.get('take_created')::timestamptz
+               and again.updated_at > t.get('take_updated')::timestamptz,
+               '...keeping its place in the stack');
+end $$;
+
+select t.throws(format('select public.set_take(%L, %L, %L)', t.get('den'), t.get('dual'), '   '), 'take_empty',
+                'an empty take is refused');
+select t.throws(format('select public.set_take(%L, %L, %L)', t.get('den'), t.get('dual'), repeat('x', 281)), 'take_too_long',
+                'a take over 280 characters is refused');
+select t.throws(format('select public.set_take(%L, gen_random_uuid(), %L)', t.get('den'), 'hi'), 'place_not_in_stash',
+                'you cannot comment on a place the Den never saved');
+
+select t.login('bob');
+select null from public.set_take(t.get('den')::uuid, t.get('dual')::uuid, 'the patio is the move');
+select t.ok((select count(*) from public.takes where den_id = t.get('den')::uuid) = 2, 'bob''s take sits alongside alice''s');
+select public.delete_take(t.get('den')::uuid, t.get('dual')::uuid);
+select t.ok((select count(*) from public.takes where profile_id = t.id('alice')) = 1, 'deleting only ever removes your own');
+select t.ok((select count(*) from public.takes where profile_id = t.id('bob')) = 0, '...and yours is gone');
+select public.delete_take(t.get('den')::uuid, t.get('dual')::uuid);
+select t.ok(true, 'deleting a take you don''t have is not an error');
+select t.throws(format('update public.takes set body = %L where profile_id = %L', 'hijacked', t.id('alice')),
+                'permission denied', 'nobody can edit someone else''s take directly');
+select t.throws(format('insert into public.takes (den_id, place_id, profile_id, body) values (%L, %L, %L, %L)',
+                       t.get('den'), t.get('dual'), t.id('bob'), 'sneaky'),
+                'permission denied', 'takes cannot be inserted around set_take()');
+
+select t.login('carol');
+select t.ok((select count(*) from public.takes) = 0, 'an outsider cannot read the Den''s takes');
+select t.throws(format('select public.set_take(%L, %L, %L)', t.get('den'), t.get('dual'), 'hi'), 'not_a_member',
+                'an outsider cannot leave a take');
+select t.throws(format('select public.delete_take(%L, %L)', t.get('den'), t.get('dual')), 'not_a_member',
+                'an outsider cannot delete one');
+
 -- -------------------------------------------------- privilege escalation
 select t.login('bob');
 select t.throws(format('update public.profiles set is_pro = true where id = %L', t.id('bob')),
