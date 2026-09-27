@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.ruckus"
+      "bundleIdentifier": "com.techraj.ruckus"
     },
     "android": {
       "adaptiveIcon": {
@@ -30,6 +30,7 @@
           "color": "#FF6846"
         }
       ]
-    ]
+    ],
+    "scheme": "ruckus"
   }
 }
