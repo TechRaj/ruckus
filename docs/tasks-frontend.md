@@ -119,7 +119,7 @@ user hit today's cap (100 reels a day). The offline guesser still runs, so there
 may be candidates — but say *"You've hit today's limit, so these are rougher
 than usual"* rather than letting them look like a bad guess.
 
-## Task 7 — Switch Den
+## Task 7 — Switch Den  ✅ done (People → Den panel: switch, join by code, make a new Den; the choice is remembered)
 
 "Switch Den" is a no-op and the app always uses `dens.mine()[0]`. Add a picker;
 `dens.mine()` returns every Den with member counts and your role. Needed to show

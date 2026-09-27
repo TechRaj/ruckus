@@ -102,8 +102,6 @@ place** with everyone who saved it; `StashItem` takes the first saver as
 
 - `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the
   pick-several screen isn't designed yet.
-- Onboarding creates one Den; `dens.mine()[0]` is the active Den. Switching
-  Dens is a no-op.
 
 ## Talking to the backend
 

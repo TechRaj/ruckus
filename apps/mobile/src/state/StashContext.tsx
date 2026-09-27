@@ -66,10 +66,35 @@ interface StashState {
   openOverlay: (o: Overlay) => void;
   /** A reminder tap. Opens the event, or says it is gone. */
   openReminder: (denId: string, placeId: string) => Promise<void>;
-  /** After sign-in, onboarding, or a join: re-read who I am and which Den. */
-  refreshSession: () => Promise<void>;
+  /** Every Den I'm in - for the switcher. `den` is the one on screen. */
+  dens: Den[];
+  /** Make another Den the one on screen. Remembered across launches. */
+  switchDen: (denId: string) => Promise<void>;
+  /**
+   * After sign-in, onboarding, a join or a new Den: re-read who I am and which
+   * Den. Pass `preferDenId` to land on a specific one (the Den just joined).
+   */
+  refreshSession: (preferDenId?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
+
+/**
+ * Which Den was on screen last. Per device, not per account: it's a view
+ * preference, and a stale id just falls back to the newest Den. Required
+ * lazily so the mock path (no native modules) never loads AsyncStorage.
+ */
+const ACTIVE_DEN_KEY = 'ruckus.activeDen';
+const storage = () => {
+  try { return require('@react-native-async-storage/async-storage').default as {
+    getItem(k: string): Promise<string | null>; setItem(k: string, v: string): Promise<void>; removeItem(k: string): Promise<void>;
+  }; } catch { return null; }
+};
+const rememberDen = (id: string | null) => {
+  const st = storage();
+  if (!st) return;
+  (id ? st.setItem(ACTIVE_DEN_KEY, id) : st.removeItem(ACTIVE_DEN_KEY)).catch(() => {});
+};
+const rememberedDen = async () => { try { return (await storage()?.getItem(ACTIVE_DEN_KEY)) ?? null; } catch { return null; } };
 
 const Ctx = createContext<StashState | null>(null);
 
@@ -79,6 +104,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [den, setDen] = useState<Den | null>(null);
+  const [dens, setDens] = useState<Den[]>([]);
   const [stash, setStash] = useState<StashItem[]>([]);
   const [filter, setFilterState] = useState<Filter>({ kind: 'everyone' });
   const [category, setCategoryState] = useState<Category | null>(null);
@@ -100,22 +126,38 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const refreshSession = useCallback(async () => {
+  const refreshSession = useCallback(async (preferDenId?: string) => {
     try {
       const me = await api.auth.userId();
       setCurrentUserId(me);
       /** Not awaited: billing being slow or down never holds up the session. */
       identify(me).then(setIsPro);
-      if (!me) { setSession('signedOut'); setDen(null); setStash([]); return; }
-      const dens = await api.myDens();
-      if (dens.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
-      setDen(dens[0]);
+      if (!me) { setSession('signedOut'); setDen(null); setDens([]); setStash([]); rememberDen(null); return; }
+      const mine = await api.myDens();
+      setDens(mine);
+      if (mine.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
+      // the Den just joined or made > the one on screen last time > the newest
+      const wanted = preferDenId ?? await rememberedDen();
+      const active = mine.find(d => d.id === wanted) ?? mine[0];
+      setDen(active);
+      rememberDen(active.id);
       setSession('ready');
-      await loadStash(dens[0].id);
+      await loadStash(active.id);
     } catch {
       setSession('signedOut');
     }
   }, [loadStash]);
+
+  const switchDen = useCallback(async (denId: string) => {
+    const target = dens.find(d => d.id === denId);
+    if (!target || target.id === den?.id) return;
+    // a person filter or a selection from the old Den means nothing in the new one
+    setFilterState({ kind: 'everyone' });
+    setSelectedId(null);
+    setDen(target);
+    rememberDen(target.id);
+    await loadStash(target.id);
+  }, [dens, den, loadStash]);
 
   useEffect(() => { refreshSession(); }, [refreshSession]);
   useEffect(() => onProChange(setIsPro), []);
@@ -213,6 +255,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setDen(target);
+      rememberDen(target.id);
       setSession('ready');
       const items = await api.getStash(denId);
       setStash(items);
@@ -257,6 +300,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     addToStash,
     openOverlay: setOverlay,
     openReminder,
+    dens, switchDen,
     refreshSession,
     signOut,
   };
