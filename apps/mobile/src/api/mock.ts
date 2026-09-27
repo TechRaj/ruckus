@@ -88,6 +88,11 @@ export const mockApi: Api = {
     notify(denId);
     return { ...item };
   },
+  notifications: {
+    async registerPushToken() {},
+    async unregisterPushToken() {},
+  },
+
   async setWant(denId, placeId, want) {
     await delay(180);
     const item = find(placeId);

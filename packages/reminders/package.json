@@ -1,0 +1,12 @@
+{
+  "name": "@ruckus/reminders",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "sideEffects": false,
+  "dependencies": {
+    "geo-tz": "^8.1.4"
+  }
+}

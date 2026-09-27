@@ -17,7 +17,7 @@ test('refuses the service role key', () => {
 
 test('accepts the anon key', () => {
   const r = createRuckus({ url: 'https://x.supabase.co', anonKey: jwt('anon') });
-  for (const k of ['auth', 'profile', 'dens', 'stash', 'confirmations']) assert.ok(r[k], k);
+  for (const k of ['auth', 'profile', 'dens', 'stash', 'confirmations', 'notifications']) assert.ok(r[k], k);
 });
 
 test('the paywall error is recognisable', () => {

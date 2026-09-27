@@ -22,6 +22,8 @@ through `@ruckus/api` — screens never name a table or write SQL.
 | `places` | one row per real place, keyed by Google place id | anyone signed in — it's public map data |
 | `saves` | person + place + Den + reel, with the event date if any | members of that Den |
 | `want_to_go` | votes per place per Den | members |
+| `device_push_tokens` | Expo push tokens, one row per device | only you |
+| `event_reminder_sends` | one row per reminder attempt, no token | only you, for your own alerts |
 | `confirmations` | what the confirm screen offered and what was picked (§5.8) | only you |
 
 Writes go through functions, so the rules that RLS can't express are enforced in one place:
@@ -35,6 +37,8 @@ Writes go through functions, so the rules that RLS can't express are enforced in
 | `save_places` | `stash.save` | membership; upserts the place; keeps event dates |
 | `den_stash` | `stash.list` | membership; one row per place, with distance |
 | `set_want_to_go` | `stash.setWant` | membership |
+| `register_push_token` | `notifications.registerPushToken` | the signed-in user; a token moves to the account that registers it |
+| `unregister_push_token` | `notifications.unregisterPushToken` | your own token |
 | `log_confirmation` | `confirmations.log` | strips captions and `evidence` before storing |
 
 ## Errors the app should handle
@@ -61,6 +65,26 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
   Apple Developer Program.
 - **The service role key never goes in the app.** It bypasses every rule here.
   `createRuckus()` refuses it.
+
+## Event reminders
+
+A dated save (`when_start`, one agreed date, and a place time zone) reminds
+every current member who has a device, at **09:00 in that time zone**, 7, 3,
+and 1 calendar days before the date. Want-to-go is read when the alert is
+sent. The job is `POST /internal/reminders/dispatch` on the proxy, with
+header `x-ruckus-key: $PROXY_SECRET`. It needs `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and `PROXY_SECRET` on the proxy. Schedule that
+request every 15 minutes. An optional `EXPO_ACCESS_TOKEN` is sent with the
+Expo push call.
+
+Dashboard steps that are not in the repo:
+
+1. [expo.dev](https://expo.dev) → create the project and put its id in
+   `apps/mobile/app.json` as `extra.eas.projectId`.
+2. Upload an APNs key (Apple Developer) and FCM credentials (EAS) for the
+   bundle. Remote push does not work in Expo Go on Android.
+3. Apply the migration (`npm run db:push`).
+4. Point a cron at the dispatch URL above.
 
 ## RevenueCat webhook setup
 

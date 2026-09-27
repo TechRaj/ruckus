@@ -46,6 +46,13 @@ export interface Api {
   saveToStash(args: { denId: string; placeId: string; sourceUrl: string | null }): Promise<StashItem>;
   setWant(denId: string, placeId: string, want: boolean): Promise<void>;
 
+  notifications: {
+    /** Register this device for event reminders. The token is the signed-in user's. */
+    registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
+    /** Forget one device. Call before sign-out, while the session still exists. */
+    unregisterPushToken(token: string): Promise<void>;
+  };
+
   /** Comments. No table on the backend yet — the real adapter keeps them in memory. */
   addTake(denId: string, placeId: string, text: string): Promise<void>;
   updateTake(denId: string, placeId: string, text: string): Promise<void>;

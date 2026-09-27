@@ -10,6 +10,7 @@ declare module '@ruckus/api' {
     | 'not_signed_in' | 'not_a_member' | 'den_limit_reached'
     | 'invite_invalid' | 'invite_expired' | 'invite_used_up'
     | 'place_missing_id' | 'place_not_in_stash' | 'no_places' | 'too_many_places'
+    | 'bad_push_token' | 'bad_platform'
     | 'unexpected';
 
   export class RuckusError extends Error {
@@ -93,6 +94,10 @@ declare module '@ruckus/api' {
     };
     confirmations: {
       log(args: { mode: string; offered: unknown[]; chosen?: number[]; engine?: string | null }): Promise<unknown>;
+    };
+    notifications: {
+      registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
+      unregisterPushToken(token: string): Promise<void>;
     };
   }
 

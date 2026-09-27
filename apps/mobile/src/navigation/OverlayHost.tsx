@@ -5,11 +5,14 @@
  * eventually from the share extension (§5.2), so none of those should own it.
  * Everything reads `overlay` on StashContext.
  */
+import { EmptyState } from '../components/EmptyState';
+import { SheetModal } from '../components/SheetModal';
 import { AddPlaceScreen } from '../screens/AddPlaceScreen';
 import { ConfirmScreen } from '../screens/ConfirmScreen';
 import { PlaceDetailScreen } from '../screens/PlaceDetailScreen';
 import { SavedScreen } from '../screens/SavedScreen';
 import { useStash } from '../state/StashContext';
+import { lines } from '../theme/lines';
 
 export function OverlayHost() {
   const { overlay, openOverlay, select } = useStash();
@@ -47,6 +50,12 @@ export function OverlayHost() {
           id={overlay.id}
           onClose={() => { select(null); close(); }}
         />
+      );
+    case 'missing-event':
+      return (
+        <SheetModal onClose={close} height={0.42}>
+          <EmptyState line={lines.missingEvent} />
+        </SheetModal>
       );
     default:
       return null;

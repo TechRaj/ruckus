@@ -8,7 +8,7 @@
  */
 import { useState } from 'react';
 import {
-  Pressable, StyleSheet, Text, TextInput, View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SecondaryButton } from '../components/Buttons';
@@ -16,7 +16,7 @@ import { Emblem } from '../components/Emblem';
 import {
   IconChevronDown, IconLink, IconPen, IconSearch, PawPrint,
 } from '../components/Icons';
-import { Hint } from '../components/Chrome';
+import { Hint, keyboardDismissMode } from '../components/Chrome';
 import { SheetModal } from '../components/SheetModal';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
@@ -39,6 +39,12 @@ export function AddPlaceScreen({
 
   return (
     <SheetModal onClose={onClose} height={0.62}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={keyboardDismissMode}
+        alwaysBounceVertical
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
       <View style={styles.body}>
         <View style={styles.head}>
           <Text style={styles.title}>Add a place</Text>
@@ -86,6 +92,7 @@ export function AddPlaceScreen({
         <PawPrint size={28} />
         <Hint style={{ flex: 1 }}>{lines.hint.pasteLink}</Hint>
       </View>
+      </ScrollView>
     </SheetModal>
   );
 }

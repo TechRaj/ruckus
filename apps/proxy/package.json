@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
-    "@ruckus/ingest": "*"
+    "@ruckus/ingest": "*",
+    "@ruckus/reminders": "*"
   }
 }

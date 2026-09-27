@@ -18,7 +18,7 @@ import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton } from '../components/Buttons';
-import { Hint, Kicker, RoundButton, ScreenHeader, SortToggle } from '../components/Chrome';
+import { Hint, keyboardDismissMode, Kicker, RoundButton, ScreenHeader, SortToggle } from '../components/Chrome';
 import { EmptyState } from '../components/EmptyState';
 import { FilterChips } from '../components/FilterChips';
 import { GlassSheetBackground } from '../components/GlassSheetBackground';
@@ -158,7 +158,7 @@ export function PlacesScreen() {
         animationConfigs={{ duration: reduce ? 1 : motion.sheet, easing: EASE_DRAWER }}
         animatedPosition={animatedPosition}
         onChange={setDetentIndex}
-        keyboardBehavior="extend"
+        keyboardBehavior="interactive"
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         handleIndicatorStyle={styles.handle}
@@ -222,6 +222,7 @@ export function PlacesScreen() {
               style={styles.listFlex}
               contentContainerStyle={{ paddingBottom: geo.listPaddingBottom }}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={keyboardDismissMode}
               renderItem={({ item }) => (
                 <PlaceRow
                   item={item}

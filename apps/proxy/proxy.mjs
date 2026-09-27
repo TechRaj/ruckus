@@ -20,6 +20,9 @@
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { SYSTEM } from '@ruckus/ingest';
+import {
+  createSupabaseReminderDb, dispatchEventReminders, sendExpoPush, timeZoneFromCoordinate,
+} from '@ruckus/reminders';
 
 const app = express();
 app.use(express.json({ limit: '64kb' }));
@@ -428,12 +431,48 @@ app.post('/webhooks/revenuecat', async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------------ *
+ * /internal/reminders/dispatch - send Den event reminders that are due.
+ *
+ * A cron hits this every few minutes with the proxy secret. Members are
+ * notified at 09:00 in the place's time zone, 7, 3, and 1 days before the
+ * event, even if the app is closed. The service role key stays here.
+ * Nothing in the response or the log is a push token.
+ * ------------------------------------------------------------------ */
+
+app.post('/internal/reminders/dispatch', async (req, res) => {
+  const key = req.headers['x-ruckus-key'];
+  if (!process.env.PROXY_SECRET || !safeEqual(key ?? '', process.env.PROXY_SECRET)) {
+    return res.status(401).json({ error: 'sign in required' });
+  }
+  if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: 'reminders not configured' });
+  }
+  try {
+    const db = createSupabaseReminderDb({
+      url: SUPABASE_URL,
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+    const result = await dispatchEventReminders({
+      db,
+      resolveTimeZone: timeZoneFromCoordinate,
+      push: messages => sendExpoPush(messages, { accessToken: process.env.EXPO_ACCESS_TOKEN }),
+    });
+    console.log(`[reminders] claimed=${result.claimed} sent=${result.sent} failed=${result.failed} skipped=${result.skipped}`);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[reminders]', err.message);
+    res.status(500).json({ error: 'reminders failed' });
+  }
+});
+
 app.get('/health', (_, res) => {
   const total = alarms.wrapperFail + alarms.wrapperOk;
   res.json({
     ok: true,
     model: MODEL,
     geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
+    reminders: Boolean(SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.PROXY_SECRET),
     auth: AUTH_ENFORCED ? 'enforced' : 'OPEN',
     wrapper: { ...alarms, failRate: total ? +(alarms.wrapperFail / total).toFixed(3) : null },
   });

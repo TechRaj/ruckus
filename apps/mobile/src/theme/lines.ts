@@ -29,6 +29,7 @@ export const lines = {
     'matching the place…',
   ],
   hiding: "couldn't find that one. try searching, or add it by hand.",
+  missingEvent: "that event isn't in your den anymore.",
   saved: 'saved to the stash.',
 
   /** Hints: mono, lowercase, muted. */

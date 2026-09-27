@@ -14,7 +14,7 @@ import { api } from '../api/client';
 import { useStash } from '../state/StashContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton, TextButton } from '../components/Buttons';
-import { Field, Hint, Kicker } from '../components/Chrome';
+import { Field, Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { CritterRoom } from '../components/CritterRoom';
 import { EMBLEMS, Emblem } from '../components/Emblem';
 import { Grain } from '../components/Grain';
@@ -100,7 +100,7 @@ export function OnboardingScreen() {
     return (
       <View style={[styles.root, pad]}>
         <Back onPress={() => setStep('welcome')} />
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           <Text style={styles.headline}>Set yourself up</Text>
           <Text style={styles.sub}>
             This is how you'll show up on the map and in your Den.
@@ -129,7 +129,7 @@ export function OnboardingScreen() {
     return (
       <View style={[styles.root, pad]}>
         <Back onPress={() => setStep('welcome')} />
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           <Text style={styles.headline}>Join a Den</Text>
           <Text style={styles.sub}>The six-character code from your friend's invite link.</Text>
           <View style={{ height: 28 }} />
@@ -148,7 +148,7 @@ export function OnboardingScreen() {
   return (
     <View style={[styles.root, pad]}>
       <Back onPress={() => setStep('you')} />
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
         <Text style={styles.headline}>Who's this with?</Text>
         <Text style={styles.sub}>
           A Den is your group. Everything you save is shared with them.

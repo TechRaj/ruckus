@@ -3,8 +3,8 @@
  *
  * A control, so it stays Nunito rather than mono. Lives in the sheet at the
  * full detent only; BottomSheetTextInput registers with the sheet's keyboard
- * handling so the sheet extends rather than the list disappearing under the
- * keyboard. Composes with the person and category chips.
+ * handling. The sheet follows the keyboard, and dragging down dismisses it.
+ * Composes with the person and category chips.
  */
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, View } from 'react-native';
@@ -25,6 +25,7 @@ export function StashSearch({
         placeholder="Search your stash"
         placeholderTextColor={colors.inkMuted}
         returnKeyType="search"
+        blurOnSubmit
         autoCorrect={false}
         autoCapitalize="none"
         clearButtonMode="never"

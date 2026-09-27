@@ -269,6 +269,197 @@ select t.login('carol');
 select t.ok((select count(*) from public.confirmations where id = t.get('conf')::uuid) = 0,
             'nobody can read anyone else''s confirmations');
 
+-- --------------------------------------------------------- event reminders
+-- 09:00 America/Toronto. 2026-03-08 is the spring-forward; 09:00 that day is EDT.
+select t.login('alice');
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_market","name":"Toronto Night Market","kind":"event",
+     "coordinate":{"lat":43.638,"lng":-79.419},
+     "when":{"text":"March 10","start":"2026-03-10","end":null,"recurring":null}}]'::jsonb,
+  null, 'manual', null, 'manual');
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_prose","name":"Sometime Market","kind":"event",
+     "coordinate":{"lat":43.64,"lng":-79.42},
+     "when":{"text":"sometime in spring","start":null,"end":null,"recurring":null}}]'::jsonb,
+  null, 'manual', null, 'manual');
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_recur","name":"Monthly Market","kind":"event",
+     "coordinate":{"lat":43.64,"lng":-79.42},
+     "when":{"text":null,"start":null,"end":null,"recurring":"First Wednesday of each month"}}]'::jsonb,
+  null, 'manual', null, 'manual');
+
+select t.login('alice');
+select public.register_push_token('ExponentPushToken[alicealicealicealice]', 'ios');
+select t.login('bob');
+select public.register_push_token('ExponentPushToken[bobbobbobbobbobbbbbb]', 'ios');
+select t.login('erin');
+select public.register_push_token('ExponentPushToken[erinerinerinerinerin]', 'android');
+
+select t.throws('select public.register_push_token(''not-a-token'', ''ios'')',
+                'bad_push_token', 'a push token has to look like an Expo token');
+select t.login('carol');
+select t.throws('select public.claim_event_reminders(''2026-03-03 14:00+00'')',
+                'permission denied', 'a member cannot run the reminder job');
+select t.throws('select public.reminder_send_context(''11111111-1111-1111-1111-111111111111'')',
+                'permission denied', 'a member cannot read reminder tokens');
+select t.ok((select count(*) from public.device_push_tokens) = 0,
+            'a stranger sees nobody else''s push tokens');
+select public.register_push_token('ExponentPushToken[carolcarolcarolcarol]', 'ios');
+select t.ok((select count(*) from public.device_push_tokens) = 1
+            and (select profile_id from public.device_push_tokens) = t.id('carol'),
+            'registering a token stores it only on your own row');
+select t.throws('insert into public.device_push_tokens (profile_id, token, platform) values ('
+                || quote_literal(t.id('carol')) || ', ''ExponentPushToken[sneakysneakysneaky]'', ''ios'')',
+                'permission denied', 'tokens cannot be inserted around register_push_token()');
+
+reset role;
+update public.places set time_zone = 'America/Toronto' where google_place_id = 'ChIJ_market';
+insert into public.den_members (den_id, profile_id) values (t.get('den')::uuid, t.id('erin'));
+
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-03 13:59+00')) = 0,
+            'a minute before 09:00 local, the 7-day reminder is not due');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-03 14:00+00')) = 3,
+            'at 09:00 America/Toronto the 7-day reminder is claimed once per member with a device');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-03 14:00+00')) = 0,
+            'running the job again claims nothing');
+select t.ok((select count(*) from public.event_reminder_sends where offset_days <> 7) = 0,
+            'the 3-day and 1-day reminders wait for their own morning');
+select t.ok((select count(*) from public.places p
+             join public.saves s on s.place_id = p.id
+             where p.google_place_id in ('ChIJ_prose', 'ChIJ_recur')
+               and p.time_zone is not null) = 0,
+            'a caption or a recurrence without a resolved date is not an event we schedule');
+
+do $$
+declare
+  bob_send uuid;
+  ctx record;
+begin
+  select id into bob_send from public.event_reminder_sends
+    where recipient_id = t.id('bob') and offset_days = 7;
+  select * into ctx from public.reminder_send_context(bob_send, '2026-03-03 14:00+00');
+  perform t.ok(ctx.eligible and not ctx.recipient_voted and ctx.other_voter_names = '{}',
+               'with nobody interested, the send has no invented names');
+  perform t.ok(ctx.tokens = array['ExponentPushToken[bobbobbobbobbobbbbbb]'],
+               'the send context carries the recipient''s current device');
+  perform t.ok(ctx.event_name = 'Toronto Night Market', 'the alert names the place, not the reel');
+end $$;
+
+select t.login('alice');
+select null where public.set_want_to_go(t.get('den')::uuid,
+  (select id from public.places where google_place_id = 'ChIJ_market'), true) > 0;
+
+reset role;
+do $$
+declare ctx record;
+begin
+  select * into ctx from public.reminder_send_context(
+    (select id from public.event_reminder_sends where recipient_id = t.id('bob') and offset_days = 7),
+    '2026-03-03 14:00+00');
+  perform t.ok(ctx.other_voter_names = array['Amelia'] and not ctx.recipient_voted,
+               'a vote cast after the claim is what the send would say');
+  select * into ctx from public.reminder_send_context(
+    (select id from public.event_reminder_sends where recipient_id = t.id('alice') and offset_days = 7),
+    '2026-03-03 14:00+00');
+  perform t.ok(ctx.recipient_voted and ctx.other_voter_names = '{}',
+               'the person who voted is not asked to join');
+end $$;
+
+-- erin leaves. her unsent reminder is cancelled; she cannot keep it.
+delete from public.den_members where profile_id = t.id('erin') and den_id = t.get('den')::uuid;
+select null from public.claim_event_reminders('2026-03-03 14:00+00');
+select t.ok((select status from public.event_reminder_sends where recipient_id = t.id('erin')) = 'skipped',
+            'leaving the Den cancels an unsent reminder');
+
+-- 3 days before is still EST (14:00 UTC). 1 day before is EDT (13:00 UTC).
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-07 13:59+00')) = 0,
+            'the 3-day reminder waits until 09:00 EST');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-07 14:00+00')) = 2,
+            'the 3-day reminder is claimed for the members who are still in the Den');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 12:59+00')) = 0,
+            'the day after the clocks change, 09:00 is 13:00 UTC');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 13:00+00')) = 2,
+            'the 1-day reminder fires at 09:00 EDT');
+
+select public.finish_event_reminder(
+  (select id from public.event_reminder_sends where recipient_id = t.id('alice') and offset_days = 7),
+  'failed', 'DeviceNotRegistered ExponentPushToken[alicealicealicealice]');
+select t.ok((select error from public.event_reminder_sends
+             where recipient_id = t.id('alice') and offset_days = 7) = 'DeviceNotRegistered [token]',
+            'a failed send is auditable and does not keep the token');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 13:00+00')) = 1,
+            'a failed send can be retried; a sent or sending one cannot');
+
+-- The date moves. Old unsent rows are skipped; the new date gets its own set.
+update public.saves set when_start = '2026-03-20'
+ where place_id = (select id from public.places where google_place_id = 'ChIJ_market');
+select null from public.claim_event_reminders('2026-03-13 13:00+00');
+select t.ok((select count(*) from public.event_reminder_sends
+             where event_date = '2026-03-10' and status = 'sending') = 0,
+            'an edited date cancels unsent reminders for the old date');
+select t.ok((select count(*) from public.event_reminder_sends
+             where event_date = '2026-03-20' and offset_days = 7 and status = 'sending') = 2,
+            'an edited date schedules a new 7-day reminder');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-13 13:00+00')) = 0,
+            'the new date is not claimed twice');
+
+-- A second save that disagrees about the date makes the event ambiguous.
+select t.login('bob');
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_market","name":"Toronto Night Market","kind":"event",
+     "coordinate":{"lat":43.638,"lng":-79.419},
+     "when":{"text":"March 22","start":"2026-03-22","end":null,"recurring":null}}]'::jsonb,
+  null, 'manual', null, 'manual');
+reset role;
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-15 13:00+00')) = 0,
+            'two different dates on one event are not guessed between');
+
+-- Deleted event: nothing further is sent, and the unsent claim is skipped.
+delete from public.saves where place_id = (select id from public.places where google_place_id = 'ChIJ_market');
+select null from public.claim_event_reminders('2026-03-15 13:00+00');
+select t.ok((select count(*) from public.event_reminder_sends
+             where place_id = (select id from public.places where google_place_id = 'ChIJ_market')
+               and status = 'sending') = 0,
+            'deleting the event cancels unsent reminders');
+
+-- Unknown zone: a future dated place with coordinates and no zone is listed, then stored.
+select t.login('alice');
+select null from public.save_places(t.get('den')::uuid,
+  format('[{"googlePlaceId":"ChIJ_future","name":"Future Market","kind":"event",
+     "coordinate":{"lat":43.65,"lng":-79.38},
+     "when":{"text":null,"start":"%s","end":null,"recurring":null}}]', current_date + 14)::jsonb,
+  null, 'manual', null, 'manual');
+reset role;
+select t.ok(exists (select 1 from public.places_missing_time_zone() m
+                    join public.places p on p.id = m.id
+                    where p.google_place_id = 'ChIJ_future'),
+            'a dated place with no time zone is reported, not guessed');
+select t.ok((select count(*) from public.due_event_reminders(now()) d
+             join public.places p on p.id = d.place_id
+             where p.google_place_id = 'ChIJ_future') = 0,
+            'without a time zone, no reminder is due');
+select public.set_place_time_zone(
+  (select id from public.places where google_place_id = 'ChIJ_future'), 'America/Toronto');
+select t.throws('select public.set_place_time_zone('
+                || quote_literal((select id from public.places where google_place_id = 'ChIJ_future'))
+                || ', ''Not/AZone'')',
+                'bad_time_zone', 'a time zone postgres does not know is refused');
+set role authenticated;
+select t.login('carol');
+select t.throws('select public.set_place_time_zone('
+                || quote_literal((select id from public.places where google_place_id = 'ChIJ_future'))
+                || ', ''America/Toronto'')',
+                'permission denied', 'a stranger cannot set a place time zone');
+select t.ok((select count(*) from public.event_reminder_sends) = 0,
+            'a stranger sees no reminder history');
+
+select t.login('alice');
+select t.ok((select count(*) from public.event_reminder_sends) > 0, 'you can read your own reminder history');
+select t.ok((select count(*) from public.event_reminder_sends where recipient_id <> t.id('alice')) = 0,
+            'you cannot read anyone else''s reminder history');
+select public.unregister_push_token('ExponentPushToken[alicealicealicealice]');
+select t.ok((select count(*) from public.device_push_tokens) = 0, 'signing out removes your token');
+
 -- ---------------------------------------------------------- leaving a Den
 select t.login('alice');
 select public.leave_den(t.get('den')::uuid);

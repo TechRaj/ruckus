@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/Buttons';
-import { Kicker } from '../components/Chrome';
+import { keyboardDismissMode, Kicker } from '../components/Chrome';
 import { CritterStack } from '../components/CritterHead';
 import { EmptyState } from '../components/EmptyState';
 import { IconCheck, IconExternal, IconNav } from '../components/Icons';
@@ -38,7 +38,13 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(false);
   const item = stash.find(s => s.id === id);
-  if (!item) return null;
+  if (!item) {
+    return (
+      <SheetModal onClose={onClose} height={0.42}>
+        <EmptyState line={lines.missingEvent} />
+      </SheetModal>
+    );
+  }
 
   const savedBy = memberById.get(item.savedBy);
   const going = item.interested.map(u => memberById.get(u)).filter(Boolean) as Member[];
@@ -65,7 +71,12 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
 
   return (
     <SheetModal onClose={onClose} height={0.88}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={keyboardDismissMode}
+        alwaysBounceVertical
+      >
         <Kicker>{`${item.neighbourhood} · ${CATEGORY_LABEL[item.category]}`}</Kicker>
         <Text style={styles.title}>{item.name}</Text>
         <Text style={styles.where}>{item.address ?? item.neighbourhood} · {item.distance}</Text>

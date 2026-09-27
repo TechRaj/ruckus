@@ -36,6 +36,8 @@ export const ERRORS = {
   place_not_in_stash: "That place isn't in this Den's Stash.",
   no_places:          'Pick at least one place to save.',
   too_many_places:    'That is a lot of places. Save fewer at once.',
+  bad_push_token:     "That device couldn't be registered for reminders.",
+  bad_platform:       "That device couldn't be registered for reminders.",
 };
 
 export class RuckusError extends Error {
@@ -260,7 +262,22 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       rpc('log_confirmation', { p_mode: mode, p_offered: offered, p_chosen: chosen, p_engine: engine ?? null }),
   };
 
-  return { supabase, auth, profile, dens, stash, confirmations };
+  /* ------------------------------------------------------- notifications -- */
+
+  const notifications = {
+    /**
+     * Remember this device for event reminders. A token belongs to the
+     * signed-in user; registering it again moves it off any previous account.
+     */
+    registerPushToken: (token, platform) =>
+      rpc('register_push_token', { p_token: token, p_platform: platform }),
+
+    /** Drop one device. Call this before sign-out, while the session still exists. */
+    unregisterPushToken: token =>
+      rpc('unregister_push_token', { p_token: token }),
+  };
+
+  return { supabase, auth, profile, dens, stash, confirmations, notifications };
 }
 
 /** snake_case row from den_stash() -> the camelCase shape screens use */

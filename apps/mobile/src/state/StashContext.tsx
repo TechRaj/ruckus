@@ -14,6 +14,7 @@ import React, {
 } from 'react';
 import { api } from '../api/client';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
+import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
 import { Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
 
 export type Overlay =
@@ -21,6 +22,7 @@ export type Overlay =
   | { kind: 'add' }
   | { kind: 'confirm'; url: string | null }
   | { kind: 'detail'; id: string }
+  | { kind: 'missing-event' }
   | { kind: 'saved'; name: string };
 
 export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
@@ -62,6 +64,8 @@ interface StashState {
   deleteTake: (id: string) => void;
   addToStash: (placeId: string, sourceUrl: string | null) => Promise<StashItem>;
   openOverlay: (o: Overlay) => void;
+  /** A reminder tap. Opens the event, or says it is gone. */
+  openReminder: (denId: string, placeId: string) => Promise<void>;
   /** After sign-in, onboarding, or a join: re-read who I am and which Den. */
   refreshSession: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -200,6 +204,29 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     orReload(api.deleteTake(den.id, id));
   }, [den, currentUserId, patch, orReload]);
 
+  const openReminder = useCallback(async (denId: string, placeId: string) => {
+    try {
+      const dens = await api.myDens();
+      const target = dens.find(d => d.id === denId);
+      if (!target) {
+        setOverlay({ kind: 'missing-event' });
+        return;
+      }
+      setDen(target);
+      setSession('ready');
+      const items = await api.getStash(denId);
+      setStash(items);
+      if (!items.some(s => s.id === placeId)) {
+        setOverlay({ kind: 'missing-event' });
+        return;
+      }
+      setSelectedId(placeId);
+      setOverlay({ kind: 'detail', id: placeId });
+    } catch {
+      setOverlay({ kind: 'missing-event' });
+    }
+  }, []);
+
   const addToStash = useCallback(async (placeId: string, sourceUrl: string | null) => {
     if (!den) throw new Error('not_a_member');
     const saved = await api.saveToStash({ denId: den.id, placeId, sourceUrl });
@@ -208,10 +235,15 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   }, [den]);
 
   const signOut = useCallback(async () => {
+    await unregisterCurrentPushToken();
     await api.auth.signOut();
     setOverlay({ kind: 'none' });
     await refreshSession();
   }, [refreshSession]);
+
+  useEventReminders(session === 'ready', useCallback(target => {
+    openReminder(target.denId, target.placeId);
+  }, [openReminder]));
 
   const value: StashState = {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,
@@ -224,6 +256,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     addTake, updateTake, deleteTake,
     addToStash,
     openOverlay: setOverlay,
+    openReminder,
     refreshSession,
     signOut,
   };

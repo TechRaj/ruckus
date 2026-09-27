@@ -16,7 +16,7 @@ import {
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { CategoryGlyph } from '../components/CategoryGlyph';
-import { Hint, Kicker } from '../components/Chrome';
+import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { Emblem } from '../components/Emblem';
 import { EmptyState } from '../components/EmptyState';
 import {
@@ -124,11 +124,13 @@ export function ConfirmScreen({
               placeholder={den ? 'Toronto' : 'Search'}
               placeholderTextColor={colors.inkMuted}
               autoFocus
+              returnKeyType="search"
+              blurOnSubmit
               style={styles.searchInput}
             />
           </View>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled">
+        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           {results.map(r => (
             <Pressable
               key={r.placeId}
@@ -166,7 +168,7 @@ export function ConfirmScreen({
 
   return (
     <SheetModal onClose={onClose} height={0.9} dismissable={mode !== 'saving'}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
         <Kicker>{sharedUrl ? 'From the link you shared' : 'From your search'}</Kicker>
         <Text style={styles.headline}>
           {confident && !expanded ? 'Think I found it' : 'Which one did you mean?'}

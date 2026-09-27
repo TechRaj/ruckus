@@ -4,11 +4,14 @@
  * name in display type, sitting straight over the map.
  */
 import React from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
 import { colors, radius, shadow, space, type } from '../theme/tokens';
 import { IconCalendar, IconNav } from './Icons';
 import { Sort } from '../types';
+
+/** Drag the keyboard down to dismiss it. iOS follows the finger; Android dismisses on drag. */
+export const keyboardDismissMode = Platform.OS === 'ios' ? 'interactive' : 'on-drag';
 
 export function Kicker({ children, style }: { children: string; style?: TextStyle }) {
   return <Text style={[styles.kicker, style]}>{children.toUpperCase()}</Text>;
@@ -71,6 +74,8 @@ export function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.inkMuted}
+        returnKeyType="done"
+        blurOnSubmit
         style={styles.field}
         {...input}
       />

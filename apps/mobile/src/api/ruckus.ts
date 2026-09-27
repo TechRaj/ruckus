@@ -194,6 +194,11 @@ export const ruckusApi: Api = {
     await ruckus.stash.setWant(denId, placeId, want);
   },
 
+  notifications: {
+    registerPushToken: (token, platform) => ruckus.notifications.registerPushToken(token, platform),
+    unregisterPushToken: token => ruckus.notifications.unregisterPushToken(token),
+  },
+
   async addTake(denId, placeId, text) {
     const me = await ruckus.auth.userId();
     if (!me) throw new Error('not_signed_in');
