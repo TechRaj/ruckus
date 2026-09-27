@@ -52,7 +52,7 @@ export const mockApi: Api = {
     dens = [mockDen, ...dens];
     return mockDen;
   },
-  async getInviteLink() { await delay(200); return { url: 'https://ruckus.app/j/8FK2QD' }; },
+  async getInviteLink() { await delay(200); return { code: '8FK2QD', url: 'https://ruckus.app/j/8FK2QD' }; },
 
   async getStash() { await delay(320); return stash.map(s => ({ ...s })); },
   onStashChange(denId, cb) {

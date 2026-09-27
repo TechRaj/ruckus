@@ -94,7 +94,7 @@ paywall and Customer Center, entitlement **`ruckus_pro`**. What's left:
 - When a URL arrives: `resolveSharedUrl(url)` → confirm screen. That path already
   works from a pasted link, so this task is plumbing only.
 
-## Task 5 — Invites without a domain
+## Task 5 — Invites without a domain  ✅ done (People shows and shares the code; "Join another Den" takes one)
 
 The app builds `https://ruckus.app/j/CODE`, but nobody owns `ruckus.app`, and links
 that open the app need the paid Apple account. So:

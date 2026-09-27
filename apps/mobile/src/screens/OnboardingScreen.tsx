@@ -131,7 +131,7 @@ export function OnboardingScreen() {
         <Back onPress={() => setStep('welcome')} />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           <Text style={styles.headline}>Join a Den</Text>
-          <Text style={styles.sub}>The six-character code from your friend's invite link.</Text>
+          <Text style={styles.sub}>The six-character code your friend shared.</Text>
           <View style={{ height: 28 }} />
           <Field
             label="Invite code" value={code} onChangeText={setCode} placeholder="8FK2QD"

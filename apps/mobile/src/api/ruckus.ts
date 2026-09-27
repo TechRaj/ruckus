@@ -133,7 +133,10 @@ export const ruckusApi: Api = {
   },
   createDen: async (name, emblem) => toDen(await ruckus.dens.create(name, emblem)),
   joinDen: async (code) => toDen(await ruckus.dens.join(code)),
-  getInviteLink: async (denId) => ({ url: `https://ruckus.app/j/${await ruckus.dens.invite(denId)}` }),
+  getInviteLink: async (denId) => {
+    const code = await ruckus.dens.invite(denId);
+    return { code, url: `https://ruckus.app/j/${code}` };
+  },
 
   async getStash(denId, pos) {
     const rows = await ruckus.stash.list(denId, pos);

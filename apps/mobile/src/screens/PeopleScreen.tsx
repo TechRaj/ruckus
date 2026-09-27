@@ -4,6 +4,10 @@
  *
  * A small private social world, not a project workspace: emblem, name, roster,
  * invite, Stash count. Nothing configurable beyond the name.
+ *
+ * Invites are the six-character code, not a link: nobody owns ruckus.app yet,
+ * so a link can't open the app. Joining another Den happens here too - the
+ * code field in onboarding is only reachable before your first Den.
  */
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -11,7 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
-import { Kicker } from '../components/Chrome';
+import { Field, Hint, Kicker } from '../components/Chrome';
 import { CritterRoom } from '../components/CritterRoom';
 import { IconChevronRight } from '../components/Icons';
 import { Emblem } from '../components/Emblem';
@@ -19,14 +23,34 @@ import { useStash } from '../state/StashContext';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, stash, savedCountBy, signOut, isPro, openPro } = useStash();
+  const { den, stash, savedCountBy, signOut, isPro, openPro, refreshSession } = useStash();
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [code, setCode] = useState('');
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (den) api.getInviteLink(den.id).then(r => setInvite(r.url)).catch(() => {});
+    if (den) api.getInviteLink(den.id).then(r => setInvite(r.code)).catch(() => {});
   }, [den]);
+
+  /** Joining makes the new Den the active one: refreshSession picks the newest. */
+  const join = async () => {
+    setJoinBusy(true); setJoinError(null);
+    try {
+      await api.joinDen(code);
+      setJoining(false); setCode('');
+      await refreshSession();
+    } catch (err) {
+      // the free tier holds 2 Dens; a third is exactly what Ruckus Pro sells
+      if ((err as { needsUpgrade?: boolean }).needsUpgrade) { await openPro(); return; }
+      setJoinError(err instanceof Error && err.message ? err.message : "Couldn't join. Try again.");
+    } finally {
+      setJoinBusy(false);
+    }
+  };
 
   if (!den) return <View style={styles.root} />;
 
@@ -61,7 +85,7 @@ export function PeopleScreen() {
 
         <View style={styles.inviteBox}>
           <View style={{ flex: 1 }}>
-            <Kicker>Invite link</Kicker>
+            <Kicker>Invite code</Kicker>
             <Text style={styles.inviteUrl} numberOfLines={1}>
               {invite ?? 'Generating…'}
             </Text>
@@ -78,7 +102,9 @@ export function PeopleScreen() {
         <View style={{ height: space.md }} />
         <PrimaryButton
           label="Share invite"
-          onPress={() => invite && Share.share({ message: `Join my Den on Ruckus: ${invite}` })}
+          onPress={() => invite && Share.share({
+            message: `Join my Den "${den.name}" on Ruckus - open the app, tap Join a Den, and enter ${invite}`,
+          })}
         />
 
         <View style={{ height: 26 }} />
@@ -95,6 +121,20 @@ export function PeopleScreen() {
           <IconChevronRight />
         </Pressable>
 
+        {joining ? (
+          <View style={{ marginTop: space.lg }}>
+            <Field
+              label="Join a Den" value={code} onChangeText={setCode} placeholder="8FK2QD"
+              autoCapitalize="characters" autoComplete="off" maxLength={8} autoFocus
+            />
+            {joinError ? <Hint style={styles.error}>{joinError}</Hint> : null}
+            <View style={{ height: space.md }} />
+            <PrimaryButton label="Join" onPress={join} loading={joinBusy} disabled={joinBusy || code.trim().length < 6} />
+            <TextButton label="Cancel" onPress={() => { setJoining(false); setCode(''); setJoinError(null); }} muted />
+          </View>
+        ) : (
+          <TextButton label="Join another Den" onPress={() => setJoining(true)} muted />
+        )}
         <TextButton label="Switch Den" onPress={() => {}} muted />
         <TextButton label="Sign out" onPress={signOut} muted />
       </View>
@@ -111,7 +151,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     padding: space.lg, borderRadius: radius.xl, backgroundColor: colors.paperSunk,
   },
-  inviteUrl: { ...type.chip, fontSize: 16, color: colors.ink, marginTop: 5 },
+  // the code is read aloud and typed off a screenshot: big, spaced, mono
+  inviteUrl: { ...type.chip, fontSize: 22, letterSpacing: 4, color: colors.ink, marginTop: 5 },
+  error: { color: colors.flare, marginTop: space.md },   // same as sign-in and onboarding
   copy: {
     height: 40, borderRadius: 20, paddingHorizontal: space.lg,
     backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center',

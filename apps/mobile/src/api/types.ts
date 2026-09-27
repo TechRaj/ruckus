@@ -33,7 +33,11 @@ export interface Api {
   myDens(): Promise<Den[]>;
   createDen(name: string, emblem: string): Promise<Den>;
   joinDen(code: string): Promise<Den>;
-  getInviteLink(denId: string): Promise<{ url: string }>;
+  /**
+   * The Den's six-character join code. `url` is for later: nobody owns
+   * ruckus.app yet, so a link can't open the app - share the code instead.
+   */
+  getInviteLink(denId: string): Promise<{ code: string; url: string }>;
 
   getStash(denId: string, pos?: { lat: number; lng: number }): Promise<StashItem[]>;
   /** A friend saved or voted; re-fetch. Returns unsubscribe. */
