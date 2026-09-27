@@ -186,6 +186,20 @@ begin
 end $$;
 select t.login('bob');
 select t.ok(public.set_want_to_go(t.get('den')::uuid, t.get('dual')::uuid, true) = 2, 'bob wants to go too');
+do $$
+declare w jsonb;
+begin
+  select wanters into w from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_dual';
+  perform t.ok(jsonb_array_length(w) = 2, 'two members who want to go are both listed');
+  perform t.ok(w->0->>'profile_id' = t.id('alice')::text and w->0->>'display_name' = 'Amelia',
+               'the earlier vote comes first, with their name');
+  perform t.ok(w->1->>'profile_id' = t.id('bob')::text and w->1->>'display_name' = 'bob',
+               'the later vote comes second');
+  perform t.ok(w->0 ? 'avatar' and w->1 ? 'avatar', 'each wanter includes an avatar');
+
+  select wanters into w from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_downsview';
+  perform t.ok(w = '[]'::jsonb, 'a place nobody wants lists nobody');
+end $$;
 select t.ok(public.set_want_to_go(t.get('den')::uuid, t.get('dual')::uuid, false) = 1, 'bob changes his mind');
 select t.login('alice');
 select t.ok((select i_want from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_dual'),

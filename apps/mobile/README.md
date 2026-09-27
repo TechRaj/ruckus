@@ -94,9 +94,6 @@ place** with everyone who saved it; `StashItem` takes the first saver as
 
 **Still open on the backend side** — ask before working around:
 
-- `den_stash()` returns `want_count` but not *who*. The app draws critter faces
-  from `interested[]`, so faces degrade to a count until the RPC returns wanter
-  ids.
 - Comments (`takes`) have no table. The real adapter keeps them in memory per
   session.
 - `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the

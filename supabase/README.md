@@ -35,7 +35,7 @@ Writes go through functions, so the rules that RLS can't express are enforced in
 | `join_den` | `dens.join` | expiry, max uses, the Den limit; idempotent |
 | `leave_den` | `dens.leave` | hands ownership on; deletes an empty Den |
 | `save_places` | `stash.save` | membership; upserts the place; keeps event dates |
-| `den_stash` | `stash.list` | membership; one row per place, with distance |
+| `den_stash` | `stash.list` | membership; one row per place, with distance and who wants to go |
 | `set_want_to_go` | `stash.setWant` | membership |
 | `register_push_token` | `notifications.registerPushToken` | the signed-in user; a token moves to the account that registers it |
 | `unregister_push_token` | `notifications.unregisterPushToken` | your own token |

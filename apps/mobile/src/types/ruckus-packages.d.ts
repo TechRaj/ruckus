@@ -57,6 +57,7 @@ declare module '@ruckus/api' {
     when: { text: string | null; start: string | null; end: string | null; recurring: string | null } | null;
     wantCount: number;
     iWant: boolean;
+    wanters: { id: string; displayName: string; avatar: string | null }[];
   }
 
   export interface Ruckus {

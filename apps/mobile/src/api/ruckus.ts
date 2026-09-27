@@ -8,10 +8,7 @@
  * first saver as `savedBy`, `distanceM` formatted, and his free-text
  * category folded into eat / drink / do for the pin glyph.
  *
- * Two things the backend does not have yet, kept honest here:
- *   - who wants to go (only the count) — `interested` is [me] or [], so
- *     faces degrade to a count until den_stash() returns wanter ids.
- *   - comments — kept in memory per session until there is a table.
+ * Comments are kept in memory per session until there is a table.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
@@ -60,7 +57,7 @@ const formatDistance = (m: number | null) =>
 const takes = new Map<string, Take[]>();
 const takeKey = (denId: string, placeId: string) => `${denId}:${placeId}`;
 
-function toStashItem(r: StashRow, denId: string, me: string | null): StashItem | null {
+function toStashItem(r: StashRow, denId: string): StashItem | null {
   if (!r.coordinate) return null;   // can't be pinned; the backend routed it to search anyway
   return {
     id: r.placeId,
@@ -76,7 +73,7 @@ function toStashItem(r: StashRow, denId: string, me: string | null): StashItem |
     savedAt: r.firstSavedAt,
     wantCount: r.wantCount,
     iWant: r.iWant,
-    interested: r.iWant && me ? [me] : [],
+    interested: (r.wanters ?? []).map(w => w.id),
     note: r.note ?? '',
     distance: formatDistance(r.distanceM),
     address: r.address ?? undefined,
@@ -145,8 +142,8 @@ export const ruckusApi: Api = {
   getInviteLink: async (denId) => ({ url: `https://ruckus.app/j/${await ruckus.dens.invite(denId)}` }),
 
   async getStash(denId, pos) {
-    const [rows, me] = await Promise.all([ruckus.stash.list(denId, pos), ruckus.auth.userId()]);
-    return rows.map(r => toStashItem(r, denId, me)).filter((s): s is StashItem => s !== null);
+    const rows = await ruckus.stash.list(denId, pos);
+    return rows.map(r => toStashItem(r, denId)).filter((s): s is StashItem => s !== null);
   },
   onStashChange: (denId, cb) => ruckus.stash.onChange(denId, cb),
 

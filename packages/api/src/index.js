@@ -302,6 +302,7 @@ function toStashRow(r) {
       : null,
     wantCount: r.want_count,
     iWant: r.i_want,
+    wanters: (r.wanters ?? []).map(w => ({ id: w.profile_id, displayName: w.display_name, avatar: w.avatar })),
   };
 }
 
