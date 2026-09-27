@@ -5,8 +5,14 @@ TypeScript). Runs in Expo Go today, with RevenueCat in its preview mock; real
 purchases and the share extension need the dev build (`npm run ios`).
 
     npm install                    # from the repo root — this is a workspace
-    npm run mobile                 # expo start
+    npm run mobile:build           # once, and after adding any native package: builds + installs the app
+    npm run mobile                 # every day after that: starts the JS server; open the Ruckus app
     npm run typecheck:mobile       # tsc, unused locals/params are errors
+
+**Use the dev build, not Expo Go.** RevenueCat's paywall and the share extension
+are native code, which Expo Go doesn't contain — in Expo Go RevenueCat falls back
+to "Browser Mode" and the paywall fails with `document is not available`.
+`expo-dev-client` is installed, so `npm run mobile` opens the dev build.
 
 The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 
