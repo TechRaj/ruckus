@@ -18,7 +18,7 @@ import { useStash } from '../state/StashContext';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, dens, switchDen, stash, savedCountBy, signOut, isPro, openPro, refreshSession } = useStash();
+  const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession } = useStash();
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -61,12 +61,11 @@ export function PeopleScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: space.xxl }}
-    >
+    <View style={[styles.root, { paddingTop: insets.top + 14 }]}>
+      {/* Outside the scroll view, so it stays where it is on the other tabs when the page scrolls. */}
+      <View style={styles.pad}><ThemeSwitch /></View>
+    <ScrollView contentContainerStyle={{ paddingBottom: space.xxl }}>
       <View style={styles.pad}>
-        <ThemeSwitch />
         <Emblem name={den.emblem} size={68} />
         <Text style={styles.title}>{den.name}</Text>
         <Text style={styles.meta}>
@@ -188,9 +187,10 @@ export function PeopleScreen() {
             <TextButton label={panel === 'switch' ? 'Close' : 'Back'} onPress={() => (panel === 'switch' ? closePanel() : (setPanel('switch'), setPanelError(null)))} muted />
           </View>
         )}
-        <TextButton label="Sign out" onPress={signOut} muted />
+        <TextButton label="Sign out" onPress={() => openOverlay({ kind: 'sign-out' })} muted />
       </View>
     </ScrollView>
+    </View>
   );
 }
 

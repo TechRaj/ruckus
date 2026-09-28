@@ -14,7 +14,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
 import { PlacesScreen } from '../screens/PlacesScreen';
-import { SignInScreen } from '../screens/SignInScreen';
+import { SignedOutScreen } from '../screens/SignedOutScreen';
 import { useStash } from '../state/StashContext';
 import { USE_MOCKS } from '../api/client';
 import { useFollowTheClock } from '../theme/clock';
@@ -42,11 +42,11 @@ export function RootNavigator() {
   );
   const insets = useSafeAreaInsets();
 
-  /** Signed out shows sign in. Signed in with no Den shows onboarding. Otherwise the tabs. */
+  /** Signed out shows the welcome screen or sign in. Signed in with no Den shows onboarding. Otherwise the tabs. */
   if (session === 'loading') {
     return <View style={styles.splash}><ActivityIndicator color={colors.inkMuted} /></View>;
   }
-  if (session === 'signedOut') return <SignInScreen />;
+  if (session === 'signedOut') return <SignedOutScreen />;
   if (session === 'noDen') return <OnboardingScreen />;
 
   return (

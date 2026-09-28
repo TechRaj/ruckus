@@ -15,7 +15,7 @@ import { lines } from '../theme/lines';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
 
-const RASCAL_WIDTH = 124;
+const RASCAL_WIDTH = 132;
 
 export function HomeScreen() {
   const { den, stash, nearlyPlans, currentUserId, memberById } = useStash();

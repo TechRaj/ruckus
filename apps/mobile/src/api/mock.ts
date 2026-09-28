@@ -30,7 +30,8 @@ export const mockApi: Api = {
       return userId;
     },
     async userId() { await delay(60); return userId; },
-    async signOut() { userId = null; dens = []; },
+    /** The account keeps its Dens, so signing back in returns to them. */
+    async signOut() { userId = null; },
   },
 
   profile: {

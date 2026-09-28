@@ -1,27 +1,23 @@
-/** Onboarding. Two steps: name and critter, then create or join a Den. */
+/**
+ * Onboarding, for someone who has signed in and has no Den yet. Two steps:
+ * name and critter, then create or join a Den. The welcome screen comes
+ * before sign-in and lives in WelcomeScreen.
+ */
 import { useState } from 'react';
-import {
-  Pressable, ScrollView, StyleSheet, Text, View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { useStash } from '../state/StashContext';
-import { LinearGradient } from 'expo-linear-gradient';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Field, Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
-import { CritterRoom } from '../components/CritterRoom';
+import { CritterPicker } from '../components/CritterPicker';
 import { EMBLEMS, Emblem } from '../components/Emblem';
-import { Grain } from '../components/Grain';
 import { IconChevronLeft, PawPrint } from '../components/Icons';
-import { Sprite } from '../components/Sprite';
-import { trashcan } from '../theme/sprites';
 import { lines } from '../theme/lines';
 import { colors, launchCritters, space, type } from '../theme/tokens';
 import { Critter as CritterName } from '../types';
 
-type Step = 'welcome' | 'you' | 'den' | 'join';
-
-const ART_WIDTH = 200;
+type Step = 'you' | 'den' | 'join';
 
 /**
  * Shown when the user is signed in but has no Den. The name and critter are
@@ -30,7 +26,7 @@ const ART_WIDTH = 200;
 export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { refreshSession } = useStash();
-  const [step, setStep] = useState<Step>('welcome');
+  const [step, setStep] = useState<Step>('you');
   const [name, setName] = useState('');
   const [critter, setCritter] = useState<CritterName>('raccoon');
   const [denName, setDenName] = useState('');
@@ -65,37 +61,9 @@ export function OnboardingScreen() {
     if (await attempt(() => api.joinDen(code))) await refreshSession();
   };
 
-  if (step === 'welcome') {
-    return (
-      <View style={[styles.root, styles.centred, pad]}>
-        <Grain opacity={0.035} />
-        <LinearGradient
-          pointerEvents="none"
-          colors={[colors.mapWater + '00', colors.mapWater + '4D', colors.mapWater + '00']}
-          style={styles.glow}
-        />
-        <View>
-          <Kicker>A places app for friends</Kicker>
-          <Text style={styles.wordmark}>Ruckus</Text>
-          <Text style={styles.tagline}>Places worth leaving the group chat for.</Text>
-          <Sprite
-            sheet={trashcan} width={ART_WIDTH} style={styles.heroArt}
-            accessibilityLabel="A raccoon popping out of a trash can"
-          />
-        </View>
-        {/* Drawn after the can, so the button covers the can's flat base. */}
-        <PrimaryButton label="Get started" onPress={() => setStep('you')} />
-        <Pressable onPress={() => setStep('join')} style={styles.joinHint} accessibilityRole="button">
-          <Hint style={{ textAlign: 'center' }}>{lines.hint.joinLink}</Hint>
-        </Pressable>
-      </View>
-    );
-  }
-
   if (step === 'you') {
     return (
       <View style={[styles.root, pad]}>
-        <Back onPress={() => setStep('welcome')} />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           <Text style={styles.headline}>Set yourself up</Text>
           <Text style={styles.sub}>
@@ -105,10 +73,7 @@ export function OnboardingScreen() {
           <Field label="Your name" value={name} onChangeText={setName} placeholder="Amelia" />
           <View style={{ height: 22 }} />
           <Kicker style={{ marginBottom: space.md }}>Your critter</Kicker>
-          <CritterRoom
-            heads={launchCritters.map(c => ({ key: c, critter: c, label: c, selected: critter === c }))}
-            onPick={k => setCritter(k as CritterName)}
-          />
+          <CritterPicker critters={launchCritters} value={critter} onChange={setCritter} />
         </ScrollView>
         {error ? <Hint style={styles.error}>{error}</Hint> : null}
         <PrimaryButton
@@ -124,7 +89,7 @@ export function OnboardingScreen() {
   if (step === 'join') {
     return (
       <View style={[styles.root, pad]}>
-        <Back onPress={() => setStep('welcome')} />
+        <Back onPress={() => setStep('den')} />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
           <Text style={styles.headline}>Join a Den</Text>
           <Text style={styles.sub}>The six-character code your friend shared.</Text>
@@ -136,7 +101,7 @@ export function OnboardingScreen() {
           {error ? <Hint style={styles.error}>{error}</Hint> : null}
         </ScrollView>
         <PrimaryButton label="Join" onPress={joinDen} loading={busy} disabled={busy || code.trim().length < 6} />
-        <TextButton label="Make a new Den instead" onPress={() => setStep('you')} muted />
+        <TextButton label="Make a new Den instead" onPress={() => setStep('den')} muted />
       </View>
     );
   }
@@ -198,18 +163,6 @@ function Back({ onPress }: { onPress: () => void }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: space.xl },
-  /** The welcome screen is one block, button included, centred between the top and bottom insets. */
-  centred: { justifyContent: 'center' },
-  glow: { position: 'absolute', left: 0, right: 0, top: '30%', height: '50%' },
-  /** The can stands on the button: the overlap hides the base, which the art cuts off flat. */
-  heroArt: { alignSelf: 'center', marginTop: space.sm, marginBottom: -8 },
-  wordmark: {
-    /** Baloo 2 clips the tops of letters when lineHeight is under about 1.3 times fontSize. */
-    fontFamily: type.display.fontFamily, fontSize: 72, lineHeight: 96,
-    color: colors.ink, marginTop: -4,
-  },
-  tagline: { ...type.body, fontSize: 17, lineHeight: 24, color: colors.inkSecondary, marginTop: 4, maxWidth: 300 },
-  joinHint: { height: 44, justifyContent: 'center' },
   error: { color: colors.warn, marginTop: space.md },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xl },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -11 },

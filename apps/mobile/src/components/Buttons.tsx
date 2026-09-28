@@ -54,11 +54,11 @@ export function SecondaryButton({
 }
 
 export function TextButton({
-  label, onPress, muted,
-}: { label: string; onPress: () => void; muted?: boolean }) {
+  label, onPress, muted, danger,
+}: { label: string; onPress: () => void; muted?: boolean; danger?: boolean }) {
   return (
     <PressableScale onPress={onPress} accessibilityRole="button" style={styles.text}>
-      <Text style={[styles.textLabel, muted && { color: colors.inkMuted }]}>{label}</Text>
+      <Text style={[styles.textLabel, muted && { color: colors.inkMuted }, danger && { color: colors.warn }]}>{label}</Text>
     </PressableScale>
   );
 }

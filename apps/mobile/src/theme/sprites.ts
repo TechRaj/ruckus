@@ -27,7 +27,7 @@ export const trashcan: SpriteSheet = {
   source: require('../../assets/sprites/trashcan.png'),
   columns: 4,
   rows: 2,
-  cell: { width: 604, height: 747 },
+  cell: { width: 604, height: 744 },
   padding: 2,
   steps: [
     [1, 800], [2, 90], [3, 110], [4, 120], [5, 130], [6, 110], [7, 110], [8, 2600], [6, 110],
@@ -37,6 +37,15 @@ export const trashcan: SpriteSheet = {
 
 const IDLE = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(frame => [frame, 170] as const);
 
+/** Rascal standing, with a slow wobble. Loops. */
+export const jumpIdle: SpriteSheet['steps'] = IDLE;
+
+/** One hop, played once. Ends with him standing. */
+export const jumpHop: SpriteSheet['steps'] = [
+  [7, 250], [1, 110], [2, 80], [3, 170], [4, 80], [5, 130], [1, 110], [2, 80], [3, 170], [4, 80], [5, 130], [7, 300],
+];
+export const jumpHopMs = jumpHop.reduce((sum, [, ms]) => sum + ms, 0);
+
 /**
  * Rascal hopping. Frames 6 to 15 are an idle wobble and frames 1 to 5 are one
  * hop. The wobble plays twice, about 3.4 seconds, before each hop.
@@ -45,7 +54,7 @@ export const jump: SpriteSheet = {
   source: require('../../assets/sprites/jump.png'),
   columns: 5,
   rows: 3,
-  cell: { width: 244, height: 355 },
+  cell: { width: 244, height: 332 },
   padding: 2,
   steps: [...IDLE, ...IDLE, [1, 110], [2, 80], [3, 170], [4, 80], [5, 130]],
   rest: 7,

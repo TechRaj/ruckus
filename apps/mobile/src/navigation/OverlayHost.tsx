@@ -9,6 +9,7 @@ import { AddPlaceScreen } from '../screens/AddPlaceScreen';
 import { ConfirmScreen } from '../screens/ConfirmScreen';
 import { PlaceDetailScreen } from '../screens/PlaceDetailScreen';
 import { SavedScreen } from '../screens/SavedScreen';
+import { SignOutSheet } from '../screens/SignOutSheet';
 import { Overlay, useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 
@@ -65,6 +66,8 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
           onClose={() => { select(null); close(); }}
         />
       );
+    case 'sign-out':
+      return <SignOutSheet onClose={close} />;
     case 'missing-event':
       return (
         <SheetModal onClose={close} height={0.42}>

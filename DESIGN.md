@@ -7,9 +7,8 @@ Product and pipeline context is in `CLAUDE.md`; this file covers the interface o
 copied from there as of 27 Sept 2026. If this file and `tokens.ts` disagree,
 `tokens.ts` is right and this file needs fixing.
 
-**The PNG exports in `design/` are out of date.** They show the earlier look:
-orange accent, black pins, a plain tab bar. They are still correct for layout and
-screen structure. For colour, type and components, read the code.
+Source art is in `design/`: the mascot and sprite sheets in `design/sprites/`,
+critter heads in `design/ruckus_headshots/`, and the sky drawings in `design/sky/`.
 
 ---
 
@@ -234,6 +233,17 @@ full, and the map controls fade out as the sheet approaches full.
 
 Rows are a fixed 84px. The add button is a 64px flare circle fixed in the corner.
 
+### First launch and sign-in
+
+| Person | Path |
+| --- | --- |
+| New to this device | Welcome, email and code, name and critter, Den, then the tabs |
+| Has signed in here before | Sign in with email and code, then the tabs |
+
+Signing out always returns to the sign-in screen, with the email filled in.
+"I already have an account" on the welcome screen and "New here? Get started"
+on the sign-in screen switch between the two paths.
+
 ### Modal sheets
 
 Add, confirm, saved and place detail all appear in **one** modal sheet
@@ -243,6 +253,7 @@ content. It does not close and reopen.
 | Screen | Height |
 | --- | --- |
 | Place not found, missing event | 42% |
+| Sign out | 60% |
 | Confirm, while resolving | 50% |
 | Add a place | 62% |
 | Place detail, confirm with choices | 88% |
@@ -354,6 +365,8 @@ pigeon, fox, crow. To add one, add the image and one line in
 | Place | Form |
 | --- | --- |
 | Onboarding welcome | Trash can sprite, standing on the Get started button below the wordmark and tagline: the can waits, squashes, pops open, he settles under the lid |
+| Sign in | Standing beside the form with a slow wobble, then hopping once when the code is accepted |
+| Sign out | Peeking from the can on the confirm sheet, then ducking in once signed out |
 | Places, at peek | Paws resting on the sheet's top edge; fades out as the sheet rises |
 | Resolving a link | Beside a speech bubble |
 | Saved | Springs in with a success haptic |
@@ -428,4 +441,3 @@ Known gaps:
 - **A styled map.** The `map*` tokens are waiting on a renderer that supports them.
 - **Pin clustering**, once a Stash passes about 50 pins.
 - **Rascal's sniff and cheer poses.**
-- **Re-export the boards** so `design/` matches the shipped palette.

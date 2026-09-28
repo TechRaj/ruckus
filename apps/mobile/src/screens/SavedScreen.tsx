@@ -9,7 +9,7 @@ import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Grain } from '../components/Grain';
 import { RascalBubble } from '../components/RascalBubble';
 import { SheetModal } from '../components/SheetModal';
-import { RASCAL_ASPECT, rascalCheer } from '../theme/critters';
+import { rascalStand } from '../theme/critters';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapSuccess, useReduceMotion } from '../theme/motion';
 import { useStash } from '../state/StashContext';
@@ -67,7 +67,7 @@ export function SavedScreen({
           ))}
           <Animated.Text style={[styles.title, titleStyle]}>In the Stash</Animated.Text>
           <Animated.View style={[styles.rascalWrap, cheer]}>
-            <Image source={rascalCheer} style={styles.rascal} resizeMode="contain" />
+            <Image source={rascalStand.source} style={styles.rascal} resizeMode="contain" />
           </Animated.View>
           <View style={styles.line}>
             <RascalBubble tail="left" delay={200} maxWidth={150}>{lines.saved}</RascalBubble>
@@ -83,7 +83,7 @@ export function SavedScreen({
   );
 }
 
-const RASCAL_W = 210;
+const RASCAL_W = 176;
 
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: space.xl },
@@ -96,11 +96,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.45, color: colors.ink,
   },
   /** Offset so the image starts at the title's baseline and does not cover the letters. */
-  rascalWrap: { position: 'absolute', alignSelf: 'center', top: '30%', marginTop: 62, zIndex: 2 },
-  rascal: { width: RASCAL_W, height: RASCAL_W / RASCAL_ASPECT },
+  rascalWrap: { position: 'absolute', alignSelf: 'center', top: '30%', marginTop: 66, zIndex: 2 },
+  rascal: { width: RASCAL_W, height: RASCAL_W / rascalStand.aspect },
   line: { position: 'absolute', right: 0, top: '30%', marginTop: -78, zIndex: 3 },
   sub: {
-    position: 'absolute', left: 0, right: 0, top: '30%', marginTop: 282,
+    position: 'absolute', left: 0, right: 0, top: '30%', marginTop: 286,
     ...type.body, color: colors.inkSecondary, textAlign: 'center',
   },
 });

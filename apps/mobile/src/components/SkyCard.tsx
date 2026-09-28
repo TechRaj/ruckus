@@ -36,7 +36,7 @@ const ORBS: Record<Mood, number> = {
 };
 
 const HEIGHT = 150;
-const ORB = 48;
+const ORB = 52;
 /** Width over height of the sky drawings. */
 const ASPECT = 1180 / 500;
 /** The hills layer starts this far down the drawing, as a fraction of its height. */

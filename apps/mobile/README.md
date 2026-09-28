@@ -14,7 +14,7 @@ are native code, which Expo Go doesn't contain — in Expo Go RevenueCat falls b
 to "Browser Mode" and the paywall fails with `document is not available`.
 `expo-dev-client` is installed, so `npm run mobile` opens the dev build.
 
-The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
+The standing context is the root `CLAUDE.md`. The interface is described in the root `DESIGN.md`, and source art is in `design/`.
 
 ## Layout
 
@@ -45,7 +45,7 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
       theme/motion.ts       easing curves, haptics, Reduce Motion / Transparency hooks
       theme/critters.ts     the pre-rendered heads and Rascal's poses
       lib/time.ts           `ago()` — the one relative-date formatter
-    assets/critters/        the five renders (from ../../design/boards/renders/)
+    assets/critters/        critter heads and the mascot (from ../../design/)
     assets/textures/        the grain tile
 
 ## Rules the code keeps

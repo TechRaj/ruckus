@@ -8,6 +8,7 @@ import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
 } from 'react';
 import { api } from '../api/client';
+import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
 import { Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
@@ -18,6 +19,7 @@ export type Overlay =
   | { kind: 'confirm'; url: string | null }
   | { kind: 'detail'; id: string }
   | { kind: 'missing-event' }
+  | { kind: 'sign-out' }
   | { kind: 'saved'; name: string };
 
 export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
@@ -284,6 +286,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await unregisterCurrentPushToken();
+    await markSignedOut();
     await api.auth.signOut();
     setOverlay({ kind: 'none' });
     await refreshSession();
