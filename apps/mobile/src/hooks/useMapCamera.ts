@@ -1,10 +1,7 @@
 /**
- * Moving the map: pan to a place, zoom in or out, recentre.
- *
- * Everything goes through `animateToRegion`. `camera.zoom` is a Google Maps
- * field that Apple Maps silently ignores (it uses altitude), so the zoom
- * buttons did nothing until this tracked the live region and halved or
- * doubled what is actually on screen — pinch included.
+ * Map camera controls: pan to a place, zoom, recentre. All of them use
+ * `animateToRegion`, because Apple Maps ignores `camera.zoom`. Zoom halves or
+ * doubles the region currently on screen.
  */
 import { useCallback, useRef } from 'react';
 import MapView, { Region } from 'react-native-maps';
@@ -23,10 +20,10 @@ export function useMapCamera() {
   const mapRef = useRef<MapView>(null);
   const regionRef = useRef<Region>(TORONTO);
 
-  /** Pass to MapView's onRegionChangeComplete so zoom works from wherever the user is. */
+  /** Pass to MapView's onRegionChangeComplete so zoom starts from the region on screen. */
   const onRegionChangeComplete = useCallback((r: Region) => { regionRef.current = r; }, []);
 
-  /** Centre a place a little above the middle so the sheet doesn't cover it. */
+  /** Centres the place above the middle of the map so the sheet does not cover it. */
   const panTo = useCallback((item: StashItem) => {
     mapRef.current?.animateToRegion({
       latitude: item.lat - 0.006,

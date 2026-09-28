@@ -1,16 +1,10 @@
 /**
- * Map pin — §12.1, restyled in §13.6.
- *
- * A resting pin says almost nothing: it marks a location and invites a tap.
- * One silhouette for the whole map, so forty pins read as one calm system.
- * Category is the interior glyph; state is size and fill. Nothing depends on
- * colour alone.
- *
- * Selection is the only place tangerine appears on the map, and the only
- * thing that lifts.
+ * Map pin. Category is the glyph inside. State is size and fill.
+ * Nothing depends on colour alone. Only the selected pin uses flare and a
+ * shadow.
  */
 import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors, pin as pinTokens, shadow } from '../theme/tokens';
 import { Category, Critter } from '../types';
 import { CategoryGlyph } from './CategoryGlyph';
@@ -23,9 +17,9 @@ export function Pin({
 }: {
   category: Category;
   state: PinState;
-  /** A tangerine dot, top right — the place is already in a Caper. */
+  /** Shows a dot at the top right when the place is already in a Caper. */
   inCaper?: boolean;
-  /** Only set when the sheet is filtered to one person — §12.2. */
+  /** Set only when the sheet is filtered to one person. */
   critter?: Critter;
 }) {
   if (state === 'dimmed') {
@@ -39,16 +33,18 @@ export function Pin({
   const selected = state === 'selected';
   const w = selected ? pinTokens.selected : pinTokens.rest;
   const h = w * (52 / 40);
-  const fill = selected ? colors.flare : colors.ink;
-  const glyph = selected ? colors.ink : colors.paper;
+  const fill = selected ? colors.flare : colors.pin;
+  const glyph = selected ? colors.onFlare : colors.pinInk;
   const g = w * 0.55;
 
   return (
     <View style={[styles.hit, { width: w + 16, height: h + 16 }]}>
       <View style={selected ? shadow.control : undefined}>
         <Svg width={w} height={h} viewBox="0 0 40 52">
-          <Path d="M11 34h18l-9 18Z" fill={fill} />
-          <Circle cx="20" cy="20" r="20" fill={fill} />
+          <Path
+            d="M20 1.5a18.5 18.5 0 0 1 9.6 34.3L20 49 10.4 35.8A18.5 18.5 0 0 1 20 1.5Z"
+            fill={fill} stroke={glyph} strokeWidth={3} strokeLinejoin="round"
+          />
         </Svg>
         <View style={[styles.glyph, { top: w * 0.5 - g / 2 }]}>
           <CategoryGlyph category={category} size={g} color={glyph} />
@@ -65,7 +61,7 @@ export function Pin({
 }
 
 const styles = StyleSheet.create({
-  /** Hit target stays 48 regardless of the rendered size — §12.6. */
+  /** The hit target stays at least 48 at every rendered size, for accessibility. */
   hit: {
     minWidth: pinTokens.hitTarget,
     minHeight: pinTokens.hitTarget,
@@ -82,8 +78,8 @@ const styles = StyleSheet.create({
   caperDot: {
     position: 'absolute', top: 1, right: -1,
     width: 11, height: 11, borderRadius: 6,
-    backgroundColor: colors.flare,
-    borderWidth: 2, borderColor: colors.mapLand,
+    backgroundColor: colors.butter,
+    borderWidth: 2, borderColor: colors.pinInk,
   },
   critter: { position: 'absolute', left: -14, top: -20 },
 });

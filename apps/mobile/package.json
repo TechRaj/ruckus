@@ -10,8 +10,7 @@
     "preios": "node ../../tools/sync-mobile-env.mjs"
   },
   "dependencies": {
-    "@expo-google-fonts/fredoka": "^0.4.1",
-    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/baloo-2": "^0.4.2",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@react-native-async-storage/async-storage": "2.2.0",

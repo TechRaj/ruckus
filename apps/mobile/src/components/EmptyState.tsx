@@ -1,9 +1,6 @@
 /**
- * The one empty state — a paw print, one of Rascal's lines as plain text,
- * and optionally the thing to do about it. No bubble: a balloon is for the
- * two moments he is actually doing something (sniffing, the save). Here he
- * is just the voice. Replaces three ad-hoc copies that each had different
- * spacing.
+ * Shared empty state: a paw print, one line of text, and an optional action.
+ * Use this on every screen so the spacing stays the same.
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';

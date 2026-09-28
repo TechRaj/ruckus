@@ -1,44 +1,43 @@
 /**
- * Den emblems — low-poly, faceted, matte. Same material language as the
- * critters (§10.1): flat shading, one soft key light, no gradients.
+ * Den emblems: a coloured coin with one solid mark. The five names are
+ * stored on Dens, so do not rename them.
  */
 import React from 'react';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { G, Path, Rect } from 'react-native-svg';
+import { colors } from '../theme/tokens';
 
-const shapes: Record<string, React.ReactNode> = {
-  lantern: <>
-    <Path d="M20 3 33 12v18L20 37 7 30V12Z" fill="#E0C67C" />
-    <Path d="M20 3 33 12v18L20 37Z" fill="#CBB167" />
-    <Path d="M20 13 26 17v8l-6 4-6-4v-8Z" fill="#FBFAF6" opacity={0.55} />
-  </>,
-  acorn: <>
-    <Path d="M20 37 8 24l4-8h16l4 8Z" fill="#D3A78E" />
-    <Path d="M20 37 32 24l-4-8h-8Z" fill="#BE9179" />
-    <Path d="M6 13h28l-4 5H10Z" fill="#8A8478" />
-  </>,
-  moon: <>
-    <Path d="M27 4 34 20l-7 16-9-8 4-8-4-8Z" fill="#A9B6C6" />
-    <Path d="M27 4 34 20l-7 16Z" fill="#93A0B1" />
-    <Circle cx="12" cy="12" r="3" fill="#A9B6C6" />
-  </>,
-  peak: <>
-    <Path d="M20 5 36 34H4Z" fill="#9EC4C2" />
-    <Path d="M20 5 36 34H20Z" fill="#86ADAB" />
-    <Path d="M20 5 27 18H13Z" fill="#FBFAF6" opacity={0.7} />
-  </>,
-  leaf: <>
-    <Path d="M20 3 34 20 20 37 6 20Z" fill="#A8C4A2" />
-    <Path d="M20 3 34 20 20 37Z" fill="#93AF8D" />
-    <Path d="M20 6v28" stroke="#FBFAF6" strokeWidth={1.6} opacity={0.6} />
-  </>,
+const shapes: Record<string, { coin: string; mark: string; d: React.ReactNode }> = {
+  lantern: {
+    coin: colors.butter, mark: '#8A6A1E',
+    d: <><Rect x="7" y="7" width="10" height="12" rx="4" /><Rect x="9.5" y="3.5" width="5" height="3" rx="1.5" /></>,
+  },
+  acorn: {
+    coin: colors.peach, mark: '#8A4E3A',
+    d: <><Path d="M5 9.5C5 6.5 8 5 12 5s7 1.5 7 4.5Z" /><Path d="M6.5 11h11c0 5-2.5 8.5-5.5 9.5-3-1-5.5-4.5-5.5-9.5Z" /></>,
+  },
+  moon: {
+    coin: colors.lilac, mark: '#54439A',
+    d: <Path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />,
+  },
+  peak: {
+    coin: colors.sky, mark: '#2F6F8A',
+    d: <Path d="M3 19 10 6.5c.4-.7 1.3-.7 1.7 0L15 12l1.5-2.2c.4-.6 1.2-.6 1.6 0L22 19Z" />,
+  },
+  leaf: {
+    coin: '#ACE1AF', mark: '#23644F',
+    d: <Path d="M5 19C4 11 9 5 20 4.5 20 15 14.5 20 7 19.5l5-7.5-7 7Z" />,
+  },
 };
 
 export const EMBLEMS = ['lantern', 'acorn', 'moon', 'peak', 'leaf'] as const;
 
 export function Emblem({ name, size = 40 }: { name: string; size?: number }) {
+  const { coin, mark, d } = shapes[name] ?? shapes.lantern;
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
-      {shapes[name] ?? shapes.lantern}
+      <Rect width="40" height="40" rx="13.5" fill={coin} />
+      {/* Marks are drawn on a 24 grid and scaled to fill the 40 coin. */}
+      <G transform="translate(3.2 3.2) scale(1.4)" fill={mark}>{d}</G>
     </Svg>
   );
 }

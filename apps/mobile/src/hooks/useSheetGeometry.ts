@@ -1,15 +1,8 @@
 /**
- * Every number the Places sheet and the things that ride on it depend on —
- * §4, corrected in §13.1. One seam: change a detent in `layout` and the snap
- * points, Rascal's perch, and the three drag-driven fades all move together.
- *
- * The detents resolve against the TAB SCREEN, and React Navigation has
- * already taken the tab bar out of that height. Subtracting a bottomInset
- * on the sheet as well would double-count it and float the sheet over a
- * strip of map — the mirror image of the original bug.
- *
- * Pixel snap points, not percentages: peek is measured to the sheet header
- * (at 18% it was a third taller than anything it had to show).
+ * Snap points and drag-driven fades for the Places sheet, derived from
+ * `layout`. The tab screen's height already excludes the tab bar, so do not
+ * also set a bottom inset on the sheet. Peek is a pixel height that matches
+ * the sheet header.
  */
 import { useMemo } from 'react';
 import { useWindowDimensions } from 'react-native';
@@ -37,8 +30,8 @@ export function useSheetGeometry(animatedPosition: SharedValue<number>) {
       peekTop: sheetHeight - layout.sheetPeek,
       halfTop: sheetHeight * (1 - layout.sheetHalf),
       fullTop: sheetHeight * (1 - layout.sheetFull),
-      /** Room under the list for the FAB, plus the bar and home indicator in case
-       *  the container runs under them — over-padding is only slack. */
+      /** Space under the list for the FAB, plus the tab bar and home indicator in
+       *  case the container extends under them. */
       listPaddingBottom: layout.sheetPeek + layout.tabBar + insets.bottom,
     };
   }, [windowHeight, insets]);
@@ -46,10 +39,9 @@ export function useSheetGeometry(animatedPosition: SharedValue<number>) {
   const { peekTop, halfTop, fullTop } = geometry;
 
   /**
-   * Three fades driven from the sheet's own position on the UI thread, so
-   * they track the finger rather than waiting for the animation to land.
-   * Sorting is meaningless at peek; the hint is meaningless anywhere else;
-   * search belongs to the full detent alone.
+   * These fades read the sheet position on the UI thread, so they follow the
+   * drag. The sort control hides at peek, the hint shows only at peek, and
+   * search shows only at full.
    */
   const sortStyle = useAnimatedStyle(() => {
     const t = interpolate(
@@ -67,5 +59,10 @@ export function useSheetGeometry(animatedPosition: SharedValue<number>) {
     return { opacity: t, height: 66 * t, overflow: 'hidden' as const };
   });
 
-  return { ...geometry, sortStyle, hintStyle, searchStyle };
+  /** Fades out the controls over the map as the sheet approaches full height. */
+  const overMapStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(animatedPosition.value, [fullTop + 40, fullTop + 160], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  return { ...geometry, sortStyle, hintStyle, searchStyle, overMapStyle };
 }

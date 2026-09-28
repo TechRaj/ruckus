@@ -1,13 +1,6 @@
 /**
- * The confirmation step — §5.7.
- *
- * Three reasons it exists: the ranker won't be confident, the record needs to
- * be created by a person rather than by an extraction pipeline, and every tap
- * is a labelled example.
- *
- * The screen adapts to confidence: one result when sure, three when torn,
- * search when lost. Log which position gets picked — if it's #1 ninety percent
- * of the time, collapse to single-result and save a tap.
+ * Confirmation step. Shows one match when confident, up to three otherwise, and search when there are none.
+ * CLAUDE.md §5.8: nothing is saved until the user picks a place and confirms.
  */
 import { useEffect, useState } from 'react';
 import {
@@ -20,8 +13,9 @@ import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { Emblem } from '../components/Emblem';
 import { EmptyState } from '../components/EmptyState';
 import {
-  IconCheck, IconChevronDown, IconChevronRight, IconSearch, PawPrint,
+  IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconSearch, PawPrint,
 } from '../components/Icons';
+import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
 import { useStash } from '../state/StashContext';
@@ -32,11 +26,13 @@ import { CONFIDENT, PlaceCandidate } from '../types';
 type Mode = 'resolving' | 'pick' | 'search' | 'saving';
 
 export function ConfirmScreen({
-  sharedUrl, startInSearch, onClose, onSaved,
+  sharedUrl, startInSearch, onClose, onBack, onSaved,
 }: {
   sharedUrl: string | null;
   startInSearch?: boolean;
   onClose: () => void;
+  /** Where Back goes when there are no matches to return to. */
+  onBack: () => void;
   onSaved: (name: string) => void;
 }) {
   const { den, addToStash, isPro, openPro } = useStash();
@@ -47,8 +43,15 @@ export function ConfirmScreen({
   const [chosen, setChosen] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [failed, setFailed] = useState(false);
-  /** Why a save was refused when it isn't a failure: the Den hit its free cap. */
+  /** Message shown when a save is refused because the Den is at its free limit. */
   const [limitNote, setLimitNote] = useState<string | null>(null);
+  /** The matches the link produced, kept so Back from search can return to them. */
+  const [fromLink, setFromLink] = useState<PlaceCandidate[] | null>(null);
+  /** True when the card on screen came from search, false when it came from the link. */
+  const [pickedBySearch, setPickedBySearch] = useState(false);
+  /** The query the current results belong to. The empty message shows only when this equals the typed query. */
+  const [answered, setAnswered] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (startInSearch || !sharedUrl) return;
@@ -56,9 +59,10 @@ export function ConfirmScreen({
     api.resolveSharedUrl(sharedUrl)
       .then(({ candidates: c, mode: m }) => {
         if (!live) return;
-        /** Nothing pinnable: skip straight to search rather than show an empty pick. */
+        /** No candidates, so go to search. */
         if (m === 'search' || c.length === 0) { setMode('search'); return; }
         setCandidates(c);
+        setFromLink(c);
         setChosen(c[0]?.placeId ?? null);
         setMode('pick');
       })
@@ -66,12 +70,37 @@ export function ConfirmScreen({
     return () => { live = false; };
   }, [sharedUrl, startInSearch]);
 
+  /** Debounced. Each search is a paid geocode against a daily cap, and per-keystroke requests make the list flicker. */
   useEffect(() => {
     if (mode !== 'search') return;
     let live = true;
-    api.searchPlaces(query).then(r => { if (live) setResults(r); }).catch(() => {});
-    return () => { live = false; };
-  }, [mode, query]);
+    const asked = query.trim();
+    setSearchError(null);
+    const t = setTimeout(() => {
+      api.searchPlaces(asked, { fromLink: !!sharedUrl })
+        .then(r => { if (live) { setResults(r); setAnswered(asked); } })
+        .catch(err => {
+          if (!live) return;
+          setResults([]);
+          setSearchError((err as { code?: string }).code === 'daily_limit_reached'
+            ? lines.searchLimit : lines.searchFailed);
+        });
+    }, asked ? 350 : 0);
+    return () => { live = false; clearTimeout(t); };
+  }, [mode, query, sharedUrl]);
+
+  /** Back from search returns to the link's matches if there are any, otherwise to Add a place. */
+  const leaveSearch = () => {
+    if (fromLink?.length) {
+      setCandidates(fromLink);
+      setChosen(fromLink[0].placeId);
+      setPickedBySearch(false);
+      setExpanded(true);
+      setMode('pick');
+    } else {
+      onBack();
+    }
+  };
 
   async function save() {
     if (!chosen) return;
@@ -83,13 +112,13 @@ export function ConfirmScreen({
       await addToStash(chosen, sharedUrl);
       onSaved(name);
     } catch (err) {
-      // A full Den isn't a failed lookup - keep the pick on screen, don't
-      // send them to "search instead".
+      // A full Den is a limit, so keep the pick on screen and skip the
+      // failed state.
       const e = err as { code?: string; needsUpgrade?: boolean; message?: string };
       if (e.needsUpgrade) {
         setMode(back);
-        // Just bought Pro: the app knows at once, the server a few seconds later
-        // by webhook. Don't reopen the paywall on someone who has already paid.
+        // After a purchase the app knows about Pro before the server does, which
+        // learns by webhook a few seconds later. Skip the paywall in that window.
         if (isPro) setLimitNote('Your upgrade is on its way. Try again in a few seconds.');
         else await openPro();
         return;
@@ -108,7 +137,7 @@ export function ConfirmScreen({
             action={
               <PrimaryButton
                 label="Search instead"
-                onPress={() => { setFailed(false); setMode('search'); }}
+                onPress={() => { setFailed(false); setChosen(null); setMode('search'); }}
               />
             }
           />
@@ -130,7 +159,14 @@ export function ConfirmScreen({
     return (
       <SheetModal onClose={onClose} height={0.88}>
         <View style={styles.searchHead}>
-          <Text style={styles.headline}>Search for it</Text>
+          <Pressable
+            onPress={leaveSearch} hitSlop={12} style={styles.back}
+            accessibilityRole="button"
+            accessibilityLabel={fromLink?.length ? 'Back to the matches' : 'Back to Add a place'}
+          >
+            <IconChevronLeft />
+          </Pressable>
+          <Text style={[styles.headline, { marginTop: 0 }]}>Search for it</Text>
           <View style={styles.searchField}>
             <IconSearch size={20} color={colors.inkMuted} />
             <TextInput
@@ -145,13 +181,21 @@ export function ConfirmScreen({
             />
           </View>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
+        <ScrollView
+          keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical
+          /** Without this the last results are hidden under the keyboard. */
+          automaticallyAdjustKeyboardInsets
+        >
+          {searchError ? <Hint style={styles.searchNote}>{searchError}</Hint> : null}
+          {!searchError && query.trim() && answered === query.trim() && results.length === 0
+            ? <Hint style={styles.searchNote}>{lines.emptySearch(query.trim())}</Hint> : null}
           {results.map(r => (
             <Pressable
               key={r.placeId}
               onPress={() => {
                 setCandidates([r]);
                 setChosen(r.placeId);
+                setPickedBySearch(true);
                 setExpanded(false);
                 setMode('pick');
               }}
@@ -160,9 +204,9 @@ export function ConfirmScreen({
               <View style={styles.resultTile}>
                 <CategoryGlyph category={r.category} size={22} color={colors.ink} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.resultName}>{r.name}</Text>
-                <Text style={styles.address}>{r.address}</Text>
+              <View style={styles.resultBody}>
+                <Text style={styles.resultName} numberOfLines={2}>{r.name}</Text>
+                <Text style={styles.address} numberOfLines={2}>{r.address}</Text>
               </View>
               <IconChevronRight />
             </Pressable>
@@ -184,7 +228,7 @@ export function ConfirmScreen({
   return (
     <SheetModal onClose={onClose} height={0.9} dismissable={mode !== 'saving'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
-        <Kicker>{sharedUrl ? 'From the link you shared' : 'From your search'}</Kicker>
+        <Kicker>{sharedUrl && !pickedBySearch ? 'From the link you shared' : 'From your search'}</Kicker>
         <Text style={styles.headline}>
           {confident && !expanded ? 'Think I found it' : 'Which one did you mean?'}
         </Text>
@@ -194,9 +238,11 @@ export function ConfirmScreen({
         {shown.map(c => {
           const on = chosen === c.placeId;
           return (
-            <Pressable
+            <PressableScale
               key={c.placeId}
               onPress={() => setChosen(c.placeId)}
+              scaleTo={0.985}
+              haptic="selection"
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
               style={[styles.card, on && styles.cardOn]}
@@ -204,15 +250,15 @@ export function ConfirmScreen({
               <View style={styles.cardTile}>
                 <CategoryGlyph category={c.category} size={24} color={colors.ink} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{c.name}</Text>
-                <Text style={styles.address}>{c.address}</Text>
+              <View style={styles.resultBody}>
+                <Text style={styles.name} numberOfLines={2}>{c.name}</Text>
+                <Text style={styles.address} numberOfLines={2}>{c.address}</Text>
                 {c.reason ? <Text style={styles.reason}>{c.reason}</Text> : null}
               </View>
               {on ? (
-                <View style={styles.tick}><IconCheck size={14} color={colors.ink} /></View>
+                <View style={styles.tick}><IconCheck size={14} color={colors.onFlare} /></View>
               ) : null}
-            </Pressable>
+            </PressableScale>
           );
         })}
 
@@ -226,7 +272,7 @@ export function ConfirmScreen({
           </Pressable>
         ) : null}
 
-        <TextButton label="None of these — search for it" onPress={() => setMode('search')} muted />
+        <TextButton label="None of these? Search for it" onPress={() => setMode('search')} muted />
       </ScrollView>
 
       <View style={styles.footer}>
@@ -263,20 +309,20 @@ const styles = StyleSheet.create({
     padding: 17, borderRadius: radius.xl, marginBottom: 11,
     borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paper,
   },
-  cardOn: { borderColor: colors.flare, borderWidth: 2, backgroundColor: colors.flareWash },
+  cardOn: { borderColor: colors.flareDeep, borderWidth: 2, backgroundColor: colors.flareWash },
   cardTile: {
     width: 52, height: 52, borderRadius: radius.lg,
     backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center',
   },
   name: { ...type.rowTitle, fontSize: 19, color: colors.ink },
-  address: { ...type.meta, fontSize: 14, color: colors.inkSecondary, marginTop: 4 },
+  address: { ...type.meta, fontSize: 14, lineHeight: 19, color: colors.inkSecondary, marginTop: 2 },
   reason: { ...type.meta, color: colors.inkMuted, marginTop: 7 },
   tick: {
     width: 26, height: 26, borderRadius: 13, backgroundColor: colors.flare,
     alignItems: 'center', justifyContent: 'center',
   },
   more: {
-    height: 54, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.hairline,
+    height: 54, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.hairline,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 18,
   },
@@ -293,21 +339,26 @@ const styles = StyleSheet.create({
   denRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   denName: { ...type.chip, fontSize: 14, color: colors.ink },
   searchHead: { paddingHorizontal: space.xl, paddingBottom: 14 },
+  back: { width: 44, height: 40, justifyContent: 'center', marginLeft: -11 },
+  searchNote: { paddingHorizontal: space.xl, paddingVertical: space.md },
   searchField: {
-    marginTop: 18, height: 56, borderRadius: radius.lg,
+    marginTop: 18, height: 56, borderRadius: radius.pill,
     borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paper,
     flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: space.lg,
   },
   searchInput: { flex: 1, ...type.bodyMed, fontSize: 16, color: colors.ink },
   result: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, height: 72,
-    paddingHorizontal: space.xl,
+    /** minHeight so a long name or a two-line address can make the row taller. */
+    flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 72,
+    paddingHorizontal: space.xl, paddingVertical: space.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline,
   },
   resultTile: {
     width: 48, height: 48, borderRadius: 15, backgroundColor: colors.paperSunk,
     alignItems: 'center', justifyContent: 'center',
   },
+  /** minWidth 0 lets the text wrap inside the row instead of pushing the chevron out. */
+  resultBody: { flex: 1, minWidth: 0 },
   resultName: { ...type.rowTitle, fontSize: 17, color: colors.ink },
   searchFoot: { alignItems: 'center', gap: space.md, padding: 30 },
 });

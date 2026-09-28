@@ -1,10 +1,7 @@
 /**
- * Search your own Stash — name, neighbourhood, or the note.
- *
- * A control, so it stays Nunito rather than mono. Lives in the sheet at the
- * full detent only; BottomSheetTextInput registers with the sheet's keyboard
- * handling. The sheet follows the keyboard, and dragging down dismisses it.
- * Composes with the person and category chips.
+ * Search field for the Stash, shown in the sheet at the full detent. It
+ * applies together with the person and category filters. It must be a
+ * BottomSheetTextInput so the sheet's keyboard handling works.
  */
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { StyleSheet, View } from 'react-native';

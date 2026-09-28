@@ -1,12 +1,6 @@
 /**
- * Every pressable in the app goes through here.
- *
- * A colour swap alone does not confirm the interface heard you — the press
- * needs to move. 0.97 is enough to feel and not enough to notice, and because
- * `scale` also scales children, labels and icons come with it for free.
- *
- * Reduce Motion drops the scale and keeps the colour and the haptic, so the
- * feedback survives without the movement (§11.3).
+ * Pressable that scales down while pressed. Use it for every pressable in
+ * the app. Reduce Motion turns the scale off and keeps the haptic.
  */
 import { useCallback } from 'react';
 import { Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
@@ -23,7 +17,7 @@ export function PressableScale({
 }: PressableProps & {
   style?: StyleProp<ViewStyle>;
   scaleTo?: number;
-  /** `selection` for choosing, `impact` for committing, `none` for navigation. */
+  /** Use `selection` for choosing, `impact` for committing, `none` for navigation. */
   haptic?: 'none' | 'selection' | 'impact';
 }) {
   const reduce = useReduceMotion();

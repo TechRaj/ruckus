@@ -1,7 +1,6 @@
 /**
- * One icon set, drawn as SVG paths so they scale and recolour.
- * 24px grid, 1.9 stroke, round caps — §13.6 asks for native-feeling controls,
- * and a consistent stroke weight is most of what that means.
+ * The app's icon set, drawn as SVG paths so icons scale and take a colour.
+ * 24px grid, 1.9 default stroke, round caps.
  */
 import React from 'react';
 import Svg, { Circle, Path, G } from 'react-native-svg';
@@ -84,7 +83,22 @@ export const IconExternal = ({ size = 20, color = colors.inkSecondary }: P) =>
 export const IconClose = ({ size = 20, color = colors.inkSecondary }: P) =>
   stroke(<Path d="M5.5 5.5 18.5 18.5M18.5 5.5 5.5 18.5" />, size, color, 2.2);
 
-/** Sparkle for the Today chip — §4 always specified Everyone / Today / people. */
+/** Sun and moon for the clock pill. Filled so they stay legible at 16px. */
+export const IconSun = ({ size = 16, color = colors.ink }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={2.2} strokeLinecap="round">
+    <Circle cx="12" cy="12" r="4" fill={color} />
+    <Path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+  </Svg>
+);
+
+export const IconMoon = ({ size = 16, color = colors.ink }: P) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />
+  </Svg>
+);
+
+/** Sparkle for the Today filter chip. */
 export const IconSparkle = ({ size = 19, color = colors.inkMuted }: P) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
     <G fill={color}>
@@ -94,7 +108,7 @@ export const IconSparkle = ({ size = 19, color = colors.inkMuted }: P) => (
   </Svg>
 );
 
-/** Rascal's paw print — the accent that stands in for a full pose (§13.3). */
+/** Paw print, used where the full mascot is not shown. */
 export const PawPrint = ({ size = 30, color = colors.hairline }: P) => (
   <Svg width={size} height={size * 0.93} viewBox="0 0 30 28" fill={color}>
     <Path d="M6.2 4.8a3.2 4.2 0 1 0 0 8.4 3.2 4.2 0 1 0 0-8.4Z" />

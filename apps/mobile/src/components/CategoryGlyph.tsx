@@ -1,8 +1,6 @@
 /**
- * Category lives in an interior mark, never in colour — §12.1, and §22
- * forbids colour-only meaning. The same glyph appears inside the pin and in
- * the list row's leading tile, which is what ties the two halves of the
- * screen together.
+ * Category glyph, used inside the map pin and in the list row tile.
+ * Category is shown by shape so that nothing depends on colour alone.
  */
 import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
 import { colors } from '../theme/tokens';
@@ -33,7 +31,7 @@ export function CategoryGlyph({
     );
   }
 
-  // Two footprints, for anything you go and do.
+  // Every other category draws two footprints.
   return (
     <Svg {...s} fill={color}>
       <G rotation={-16} origin="8.6, 11">

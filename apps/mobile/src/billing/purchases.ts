@@ -1,21 +1,8 @@
 /**
- * Ruckus Pro — the only file in the app that knows RevenueCat exists.
- *
- * Two sources of truth, on purpose. The entitlement here is instant and
- * decides what the app *shows* (the Pro row, ads). `profiles.is_pro` is set
- * by the proxy's webhook a few seconds later and decides what the database
- * *allows* (the Den limit). `identify()` is what joins them: without
- * Purchases.logIn(supabaseUserId) the webhook gets an anonymous id and Pro
- * never unlocks server-side.
- *
- * With no EXPO_PUBLIC_REVENUECAT_KEY everything here is inert — nobody is
- * Pro and the paywall doesn't open — so the keyless mock path still runs.
- * In Expo Go the SDK swaps itself for a preview mock; real purchases need
- * the dev build (`npm run ios`).
- *
- * Products live in the RevenueCat dashboard, not here: one offering with
- * the three default packages (monthly, yearly, lifetime), all attached to
- * the `ruckus_pro` entitlement. The paywall is drawn from that offering.
+ * Ruckus Pro billing through RevenueCat. The entitlement here controls what
+ * the app shows. The server enforces the Den limit from `profiles.is_pro`,
+ * which the proxy's webhook sets, so `identify()` must log in with the
+ * Supabase user id. With no EXPO_PUBLIC_REVENUECAT_KEY every function is a no-op.
  */
 import type { CustomerInfo, PurchasesPackage } from 'react-native-purchases';
 
@@ -30,7 +17,7 @@ const ui = () => (require('react-native-purchases-ui') as typeof import('react-n
 
 let configured = false;
 
-/** Safe to call more than once; App.tsx calls it before the first render. */
+/** Safe to call more than once. App.tsx calls it before the first render. */
 export function configureBilling() {
   if (!BILLING_ON || configured) return;
   const { default: Purchases, LOG_LEVEL } = rc();
@@ -42,9 +29,9 @@ export function configureBilling() {
 export const isPro = (info: CustomerInfo) => info.entitlements.active[PRO_ENTITLEMENT] !== undefined;
 
 /**
- * Tie purchases to the signed-in user, or back to anonymous on sign-out.
- * Resolves to whether they're Pro. Never throws: billing being down must
- * not keep anyone out of the app.
+ * Links purchases to the signed-in user, or logs out of RevenueCat when
+ * `userId` is null. Resolves to whether the user is Pro. Never throws, so a
+ * billing failure cannot block sign-in.
  */
 export async function identify(userId: string | null): Promise<boolean> {
   if (!BILLING_ON) return false;
@@ -52,7 +39,7 @@ export async function identify(userId: string | null): Promise<boolean> {
     configureBilling();
     const { default: Purchases } = rc();
     if (!userId) {
-      // logOut() throws on an anonymous user
+      // logOut() throws for an anonymous user.
       if (!(await Purchases.isAnonymous())) await Purchases.logOut();
       return false;
     }
@@ -64,7 +51,10 @@ export async function identify(userId: string | null): Promise<boolean> {
   }
 }
 
-/** Renewals, expiries and purchases on another device arrive here. Returns unsubscribe. */
+/**
+ * Calls `cb` when the entitlement changes, including renewals, expiries and
+ * purchases on another device. Returns an unsubscribe function.
+ */
 export function onProChange(cb: (pro: boolean) => void): () => void {
   if (!BILLING_ON) return () => {};
   configureBilling();
@@ -74,7 +64,7 @@ export function onProChange(cb: (pro: boolean) => void): () => void {
   return () => { Purchases.removeCustomerInfoUpdateListener(listener); };
 }
 
-/** The RevenueCat paywall for the current offering. True when they came out Pro. */
+/** Shows the RevenueCat paywall for the current offering. Resolves true if the user purchased or restored. */
 export async function showPaywall(): Promise<boolean> {
   if (!BILLING_ON) return false;
   try {
@@ -89,8 +79,9 @@ export async function showPaywall(): Promise<boolean> {
 }
 
 /**
- * For a gate — the Den limit. Shows nothing if they're already Pro and
- * resolves true either way, so the caller can just retry what was refused.
+ * For a gated action such as the Den limit. Shows the paywall only if the
+ * user is not Pro. Resolves true when the user is Pro afterwards, so the
+ * caller can retry the action.
  */
 export async function showPaywallIfNeeded(): Promise<boolean> {
   if (!BILLING_ON) return false;
@@ -109,7 +100,7 @@ export async function showPaywallIfNeeded(): Promise<boolean> {
   }
 }
 
-/** Customer Center: cancel, restore, refund, change plan. For people who are already Pro. */
+/** Shows the RevenueCat Customer Center, where a Pro user can cancel, restore, refund or change plan. */
 export async function showCustomerCenter(): Promise<void> {
   if (!BILLING_ON) return;
   try {
@@ -120,9 +111,8 @@ export async function showCustomerCenter(): Promise<void> {
   }
 }
 
-/* ------------------------------------------------ without the paywall -- */
-/* The RevenueCat paywall does all of this itself. These are for a screen  */
-/* that draws its own prices.                                              */
+/* The functions below are for a screen that draws its own prices. */
+/* The RevenueCat paywall does not need them.                       */
 
 export interface ProPackages {
   monthly: PurchasesPackage | null;
@@ -130,7 +120,7 @@ export interface ProPackages {
   lifetime: PurchasesPackage | null;
 }
 
-/** The three products from the current offering; null where one isn't configured. */
+/** The three packages from the current offering. A package that is not configured is null. */
 export async function getPackages(): Promise<ProPackages> {
   const none = { monthly: null, yearly: null, lifetime: null };
   if (!BILLING_ON) return none;
@@ -141,8 +131,8 @@ export async function getPackages(): Promise<ProPackages> {
 }
 
 /**
- * True when they're now Pro, false when they backed out of the sheet.
- * Anything else throws an Error with a line that's safe to show.
+ * Resolves true if the user is now Pro and false if they cancelled. Any
+ * other failure throws an Error whose message can be shown to the user.
  */
 export async function purchase(pkg: PurchasesPackage): Promise<boolean> {
   configureBilling();
@@ -168,7 +158,7 @@ export async function purchase(pkg: PurchasesPackage): Promise<boolean> {
   }
 }
 
-/** True when a previous purchase was found. */
+/** Resolves true if a previous purchase was found. */
 export async function restore(): Promise<boolean> {
   if (!BILLING_ON) return false;
   configureBilling();

@@ -1,32 +1,38 @@
 /**
- * A person's critter — §10.5, §13.7.
- *
- * Bare head, no disc. The ears are the clearest silhouette signal at 32px and
- * a circular crop cuts them off; the render also carries its own identity
- * colour, so a pastel disc was duplicating what the art already does.
- * Identity is the pair (critter + colour), never the colour alone.
+ * A person's critter avatar on a coloured disc. The head is drawn at 80% of
+ * the disc so the ears are not cropped. Each critter has a fixed disc
+ * colour, so identity does not depend on colour alone.
  */
 import { Image, StyleSheet, View } from 'react-native';
 import { CRITTER_ASPECT, critterImages } from '../theme/critters';
-import { shadow } from '../theme/tokens';
+import { colors } from '../theme/tokens';
 import { Critter, Member } from '../types';
 
-/** `size` is the width; height follows the render's aspect so the ears never squash. */
+const DISC: Partial<Record<Critter, string>> = {
+  raccoon: colors.sky, possum: colors.pink, squirrel: colors.peach, skunk: colors.lilac,
+};
+
+/** `size` is the disc diameter. The head keeps the source image's aspect ratio. */
 export function CritterHead({ critter, size = 32 }: { critter: Critter; size?: number }) {
   const source = critterImages[critter];
-  if (!source) return <View style={{ width: size, height: size / CRITTER_ASPECT }} />;
+  const head = size * 0.8;
   return (
-    <Image
-      source={source}
-      style={[{ width: size, height: size / CRITTER_ASPECT }, shadow.critter]}
-      resizeMode="contain"
-    />
+    <View
+      style={[styles.disc, {
+        width: size, height: size, borderRadius: size / 2,
+        backgroundColor: DISC[critter] ?? colors.paperSunk,
+      }]}
+    >
+      {source ? (
+        <Image source={source} style={{ width: head, height: head / CRITTER_ASPECT }} resizeMode="contain" />
+      ) : null}
+    </View>
   );
 }
 
 /**
- * Overlapping heads read as a group. No paper ring — the drop shadow on each
- * head already separates them, and a ring needs a disc to sit on. Three at most.
+ * Up to three overlapping heads. The paper border on each disc keeps them
+ * visually separate.
  */
 export function CritterStack({ members, size = 32 }: { members: Member[]; size?: number }) {
   return (
@@ -42,4 +48,8 @@ export function CritterStack({ members, size = 32 }: { members: Member[]; size?:
 
 const styles = StyleSheet.create({
   stack: { flexDirection: 'row', alignItems: 'center' },
+  disc: {
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    borderWidth: 2, borderColor: colors.paper,
+  },
 });

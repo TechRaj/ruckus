@@ -1,16 +1,12 @@
 /**
- * A Stash row — brief §12, restyled in §13.6.
- *
- * Three lines: the name, then neighbourhood and distance, then one human line
- * about why it is saved. That third line is the whole reason this is not a
- * bookmark folder, and it was missing from the first pass.
- *
- * The leading tile carries the same glyph the pin does, which is what ties the
- * list to the map. The trailing critter is who saved it.
+ * A Stash list row: name, neighbourhood and distance, then the saved note.
+ * The leading tile shows the same glyph as the map pin. The trailing critter
+ * is the member who saved the place.
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { colors, space, type } from '../theme/tokens';
+import { dotted } from '../lib/time';
+import { colors, radius, space, type } from '../theme/tokens';
 import { Member, StashItem } from '../types';
 import { CategoryGlyph } from './CategoryGlyph';
 import { CritterHead } from './CritterHead';
@@ -29,21 +25,20 @@ export function PlaceRow({
     <PressableScale
       onPress={onPress}
       haptic="selection"
-      /** A full-width row needs less scale than a button, or it reads as a wobble. */
+      /** A full-width row uses a smaller scale change than a button. At 0.97 the whole row visibly shifts. */
       scaleTo={0.985}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${item.name}, ${item.neighbourhood}, ${item.distance}`}
+      accessibilityLabel={[item.name, item.neighbourhood, item.distance].filter(Boolean).join(', ')}
       style={[styles.row, selected && styles.rowOn]}
     >
-      {selected ? <View style={styles.rail} /> : null}
       <View style={styles.tile}>
         <CategoryGlyph category={item.category} size={25} color={colors.ink} />
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {item.neighbourhood} · {item.distance}
+          {dotted(item.neighbourhood, item.distance)}
         </Text>
         <Text style={styles.note} numberOfLines={1}>{item.note}</Text>
       </View>
@@ -59,18 +54,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline,
   },
+  /** The margin and padding swap equal amounts, so the content does not move when the row is selected. */
   rowOn: {
     backgroundColor: colors.flareWash,
     borderBottomColor: 'transparent',
-    paddingLeft: space.lg,
-  },
-  rail: {
-    position: 'absolute', left: 0, top: 12, bottom: 12, width: 4,
-    borderTopRightRadius: 3, borderBottomRightRadius: 3,
-    backgroundColor: colors.flare,
+    borderRadius: radius.xl,
+    marginHorizontal: space.md, paddingHorizontal: space.md,
   },
   tile: {
-    width: 56, height: 56, borderRadius: 17,
+    width: 56, height: 56, borderRadius: radius.lg,
     backgroundColor: colors.paperSunk,
     alignItems: 'center', justifyContent: 'center',
   },

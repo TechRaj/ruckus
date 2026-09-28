@@ -1,16 +1,12 @@
 /**
- * Everyone / Today / one chip per Den member — §4 — then, past a hairline,
- * Food / Drinks / Outdoors.
- *
- * Avatars first: filtering by person is the more natural gesture, and it
- * keeps the social layer on the main screen instead of in its own tab. The
- * payoff is on the map (§12.2), not in the list. Category is a second axis,
- * not an alternative — the two compose into "Mia's drinks".
+ * Filter chips for the Places sheet: Everyone, Today, one chip per Den
+ * member, then the categories (CLAUDE.md §4). The person filter and the
+ * category filter are independent and apply together.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { colors, radius, space, type } from '../theme/tokens';
+import { colors, edge, radius, space, type } from '../theme/tokens';
 import { CATEGORIES, CATEGORY_LABEL, Category, Filter, Member } from '../types';
 import { CategoryGlyph } from './CategoryGlyph';
 import { CritterHead } from './CritterHead';
@@ -56,7 +52,7 @@ export function FilterChips({
         leading={
           <IconSparkle
             size={19}
-            color={active.kind === 'today' ? colors.ink : colors.inkMuted}
+            color={active.kind === 'today' ? colors.onFlare : colors.inkMuted}
           />
         }
       />
@@ -81,7 +77,7 @@ export function FilterChips({
             label={CATEGORY_LABEL[c]}
             selected={on}
             onPress={() => onCategory(on ? null : c)}
-            leading={<CategoryGlyph category={c} size={19} color={on ? colors.ink : colors.inkMuted} />}
+            leading={<CategoryGlyph category={c} size={19} color={on ? colors.onFlare : colors.inkMuted} />}
             padLeft={15}
           />
         );
@@ -121,8 +117,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.hairline,
     backgroundColor: colors.paper,
   },
-  chipOn: { backgroundColor: colors.flare, borderColor: colors.flare },
+  chipOn: { backgroundColor: colors.flare, borderColor: colors.flareDeep, ...edge(colors.flareDeep, 3) },
   rule: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: colors.hairline, marginHorizontal: 3 },
   label: { ...type.chip, color: colors.inkSecondary },
-  labelOn: { color: colors.ink },
+  labelOn: { color: colors.onFlare },
 });

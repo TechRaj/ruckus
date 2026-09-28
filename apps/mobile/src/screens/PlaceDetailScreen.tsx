@@ -1,15 +1,6 @@
 /**
- * Place detail — §13.2. Where "I'm in" lives, and the only route out to the
- * original post.
- *
- * The tank pass gives it a voice: the saver's note is the first card, then
- * every friend's one line ("vibe checks"), and "I'm in" can add yours. That
- * third line is the reason the app is not a bookmark folder, and until now
- * the detail screen was the one place it wasn't shown.
- *
- * §5.6: store the reel URL, never the reel. The pin deep-links out, so if the
- * creator deletes the post the link goes dark, which is correct behaviour and
- * avoids a takedown process. No oEmbed, no inline preview, no Meta app token.
+ * Place detail. Shows the saver's note, comments, the "I'm in" toggle, and links to directions and the original post.
+ * CLAUDE.md §5.6: store the reel URL, never the reel. Link out to the post, no oEmbed or inline preview.
  */
 import { useState } from 'react';
 import {
@@ -23,7 +14,7 @@ import { EmptyState } from '../components/EmptyState';
 import { IconCheck, IconExternal, IconNav } from '../components/Icons';
 import { SheetModal } from '../components/SheetModal';
 import { TakeCard } from '../components/TakeCard';
-import { ago } from '../lib/time';
+import { ago, dotted } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapImpact, useReduceMotion } from '../theme/motion';
@@ -50,7 +41,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
   const going = item.interested.map(u => memberById.get(u)).filter(Boolean) as Member[];
   const isIn = item.iWant;
   const mine = item.takes.find(t => t.userId === currentUserId);
-  /** The field shows once you're in and haven't commented, or while editing yours. */
+  /** Show the field when the user is in and has no comment yet, or while editing their comment. */
   const showField = (isIn && !mine) || editing;
 
   const submit = () => {
@@ -77,9 +68,9 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
         keyboardDismissMode={keyboardDismissMode}
         alwaysBounceVertical
       >
-        <Kicker>{`${item.neighbourhood} · ${CATEGORY_LABEL[item.category]}`}</Kicker>
+        <Kicker>{dotted(item.neighbourhood, CATEGORY_LABEL[item.category])}</Kicker>
         <Text style={styles.title}>{item.name}</Text>
-        <Text style={styles.where}>{item.address ?? item.neighbourhood} · {item.distance}</Text>
+        <Text style={styles.where}>{dotted(item.address ?? item.neighbourhood, item.distance)}</Text>
 
         <View style={{ height: space.lg }} />
         <TakeCard member={savedBy} text={item.note} meta={`stashed it · ${ago(item.savedAt)}`} />
@@ -89,7 +80,8 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
           label={isIn ? "You're in" : "I'm in"}
           onPress={() => toggleInterest(item.id)}
           leading={isIn ? <IconCheck size={18} color={colors.ink} /> : undefined}
-          style={isIn ? { backgroundColor: colors.flareWash } : undefined}
+          style={isIn ? { backgroundColor: colors.flareWash, shadowColor: colors.hairline } : undefined}
+          labelColor={isIn ? colors.ink : undefined}
         />
         {showField ? (
           <Animated.View entering={reduce ? undefined : FadeIn.duration(180).easing(EASE_OUT)} style={styles.lineWrap}>

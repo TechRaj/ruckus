@@ -1,11 +1,7 @@
 /**
- * Device registration for Den event reminders.
- *
- * Permission is asked once the person has a Den — that is the first moment
- * a reminder could be theirs. A denial is left alone. The token is refreshed
- * when Expo rotates it, and removed on sign-out while the session still
- * exists. Remote push needs a development build: Expo Go on Android cannot
- * obtain a push token from SDK 53 on.
+ * Device registration for Den event reminders. Permission is requested once
+ * the user has a Den. Remote push needs a development build, because Expo Go
+ * on Android cannot get a push token from SDK 53 on.
  */
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
@@ -15,7 +11,7 @@ import * as Notifications from 'expo-notifications';
 import { api, USE_MOCKS } from '../api/client';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Mock stash ids, so the Expo Go demo can open Grey Gardens. */
+/** Matches mock ids such as `den_1`. Accepted only when USE_MOCKS is on. */
 const DEMO_ID = /^[a-z][a-z0-9_]{0,32}$/;
 
 export function reminderTarget(data: unknown): { denId: string; placeId: string } | null {
@@ -41,9 +37,9 @@ let mockReminderScheduled = false;
 const handledResponses = new Set<string>();
 
 /**
- * Expo Go cannot receive a server push. With the mock Den, schedule the
- * same banner locally so the wording and the tap can be tried on a phone.
- * Grey Gardens is the row Amelia has not voted on.
+ * Expo Go cannot receive a server push, so the mock schedules the same
+ * reminder locally. Grey Gardens is the mock item the mock user has not
+ * voted on.
  */
 async function scheduleMockReminder() {
   if (!USE_MOCKS || mockReminderScheduled) return;
@@ -133,9 +129,9 @@ function openFromResponse(
 }
 
 /**
- * Register while the session is ready, and open the event when a reminder
- * is tapped. `onOpen` is read from a ref by the caller so this effect does
- * not re-subscribe on every render.
+ * Registers the device while `enabled` is true and calls `onOpen` when a
+ * reminder is tapped. Pass a stable `onOpen`, because a new function
+ * re-subscribes the listeners.
  */
 export function useEventReminders(
   enabled: boolean,

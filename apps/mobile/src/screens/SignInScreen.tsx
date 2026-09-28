@@ -1,7 +1,6 @@
 /**
- * Sign in — an emailed 6-digit code, not Sign in with Apple (which needs the
- * paid Developer Program). Two steps on one screen: email, then the code.
- * On success the session refreshes and the navigator moves on by itself.
+ * Sign in with an emailed 6-digit code. Sign in with Apple needs the paid Developer Program.
+ * On success the session refreshes and RootNavigator shows the next screen.
  */
 import { useState } from 'react';
 import {
@@ -44,8 +43,8 @@ export function SignInScreen() {
   const onCode = (value: string) => {
     const next = value.replace(/\D/g, '').slice(0, 6);
     setCode(next);
-    // The number pad has no return key, so six digits is the "done" the email
-    // keyboard gets from its own. Dismiss so Sign in is reachable.
+    // The number pad has no return key, so dismiss the keyboard at six digits
+    // to make the Sign in button reachable.
     if (next.length === 6) Keyboard.dismiss();
   };
 
@@ -62,10 +61,13 @@ export function SignInScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.avoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/**
+        * The insets are applied to an inner view. KeyboardAvoidingView overwrites
+        * paddingBottom in its own style, so padding set on it directly is lost
+        * and the button sits under the home indicator.
+        */}
+      <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
       <Grain opacity={0.035} />
       <ScrollView
         style={styles.scroll}
@@ -106,6 +108,7 @@ export function SignInScreen() {
           <TextButton label="Use a different email" onPress={() => { setStep('email'); setCode(''); setError(null); }} muted />
         </>
       )}
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -114,12 +117,13 @@ const messageOf = (err: unknown) =>
   (err instanceof Error && err.message) ? err.message.toLowerCase() : 'something went wrong. try again.';
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: space.xl },
+  avoid: { flex: 1, backgroundColor: colors.paper },
+  root: { flex: 1, paddingHorizontal: space.xl },
   scroll: { flex: 1 },
   hero: { flexGrow: 1, justifyContent: 'center' },
   rascal: { width: 120, height: 120 / RASCAL_ASPECT, marginBottom: space.lg, marginLeft: -6 },
   title: { ...type.display, color: colors.ink, marginTop: 6 },
   sub: { ...type.body, color: colors.inkMuted, marginTop: 10, maxWidth: 300 },
-  error: { color: colors.flare, marginTop: space.md },
+  error: { color: colors.warn, marginTop: space.md },
   mock: { marginTop: space.md },
 });

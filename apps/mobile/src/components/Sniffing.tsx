@@ -1,11 +1,8 @@
 /**
- * The one loading state — Rascal sniffing, with a number.
- *
- * The tank makes you watch water fill and read a percentage before it lets
- * you in. Ruckus never gates, but its one wait gets the same care: a
- * tabular count that climbs to 92 and holds until the answer lands. The number runs on the UI thread through an animated
- * TextInput so it ticks without a render per frame. Reduce Motion keeps
- * the number (it is information) and snaps the bar.
+ * Loading state shown while a shared link resolves. The percentage counts to
+ * 92 and holds there until the result arrives. It is drawn with an animated
+ * TextInput so it updates on the UI thread without a React render per frame.
+ * Reduce Motion keeps the number and moves the bar in 25% steps.
  */
 import { useEffect, useMemo } from 'react';
 import { Image, StyleSheet, TextInput, View } from 'react-native';
@@ -21,7 +18,7 @@ import { colors, space, type } from '../theme/tokens';
 
 const AnimatedInput = Animated.createAnimatedComponent(TextInput);
 
-/** The mock resolve takes ~900ms; the number reaches 92 in that time and holds. */
+/** The mock resolve takes about 900ms. The count reaches 92 in that time. */
 const EXPECTED_MS = 900;
 
 export function Sniffing({ url }: { url: string | null }) {
@@ -59,7 +56,7 @@ export function Sniffing({ url }: { url: string | null }) {
       <View style={styles.track}>
         <Animated.View style={[styles.fill, bar]} />
       </View>
-      <Hint>nothing leaves your phone until you confirm.</Hint>
+      <Hint>nothing is saved until you confirm.</Hint>
     </View>
   );
 }
@@ -71,6 +68,6 @@ const styles = StyleSheet.create({
   rascal: { position: 'absolute', left: 8, top: 36, width: 180, height: 180 / RASCAL_ASPECT },
   bubble: { position: 'absolute', left: 176, top: 18 },
   progress: { ...type.progress, color: colors.inkSecondary, padding: 0, marginTop: space.md },
-  track: { height: 2, borderRadius: 1, backgroundColor: colors.hairline, overflow: 'hidden' },
-  fill: { height: 2, borderRadius: 1, backgroundColor: colors.flare },
+  track: { height: 10, borderRadius: 5, backgroundColor: colors.paperSunk, overflow: 'hidden' },
+  fill: { height: 10, borderRadius: 5, backgroundColor: colors.flare },
 });

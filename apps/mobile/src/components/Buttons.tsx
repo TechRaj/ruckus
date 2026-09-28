@@ -1,17 +1,15 @@
 /**
- * Tangerine means tappable, and nothing else — §10.3.
- *
- * Label is charcoal, not white. White on #FF6846 is 2.9:1 and fails AA;
- * charcoal is 5.5:1. It also reads more like a printed sticker and less
- * like a SaaS button, so the accessible answer is the on-brand one.
+ * Primary, secondary and text buttons. The flare colour is reserved for
+ * tappable things. Labels on flare use `onFlare`, because `ink` turns cream
+ * at night and loses contrast.
  */
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { colors, radius, space, type } from '../theme/tokens';
+import { colors, edge, radius, space, type } from '../theme/tokens';
 
 export function PrimaryButton({
-  label, onPress, loading, disabled, leading, style,
+  label, onPress, loading, disabled, leading, style, labelColor,
 }: {
   label: string;
   onPress: () => void;
@@ -19,6 +17,8 @@ export function PrimaryButton({
   disabled?: boolean;
   leading?: React.ReactNode;
   style?: ViewStyle;
+  /** Label colour override, for when the fill is not flare. */
+  labelColor?: string;
 }) {
   return (
     <PressableScale
@@ -29,11 +29,11 @@ export function PrimaryButton({
       style={[styles.primary, (disabled || loading) && { opacity: 0.55 }, style]}
     >
       {loading
-        ? <ActivityIndicator color={colors.ink} />
+        ? <ActivityIndicator color={colors.onFlare} />
         : (
           <View style={styles.row}>
             {leading}
-            <Text style={styles.primaryLabel}>{label}</Text>
+            <Text style={[styles.primaryLabel, labelColor ? { color: labelColor } : null]}>{label}</Text>
           </View>
         )}
     </PressableScale>
@@ -67,15 +67,17 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   primary: {
     backgroundColor: colors.flare,
-    height: 54, borderRadius: radius.lg,
+    height: 54, borderRadius: radius.pill,
     alignItems: 'center', justifyContent: 'center',
+    ...edge(colors.flareDeep),
   },
-  primaryLabel: { ...type.button, color: colors.ink },
+  primaryLabel: { ...type.button, color: colors.onFlare },
   secondary: {
-    height: 52, borderRadius: radius.lg,
+    height: 52, borderRadius: radius.pill,
     borderWidth: 1.5, borderColor: colors.hairline,
     backgroundColor: colors.paper,
     alignItems: 'center', justifyContent: 'center',
+    ...edge(colors.hairline, 4),
   },
   secondaryLabel: { fontFamily: type.chip.fontFamily, fontSize: 16, color: colors.inkSecondary },
   text: { height: 48, alignItems: 'center', justifyContent: 'center' },

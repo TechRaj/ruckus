@@ -1,5 +1,5 @@
 /**
- * Zoom stack and recentre — squircles with a shadow and no border (§13.6).
+ * Map zoom buttons and the recentre button.
  */
 import { Pressable, StyleSheet, View } from 'react-native';
 import { RoundButton } from './Chrome';
@@ -29,7 +29,7 @@ export function MapControls({
 
 const styles = StyleSheet.create({
   controls: { position: 'absolute', right: space.lg, gap: 14, alignItems: 'flex-end' },
-  zoomStack: { width: 52, borderRadius: 16, backgroundColor: colors.paper },
+  zoomStack: { width: 52, borderRadius: 22, backgroundColor: colors.paper },
   zoomBtn: { height: 52, alignItems: 'center', justifyContent: 'center' },
   zoomDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, marginHorizontal: 10 },
 });

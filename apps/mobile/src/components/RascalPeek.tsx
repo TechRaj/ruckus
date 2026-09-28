@@ -1,15 +1,8 @@
 /**
- * Rascal props his paws on the sheet — §13.3.
- *
- * He rides the sheet's animated position rather than a computed constant, so
- * he tracks the drag instead of jumping between detents. The render's paw line
- * sits at about 83% of its height, so anchoring that point to the sheet's top
- * edge puts the paws over the panel and the rest of him above it.
- *
- * He is on a higher layer than the sheet on purpose: behind it, the paws are
- * the part that gets hidden, which is the whole gesture.
- *
- * Peek only. An accent, never a passenger.
+ * Rascal image that sits on the top edge of the sheet at the peek detent.
+ * It follows the sheet's animated position so it tracks the drag. The paws
+ * are at about 83% of the image height, and that line is anchored to the
+ * sheet's top edge. It renders above the sheet so the paws stay visible.
  */
 import { Image, StyleSheet } from 'react-native';
 import Animated, {
@@ -31,7 +24,7 @@ export function RascalPeek({
 }) {
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: animatedPosition.value - HEIGHT * PAW_LINE }],
-    /** Fades out as the sheet leaves peek — he would cover the list otherwise. */
+    /** Fades out as the sheet leaves peek, so the image does not cover the list. */
     opacity: interpolate(
       animatedPosition.value,
       [halfTop, (halfTop + peekTop) / 2, peekTop],

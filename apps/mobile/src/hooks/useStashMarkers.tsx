@@ -1,11 +1,7 @@
 /**
- * One marker per Stash item. Memoised as a unit: without this, every detent
- * change re-created every Marker mid-drag, and marker churn on the native
- * map is expensive.
- *
- * One dimming rule — a pin collapses to a dot when either filter axis
- * excludes it — and avatars appear only when the sheet is filtered to a
- * single person (§12.2).
+ * One marker per Stash item. The list is memoised because re-creating markers
+ * on the native map is expensive. A pin excluded by either filter is drawn as
+ * a dot, and avatars show only when the filter is a single person.
  */
 import { useMemo } from 'react';
 import { Marker } from 'react-native-maps';
@@ -31,10 +27,9 @@ export function useStashMarkers({
     return (
       <Marker
         /**
-         * The key carries the visual state on purpose. iOS caches a marker's
-         * rendered snapshot, so with tracksViewChanges off a selected pin
-         * would never repaint — remounting is the cheap, deterministic fix
-         * at this scale.
+         * The key includes the visual state. iOS caches a marker's rendered
+         * snapshot, so with tracksViewChanges off a pin repaints only when it
+         * remounts.
          */
         key={`${item.id}-${state}-${critter ?? ''}`}
         coordinate={{ latitude: item.lat, longitude: item.lng }}

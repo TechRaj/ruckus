@@ -1,15 +1,7 @@
 /**
- * The most important screen in the app — §4.
- *
- * The map and the list are one screen, not two features. The sheet slides
- * between three detents and the map never fully dies: even at full extension
- * a sliver stays visible, and the sheet is the one pane of glass, so the map
- * ghosts through it.
- *
- * Selection syncs both ways. Tapping a pin scrolls the sheet to that row;
- * tapping a row pans the map and pops the pin. Neither owns the state — both
- * read StashContext. The numbers live in useSheetGeometry, the camera in
- * useMapCamera, the copy in describeView; this file is composition.
+ * Places tab. A map with a three-detent bottom sheet holding the list (CLAUDE.md §4).
+ * Selection is shared through StashContext, so the map and the list both read and set it.
+ * Sheet geometry is in useSheetGeometry, the camera in useMapCamera, the copy in describeView.
  */
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -35,7 +27,7 @@ import { describeView } from '../state/stashCopy';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_DRAWER, tapSelection, useReduceMotion } from '../theme/motion';
-import { colors, layout, motion, space, type } from '../theme/tokens';
+import { colors, isNight, layout, motion, space, type } from '../theme/tokens';
 import { StashItem } from '../types';
 
 export function PlacesScreen() {
@@ -55,13 +47,9 @@ export function PlacesScreen() {
   const camera = useMapCamera();
   const focusedUser = filter.kind === 'person' ? filter.userId : null;
 
-  /** Pin tapped: pan the map, lift the sheet off peek, scroll to the row. */
+  /** On pin press, pan the map, raise the sheet from peek, and scroll to the row. */
   const onPinPress = useCallback((item: StashItem) => {
-    /**
-     * The pin itself does not animate. A marker is a cached native snapshot,
-     * so Reanimated cannot drive it, and selection happens tens of times a
-     * session — the haptic carries the feedback instead, and carries it better.
-     */
+    /** Markers are cached native snapshots that Reanimated cannot animate, so feedback is a haptic. */
     tapSelection();
     select(item.id === selectedId ? null : item.id);
     if (item.id !== selectedId) {
@@ -70,14 +58,14 @@ export function PlacesScreen() {
     }
   }, [select, selectedId, detentIndex, camera]);
 
-  /** Row tapped: same selection, map follows. A second tap opens the place. */
+  /** On row press, select the place and pan the map. Pressing the selected row opens the detail. */
   const onRowPress = useCallback((item: StashItem) => {
     if (item.id === selectedId) { openOverlay({ kind: 'detail', id: item.id }); return; }
     select(item.id);
     camera.panTo(item);
   }, [select, selectedId, camera, openOverlay]);
 
-  /** The other half of the two-way sync: scroll the list to the selection. */
+  /** Scrolls the list to the selected row. */
   useEffect(() => {
     if (!selectedId) return;
     const index = visible.findIndex(s => s.id === selectedId);
@@ -109,12 +97,12 @@ export function PlacesScreen() {
         initialRegion={TORONTO}
         onRegionChangeComplete={camera.onRegionChangeComplete}
         /**
-         * react-native-maps 1.27 declares this prop as `showsPointsOfInterests`
-         * in its typings while the native module exports `showsPointsOfInterest`.
-         * Spelling it the library's way type-checks and silently does nothing,
-         * so pass the name the native side actually reads.
+         * react-native-maps 1.27 types this prop as `showsPointsOfInterests`, but
+         * the native module reads `showsPointsOfInterest`. The typed name has no
+         * effect, so the native name is passed through a cast.
          */
         {...({ showsPointsOfInterest: false } as object)}
+        userInterfaceStyle={isNight ? 'dark' : 'light'}
         showsCompass={false}
         showsMyLocationButton={false}
         toolbarEnabled={false}
@@ -124,37 +112,37 @@ export function PlacesScreen() {
         {markers}
       </MapView>
 
-      {/* Grain and a soft vignette so the basemap reads as a place, not a diagram. */}
       <Grain vignette />
 
-      {/* Apple Maps cannot be custom-styled (§11.2); a paper veil keeps the title legible. */}
+      {/* Apple Maps cannot be custom-styled, so a gradient behind the title keeps it legible. */}
       <LinearGradient
         pointerEvents="none"
         colors={[colors.paper, colors.paper + 'D9', colors.paper + '00']}
         locations={[0, 0.55, 1]}
-        style={[styles.veil, { height: geo.insets.top + 130 }]}
+        style={[styles.veil, { height: geo.insets.top + 180 }]}
       />
-      <ScreenHeader
-        kicker={den?.name ?? 'Ruckus'}
-        title="Places"
-        style={{ position: 'absolute', top: geo.insets.top + 14, left: 0, right: 0 }}
-      />
-      <MapControls top={geo.insets.top + 132} onZoom={camera.zoom} onRecentre={camera.recentre} />
+      <Animated.View
+        pointerEvents="box-none"
+        style={[StyleSheet.absoluteFill, geo.overMapStyle]}
+      >
+        <ScreenHeader
+          kicker={den?.name ?? 'Ruckus'}
+          title="Places"
+          style={{ position: 'absolute', top: geo.insets.top + 14, left: 0, right: 0 }}
+        />
+        {/* Placed beside the title so the controls stay clear of the sheet at the half detent. */}
+        <MapControls top={geo.insets.top + 70} onZoom={camera.zoom} onRecentre={camera.recentre} />
+      </Animated.View>
 
-      {/* Rascal props his paws on the sheet at peek, and ducks once it opens. */}
       <RascalPeek animatedPosition={animatedPosition} peekTop={geo.peekTop} halfTop={geo.halfTop} />
 
       <BottomSheet
         ref={sheetRef}
         index={1}
         snapPoints={geo.snapPoints}
-        /** v5 defaults to dynamic sizing, which ignores snapPoints. The detents are the design. */
+        /** @gorhom/bottom-sheet v5 defaults to dynamic sizing, which ignores snapPoints. */
         enableDynamicSizing={false}
-        /**
-         * The default spring settles differently depending on how hard you
-         * flick, which read as unpredictable. The iOS drawer curve lands the
-         * same way every time; Reduce Motion collapses it to a near-instant move.
-         */
+        /** Fixed-duration curve so the sheet lands the same way however hard it is flicked. Near-instant under Reduce Motion. */
         animationConfigs={{ duration: reduce ? 1 : motion.sheet, easing: EASE_DRAWER }}
         animatedPosition={animatedPosition}
         onChange={setDetentIndex}
@@ -162,7 +150,7 @@ export function PlacesScreen() {
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         handleIndicatorStyle={styles.handle}
-        /** The shadow and the glass live on the background; nothing inside it animates. */
+        /** The shadow and blur are drawn by the background component. */
         backgroundComponent={GlassSheetBackground}
       >
         <View style={styles.sheetHeader}>
@@ -179,9 +167,9 @@ export function PlacesScreen() {
         </Animated.View>
 
         {/**
-          * Never gate this behind the detent: BottomSheetFlatList registers
-          * itself as the sheet's scrollable when it mounts, and mounting it
-          * after the sheet had moved left the sheet without one.
+          * Keep this mounted at every detent. BottomSheetFlatList registers as
+          * the sheet's scrollable on mount, and mounting it after the sheet has
+          * moved leaves the sheet without one.
           */}
         <View style={styles.content}>
           <View style={styles.chipRow}>
@@ -194,7 +182,7 @@ export function PlacesScreen() {
               onCategory={setCategory}
             />
           </View>
-          {/* Search takes input at the full detent only; focusing it lifts the sheet. */}
+          {/* Search accepts touches at the full detent only. Focusing it snaps the sheet to full. */}
           <Animated.View style={geo.searchStyle} pointerEvents={detentIndex === 2 ? 'auto' : 'none'}>
             <StashSearch value={query} onChange={setQuery} onFocus={() => sheetRef.current?.snapToIndex(2)} />
           </Animated.View>
@@ -218,7 +206,7 @@ export function PlacesScreen() {
               keyExtractor={i => i.id}
               getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: ROW_HEIGHT * index, index })}
               onScrollToIndexFailed={() => {}}
-              /** A bounded height, or the list never scrolls and never hands the drag back. */
+              /** The list needs a bounded height to scroll and to pass drags back to the sheet. */
               style={styles.listFlex}
               contentContainerStyle={{ paddingBottom: geo.listPaddingBottom }}
               keyboardShouldPersistTaps="handled"
@@ -242,14 +230,10 @@ export function PlacesScreen() {
         </View>
       </BottomSheet>
 
-      {/**
-        * The only way to add a place — screen-anchored, not sheet-anchored.
-        * Adding is a global verb, and a global verb wants one home you can
-        * build muscle memory for (§13.8).
-        */}
+      {/* Add button. Anchored to the screen so it stays in one position at every detent. */}
       <View style={styles.addFab} pointerEvents="box-none">
         <RoundButton size={64} tone="flare" onPress={() => openOverlay({ kind: 'add' })} accessibilityLabel="Add a place">
-          <IconPlus size={28} color={colors.ink} />
+          <IconPlus size={28} color={colors.onFlare} />
         </RoundButton>
       </View>
     </View>
@@ -266,7 +250,7 @@ const styles = StyleSheet.create({
   },
   headline: { ...type.displaySm, fontSize: 28, lineHeight: 33, color: colors.ink, marginTop: 6 },
   chipRow: { height: 62, justifyContent: 'center' },
-  /** Sits in the space the chip row occupies once the sheet opens. */
+  /** Occupies the chip row's position while the sheet is at peek. */
   peekHint: { position: 'absolute', left: space.xl, top: 84 },
   addFab: { position: 'absolute', right: space.xl, bottom: space.xl, zIndex: 20 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline, marginTop: 4 },

@@ -1,35 +1,27 @@
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Fredoka_600SemiBold, useFonts } from '@expo-google-fonts/fredoka';
+import { Baloo2_700Bold, Baloo2_800ExtraBold, useFonts } from '@expo-google-fonts/baloo-2';
 import {
   Nunito_400Regular, Nunito_500Medium, Nunito_600SemiBold, Nunito_700Bold,
 } from '@expo-google-fonts/nunito';
-import { IBMPlexMono_400Regular, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { StashProvider } from './src/state/StashContext';
 import { configureBilling } from './src/billing/purchases';
-import { colors } from './src/theme/tokens';
+import { colors, isNight } from './src/theme/tokens';
 
-/** Before the first render, so the session's logIn never races it. */
+/** Runs before the first render so billing is configured before the session calls logIn. */
 configureBilling();
 
 export default function App() {
-  /**
-   * Fredoka carries display, Nunito body, and Plex Mono is the third voice —
-   * kickers, hints, and everything Rascal says (the tank pass, 16 Sep).
-   * Loading at runtime rather than through the config plugin keeps this
-   * running in Expo Go, which is the whole point until the share extension
-   * forces a development build (§11.3).
-   */
+  /** Baloo 2 is for display and labels, Nunito for body text. Fonts are loaded at runtime with useFonts. */
   const [fontsLoaded] = useFonts({
-    Fredoka_600SemiBold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
     Nunito_400Regular,
     Nunito_500Medium,
     Nunito_600SemiBold,
     Nunito_700Bold,
-    IBMPlexMono_400Regular,
-    IBMPlexMono_500Medium,
   });
 
   if (!fontsLoaded) {
@@ -39,7 +31,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.paper} />
+        <StatusBar barStyle={isNight ? 'light-content' : 'dark-content'} backgroundColor={colors.paper} />
         <StashProvider>
           <RootNavigator />
         </StashProvider>

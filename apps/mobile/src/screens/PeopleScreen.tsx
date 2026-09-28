@@ -1,13 +1,6 @@
 /**
- * People — the tab, per §3. A Den is an object a person can hold several of,
- * so it can't be the destination; this is the Den that lives inside the tab.
- *
- * A small private social world, not a project workspace: emblem, name, roster,
- * invite, Stash count. Nothing configurable beyond the name.
- *
- * Invites are the six-character code, not a link: nobody owns ruckus.app yet,
- * so a link can't open the app. Switching, joining and making Dens all happen
- * in the Den panel here - onboarding is only reachable before your first Den.
+ * People tab. Shows the active Den, its members and invite code, and the panel for switching, joining and making Dens.
+ * Invites use the six-character code because the ruckus.app domain is not set up for universal links.
  */
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
@@ -16,9 +9,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Field, Hint, Kicker } from '../components/Chrome';
+import { ClockPill } from '../components/ClockPill';
 import { CritterRoom } from '../components/CritterRoom';
 import { IconChevronRight } from '../components/Icons';
 import { EMBLEMS, Emblem } from '../components/Emblem';
+import { PressableScale } from '../components/PressableScale';
 import { useStash } from '../state/StashContext';
 import { colors, radius, space, type } from '../theme/tokens';
 
@@ -27,7 +22,7 @@ export function PeopleScreen() {
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  /** The Den panel: closed, the list of my Dens, joining one, or making one. */
+  /** Den panel state. */
   const [panel, setPanel] = useState<'closed' | 'switch' | 'join' | 'new'>('closed');
   const [code, setCode] = useState('');
   const [denName, setDenName] = useState('');
@@ -41,10 +36,7 @@ export function PeopleScreen() {
 
   const closePanel = () => { setPanel('closed'); setCode(''); setDenName(''); setPanelError(null); };
 
-  /**
-   * Join or make a Den, then land on it. A third Den on the free tier is
-   * exactly what Ruckus Pro sells, so that error opens the paywall instead.
-   */
+  /** Joins or makes a Den, then switches to it. Opens the paywall when the free Den limit is reached. */
   const run = async (action: () => Promise<{ id: string }>) => {
     setBusy(true); setPanelError(null);
     try {
@@ -74,6 +66,7 @@ export function PeopleScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: space.xxl }}
     >
       <View style={styles.pad}>
+        <ClockPill />
         <Emblem name={den.emblem} size={68} />
         <Text style={styles.title}>{den.name}</Text>
         <Text style={styles.meta}>
@@ -81,8 +74,8 @@ export function PeopleScreen() {
         </Text>
 
         <View style={{ height: 18 }} />
-        {/* The Den as a room you look into — heads float, labelled in mono. */}
         <CritterRoom
+          compact={den.members.length <= 4}
           heads={den.members.map(m => ({
             key: m.userId, critter: m.critter, label: m.displayName,
             sub: `${savedCountBy.get(m.userId) ?? 0} saved`,
@@ -97,20 +90,16 @@ export function PeopleScreen() {
               {invite ?? 'Generating…'}
             </Text>
           </View>
-          <Pressable
-            onPress={copy}
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.copy, pressed && { opacity: 0.7 }]}
-          >
+          <PressableScale onPress={copy} haptic="selection" accessibilityRole="button" style={styles.copy}>
             <Text style={styles.copyLabel}>{copied ? 'Copied' : 'Copy'}</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={{ height: space.md }} />
         <PrimaryButton
           label="Share invite"
           onPress={() => invite && Share.share({
-            message: `Join my Den "${den.name}" on Ruckus - open the app, tap Join a Den, and enter ${invite}`,
+            message: `Join my Den "${den.name}" on Ruckus. Open the app, tap Join a Den, and enter ${invite}`,
           })}
         />
 
@@ -214,19 +203,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     padding: space.lg, borderRadius: radius.xl, backgroundColor: colors.paperSunk,
   },
-  // the code is read aloud and typed off a screenshot: big, spaced, mono
+  // Large and letter-spaced because the code gets read aloud and retyped.
   inviteUrl: { ...type.chip, fontSize: 22, letterSpacing: 4, color: colors.ink, marginTop: 5 },
-  error: { color: colors.flare, marginTop: space.md },   // same as sign-in and onboarding
+  error: { color: colors.warn, marginTop: space.md },   // same as sign-in and onboarding
   panel: { marginTop: space.lg, padding: space.lg, borderRadius: radius.xl, backgroundColor: colors.paperSunk },
   denRow: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     paddingVertical: space.md, paddingHorizontal: space.sm, borderRadius: radius.lg,
   },
-  denName: { ...type.body, color: colors.ink, fontWeight: '600' },
+  denName: { ...type.rowTitle, fontSize: 17, color: colors.ink },
   here: { ...type.chip, color: colors.inkMuted },
   emblems: { flexDirection: 'row', gap: space.sm, marginTop: space.sm, flexWrap: 'wrap' },
   emblemPick: { padding: 6, borderRadius: radius.lg, borderWidth: 2, borderColor: 'transparent' },
-  emblemPicked: { borderColor: colors.flare },
+  emblemPicked: { borderColor: colors.flareDeep, backgroundColor: colors.flareWash },
   copy: {
     height: 40, borderRadius: 20, paddingHorizontal: space.lg,
     backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center',

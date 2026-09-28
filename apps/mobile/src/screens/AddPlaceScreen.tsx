@@ -1,10 +1,6 @@
 /**
- * Add a place — the entry point the app was missing entirely (§13.2).
- *
- * Three sources on purpose. §6 flags App Store Guideline 4.2 as our most
- * likely blocker, and a single-source utility reads as an unofficial client;
- * a places app that accepts links reads as a places app. Manual entry is also
- * the honest answer for the withheld-location reels in §8.
+ * Add a place by pasted link, search, or manual entry.
+ * CLAUDE.md §7: keep more than one source, a single-source app risks App Store rejection under Guideline 4.2.
  */
 import { useState } from 'react';
 import {
@@ -108,7 +104,7 @@ const styles = StyleSheet.create({
   },
   denName: { ...type.meta, color: colors.inkSecondary, flexShrink: 1 },
   linkRow: {
-    marginTop: 20, height: 60, borderRadius: radius.lg,
+    marginTop: 20, height: 60, borderRadius: radius.pill,
     borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paper,
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     paddingLeft: space.lg, paddingRight: 10,

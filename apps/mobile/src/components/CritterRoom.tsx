@@ -1,12 +1,8 @@
 /**
- * The room — critter heads with mono labels, for the picker in onboarding
- * and for the Den on People. Never on the map (§12).
- *
- * One size, two columns, evenly spaced: the heads are the identity, so the
- * layout stays quiet (mixed sizes and scattered slots read as too much).
- * Each head bobs ±2px on its own slow sine with a phase offset — transform
- * only, cancelled on unmount, off under Reduce Motion. These are rare
- * screens, so that little ambient motion is allowed here and nowhere else.
+ * Grid of critter heads with labels, used by the onboarding picker and the
+ * Den on People. Two columns by default, four per row when `compact`.
+ * Each head bobs 2px unless Reduce Motion is on. The labels stay still so
+ * the row keeps one baseline.
  */
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -31,22 +27,22 @@ export interface RoomHead {
 }
 
 const HEAD = 72;
+const HEAD_COMPACT = 56;
 
 export function CritterRoom({
-  heads, onPick,
-}: { heads: RoomHead[]; onPick?: (key: string) => void }) {
+  heads, onPick, compact = false,
+}: { heads: RoomHead[]; onPick?: (key: string) => void; compact?: boolean }) {
   return (
     <View style={styles.room}>
-      {/* light through water — a faint band, nothing more */}
       <LinearGradient
         pointerEvents="none"
-        colors={[colors.mapWater + '00', colors.mapWater + '47', colors.mapWater + '00']}
+        colors={[colors.mapWater + '00', colors.mapWater + '2E', colors.mapWater + '00']}
         style={styles.band}
       />
       <Grain opacity={0.04} />
       <View style={styles.grid}>
         {heads.map((h, i) => (
-          <Head key={h.key} head={h} index={i} onPick={onPick} />
+          <Head key={h.key} head={h} index={i} onPick={onPick} compact={compact} />
         ))}
       </View>
     </View>
@@ -54,10 +50,10 @@ export function CritterRoom({
 }
 
 function Head({
-  head, index, onPick,
-}: { head: RoomHead; index: number; onPick?: (key: string) => void }) {
+  head, index, onPick, compact,
+}: { head: RoomHead; index: number; onPick?: (key: string) => void; compact: boolean }) {
   const reduce = useReduceMotion();
-  const size = HEAD;
+  const size = compact ? HEAD_COMPACT : HEAD;
   const bob = useSharedValue(0);
   const scale = useSharedValue(head.selected ? 1.06 : 1);
 
@@ -88,17 +84,17 @@ function Head({
 
   const inner = (
     <>
-      <View style={[styles.ring, { width: size + 16, height: size + 16, borderRadius: (size + 16) / 2 }, head.selected && styles.ringOn]}>
+      <Animated.View style={[styles.ring, { width: size + 16, height: size + 16, borderRadius: (size + 16) / 2 }, head.selected && styles.ringOn, float]}>
         <CritterHead critter={head.critter} size={size} />
         {head.selected ? <View style={styles.dot} /> : null}
-      </View>
+      </Animated.View>
       <Text style={[styles.label, head.selected && { color: colors.ink }]}>{head.label.toUpperCase()}</Text>
       {head.sub ? <Text style={styles.sub}>{head.sub.toUpperCase()}</Text> : null}
     </>
   );
 
   return (
-    <Animated.View style={[styles.slot, float]}>
+    <View style={[styles.slot, compact && styles.slotCompact]}>
       {onPick ? (
         <PressableScale
           onPress={() => onPick(head.key)}
@@ -116,24 +112,25 @@ function Head({
           {inner}
         </View>
       )}
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   room: {
-    borderRadius: radius.xl + 4, overflow: 'hidden', backgroundColor: colors.paper,
+    borderRadius: radius.xl + 4, overflow: 'hidden', backgroundColor: colors.paperSunk,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline,
   },
   band: { position: 'absolute', left: -40, right: -40, top: '30%', height: '46%' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingVertical: space.sm },
   slot: { width: '50%', paddingVertical: 14 },
+  slotCompact: { width: '25%', paddingVertical: 10 },
   pick: { alignItems: 'center', gap: 6 },
   ring: {
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: 'transparent',
   },
-  ringOn: { borderColor: colors.flare },
+  ringOn: { borderColor: colors.flareDeep },
   dot: {
     position: 'absolute', top: 2, right: 2, width: 9, height: 9, borderRadius: 5,
     backgroundColor: colors.flare, borderWidth: 2, borderColor: colors.paper,

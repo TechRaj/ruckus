@@ -1,23 +1,23 @@
 /**
- * The small shared pieces: kickers, screen headers, the sort control, fields.
- * §13.6 — a letterspaced uppercase kicker naming the Den, then the screen
- * name in display type, sitting straight over the map.
+ * Small shared pieces: kickers, hints, screen headers, the sort control,
+ * text fields and round buttons.
  */
 import React from 'react';
 import { Platform, StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { colors, radius, shadow, space, type } from '../theme/tokens';
+import { colors, edge, radius, shadow, space, type } from '../theme/tokens';
+import { ClockPill } from './ClockPill';
 import { IconCalendar, IconNav } from './Icons';
 import { Sort } from '../types';
 
-/** Drag the keyboard down to dismiss it. iOS follows the finger; Android dismisses on drag. */
+/** Dragging the list dismisses the keyboard. Android has no interactive mode, so it uses on-drag. */
 export const keyboardDismissMode = Platform.OS === 'ios' ? 'interactive' : 'on-drag';
 
 export function Kicker({ children, style }: { children: string; style?: TextStyle }) {
   return <Text style={[styles.kicker, style]}>{children.toUpperCase()}</Text>;
 }
 
-/** A lowercase mono aside — "pull up for the list". Muted, never smaller than 13. */
+/** Muted mono helper text. Keep the font size at 13 or above. */
 export function Hint({ children, style }: { children: string; style?: TextStyle }) {
   return <Text style={[styles.hint, style]}>{children}</Text>;
 }
@@ -27,13 +27,14 @@ export function ScreenHeader({
 }: { kicker: string; title: string; style?: ViewStyle }) {
   return (
     <View style={[styles.header, style]}>
+      <ClockPill />
       <Kicker>{kicker}</Kicker>
       <Text style={styles.title}>{title}</Text>
     </View>
   );
 }
 
-/** Calendar is a sort order, not a tab — §4 and §7. */
+/** Switches the list between distance and date order. CLAUDE.md §4: the calendar is a sort order. */
 export function SortToggle({ value, onChange }: { value: Sort; onChange: (v: Sort) => void }) {
   return (
     <View style={styles.seg}>
@@ -105,7 +106,7 @@ export function RoundButton({
           backgroundColor: tone === 'flare' ? colors.flare : colors.paper,
           alignItems: 'center', justifyContent: 'center',
         },
-        tone === 'paper' && shadow.control,
+        tone === 'paper' ? shadow.control : edge(colors.flareDeep),
       ]}
     >
       {children}
@@ -120,10 +121,10 @@ const styles = StyleSheet.create({
   title: { ...type.display, fontSize: 40, lineHeight: 46, color: colors.ink, marginTop: 6 },
   seg: {
     flexDirection: 'row', backgroundColor: colors.paperSunk,
-    borderRadius: 14, padding: 4,
+    borderRadius: radius.pill, padding: 4,
   },
   segItem: {
-    height: 38, paddingHorizontal: 13, borderRadius: 11,
+    height: 38, paddingHorizontal: 13, borderRadius: radius.pill,
     flexDirection: 'row', alignItems: 'center', gap: 6,
   },
   segItemOn: { backgroundColor: colors.paper, ...shadow.control, shadowRadius: 3 },

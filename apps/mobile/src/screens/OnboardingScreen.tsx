@@ -1,10 +1,4 @@
-/**
- * Onboarding — brief §24, with the critter step first (decided 31 Aug).
- *
- * Two fast steps: who are you, then who's this with. §13.2 — both steps now
- * keep what they collect. The first pass asked for a critter and threw the
- * answer away, and never asked your name at all.
- */
+/** Onboarding. Two steps: name and critter, then create or join a Den. */
 import { useState } from 'react';
 import {
   Image, Pressable, ScrollView, StyleSheet, Text, View,
@@ -27,9 +21,8 @@ import { Critter as CritterName } from '../types';
 type Step = 'welcome' | 'you' | 'den' | 'join';
 
 /**
- * Shown once you're signed in but in no Den yet. Both steps keep what they
- * collect (§13.2): the name and critter go to your profile, the Den is
- * created or joined, and the session refreshes into the app.
+ * Shown when the user is signed in but has no Den. The name and critter are
+ * saved to the profile, then the Den is created or joined and the session refreshes.
  */
 export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -58,7 +51,7 @@ export function OnboardingScreen() {
     }
   };
 
-  /** "That's me": the profile is saved now, so a later crash loses nothing. */
+  /** Saves the profile at this step so it is kept if the Den step is abandoned. */
   const saveProfile = async () => {
     if (await attempt(() => api.profile.update({ displayName: name.trim(), critter }))) setStep('den');
   };
@@ -74,15 +67,13 @@ export function OnboardingScreen() {
       <View style={[styles.root, pad]}>
         <Grain opacity={0.035} />
         <View style={styles.hero}>
-          {/* light through water, low on the screen */}
           <LinearGradient
             pointerEvents="none"
-            colors={[colors.mapWater + '00', colors.mapWater + '4D']}
+            colors={[colors.mapWater + '00', colors.mapWater + '4D', colors.mapWater + '00']}
             style={styles.glow}
           />
           <Kicker>A places app for friends</Kicker>
           <Text style={styles.wordmark}>Ruckus</Text>
-          {/* Rascal's ears touch the wordmark's baseline */}
           <View style={styles.heroArt}>
             <Image source={rascal} style={styles.rascal} resizeMode="contain" />
           </View>
@@ -203,22 +194,23 @@ function Back({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: space.xl },
   hero: { flex: 1, justifyContent: 'center' },
-  glow: { position: 'absolute', left: -60, right: -60, bottom: 40, height: '40%' },
-  /** Rascal starts 12px above the wordmark's baseline so his ears overlap it. */
-  heroArt: { height: 200, marginTop: -12 },
+  glow: { position: 'absolute', left: -60, right: -60, bottom: 0, height: '55%' },
+  /** Negative margin so the image overlaps the wordmark's baseline. */
+  heroArt: { height: 200, marginTop: -26 },
   rascal: { position: 'absolute', left: -4, top: 0, width: 200, height: 200 / RASCAL_ASPECT },
   wordmark: {
-    fontFamily: type.display.fontFamily, fontSize: 72, lineHeight: 74,
-    letterSpacing: -0.6, color: colors.ink, marginTop: 6,
+    /** Baloo 2 clips the tops of letters when lineHeight is under about 1.3 times fontSize. */
+    fontFamily: type.display.fontFamily, fontSize: 72, lineHeight: 96,
+    color: colors.ink, marginTop: -4,
   },
   tagline: { ...type.body, fontSize: 17, lineHeight: 24, color: colors.inkSecondary, marginTop: 12, maxWidth: 300 },
   joinHint: { height: 44, justifyContent: 'center' },
-  error: { color: colors.flare, marginTop: space.md },
+  error: { color: colors.warn, marginTop: space.md },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xl },
   back: { width: 44, height: 44, justifyContent: 'center', marginLeft: -11 },
   headline: { ...type.display, color: colors.ink, marginTop: 10 },
   sub: { ...type.body, color: colors.inkMuted, marginTop: 10 },
-  tileOn: { borderColor: colors.flare, backgroundColor: colors.flareWash },
+  tileOn: { borderColor: colors.flareDeep, backgroundColor: colors.flareWash },
   emblems: { flexDirection: 'row', gap: space.md, marginTop: space.md },
   emblemTile: {
     width: 58, height: 58, borderRadius: 20,

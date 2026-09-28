@@ -1,13 +1,7 @@
 /**
- * Rascal's lines — the tank pass, toned down.
- *
- * Lowercase, plain, short. They say what is true and stop; no jokes, no
- * asides. Empty states and the failed state show a line as plain text; only
- * while Rascal is doing something — sniffing, the save — does one go in a
- * bubble. Nothing here is a headline.
- *
- * Keep them in one place so the register stays consistent, and so the
- * boards (design/) can quote the same strings.
+ * User-facing copy for empty states, link resolving, saves and hints. Lines
+ * are lowercase and short. Keep them all in this file so the tone stays
+ * consistent.
  */
 export const lines = {
   emptyStash: 'nothing saved yet.',
@@ -19,10 +13,12 @@ export const lines = {
   emptySearch: (q: string) => `nothing matches "${q}".`,
   emptySearchCategory: (q: string, label: string) =>
     `nothing matches "${q}" in ${label.toLowerCase()}.`,
+  searchFailed: "couldn't search just now. try again.",
+  searchLimit: "that's today's search limit. try again tomorrow.",
   quietHome: 'quiet so far. saves from your den show up here.',
   noTakes: 'no comments yet.',
 
-  /** While a link resolves. One is picked per run. */
+  /** Shown while a link resolves. One is picked at random each time. */
   sniffing: [
     'reading the link…',
     'checking the tagged handle…',
@@ -32,7 +28,7 @@ export const lines = {
   missingEvent: "that event isn't in your den anymore.",
   saved: 'saved to the stash.',
 
-  /** Hints: mono, lowercase, muted. */
+  /** Hints. Rendered in the mono font, muted. */
   hint: {
     pullUp: 'pull up for the list',
     pasteLink: 'or share a link to ruckus from any app. it lands here.',

@@ -39,7 +39,8 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
       screens/              one file per screen; composition only
                             (SignIn → Onboarding → tabs, gated by session)
       components/           shared pieces; each is one thing
-      theme/tokens.ts       colour, type, spacing, motion, layout, glass
+      theme/tokens.ts       colour (day and dusk), type, spacing, motion, layout, glass
+      theme/clock.ts        day or night, picked at launch; the clock, greeting and sky helpers
       theme/lines.ts        Rascal's lines and the mono hints, all in one place
       theme/motion.ts       easing curves, haptics, Reduce Motion / Transparency hooks
       theme/critters.ts     the pre-rendered heads and Rascal's poses
@@ -49,7 +50,11 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
 
 ## Rules the code keeps
 
-- **Tangerine means tappable** and nothing else. Titles stay ink.
+- **Flare means tappable** and nothing else: mint by day, lilac by night. Text on
+  it is `onFlare`, never `ink` (ink is cream at night). Titles stay ink.
+- **The palette follows the clock.** Night is 8pm to 5am. It is picked when the
+  bundle loads, because every StyleSheet reads `colors` at module scope; reopening
+  the app across dusk or dawn reloads it. It does not change under an open screen.
 - **One pane of glass** — the Places sheet (`GlassSheetBackground`). Nothing else blurs.
 - **Rascal talks in a bubble only while doing something** — sniffing, the save.
   Empty states show his line as plain text (`EmptyState`).
@@ -76,7 +81,7 @@ The standing context is the root `CLAUDE.md`. Design boards: `design/boards/`.
   the other two are rendered off the same rig.
 - The glass sheet blurs over `MapView`. Test the drag on a real device at all three
   detents; Reduce Transparency's opaque path is the fallback.
-- Apple Maps basemap is unstyled; the `map*` and `dusk` tokens wait for MapLibre.
+- Apple Maps basemap is unstyled beyond light/dark; the `map*` tokens wait for MapLibre.
 - "Make it a Caper", "Remove from Stash" and "Switch Den" are no-ops.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
 

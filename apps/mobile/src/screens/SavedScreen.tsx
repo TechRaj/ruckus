@@ -1,12 +1,4 @@
-/**
- * The save moment — §13.3. The one place Rascal celebrates, and where the
- * "add another" loop closes.
- *
- * Staging from the tank pass: the display title sits behind Rascal, and he
- * overlaps its lower third, the way the tank's residents stand in front of
- * the studio's name. This is the only rare screen in the app, so it is the
- * only place the delight budget is spent — and the only spring.
- */
+/** Shown after a place is saved. Offers the map or adding another place. The only screen that uses a spring animation. */
 import { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -40,13 +32,8 @@ export function SavedScreen({
   const drift = useSharedValue(0);
 
   useEffect(() => {
-    /** Fires once, on the one screen in the app where Rascal celebrates. */
     tapSuccess();
-    /**
-     * Cheer: the one spring. bounce ≈ 0.2 — enough to read as a jump, not
-     * enough to read as sloppy. The title fades up 40ms behind him so he
-     * arrives first. Reduce Motion makes both a plain crossfade.
-     */
+    /** The image springs in and the title fades in 40ms later. Under Reduce Motion both only fade. */
     scale.value = reduce ? 1 : withSpring(1, { duration: 520, dampingRatio: 0.8 });
     fade.value = withDelay(40, withTiming(1, { duration: 220, easing: EASE_OUT }));
     if (!reduce) {
@@ -66,10 +53,9 @@ export function SavedScreen({
       <Grain opacity={0.035} />
       <View style={styles.body}>
         <View style={styles.stage}>
-          {/* light through water, faint, under everything */}
           <LinearGradient
             pointerEvents="none"
-            colors={[colors.mapWater + '00', colors.mapWater + '5C']}
+            colors={[colors.mapWater + '00', colors.mapWater + '5C', colors.mapWater + '00']}
             style={styles.glow}
           />
           {BUBBLES.map((b, i) => (
@@ -102,19 +88,19 @@ const RASCAL_W = 210;
 const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: space.xl },
   stage: { flex: 1 },
-  glow: { position: 'absolute', left: -60, right: -60, bottom: 0, height: '46%' },
+  glow: { position: 'absolute', left: -60, right: -60, bottom: 0, height: '60%' },
   bubble: { position: 'absolute', borderWidth: 1.5, borderColor: colors.hairline },
   title: {
     position: 'absolute', left: 0, right: 0, top: '30%', textAlign: 'center',
-    fontFamily: type.display.fontFamily, fontSize: 56, lineHeight: 60,
+    fontFamily: type.display.fontFamily, fontSize: 52, lineHeight: 68,
     letterSpacing: -0.45, color: colors.ink,
   },
-  /** His head overlaps the title's lower third; the title is still readable above him. */
-  rascalWrap: { position: 'absolute', alignSelf: 'center', top: '30%', marginTop: 46, zIndex: 2 },
+  /** Offset so the image starts at the title's baseline and does not cover the letters. */
+  rascalWrap: { position: 'absolute', alignSelf: 'center', top: '30%', marginTop: 62, zIndex: 2 },
   rascal: { width: RASCAL_W, height: RASCAL_W / RASCAL_ASPECT },
   line: { position: 'absolute', right: 0, top: '30%', marginTop: -78, zIndex: 3 },
   sub: {
-    position: 'absolute', left: 0, right: 0, top: '30%', marginTop: 264,
+    position: 'absolute', left: 0, right: 0, top: '30%', marginTop: 282,
     ...type.body, color: colors.inkSecondary, textAlign: 'center',
   },
 });

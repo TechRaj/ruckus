@@ -1,7 +1,6 @@
 /**
- * A vibe check — one friend's line about a place. The saver's note is the
- * first card in the stack; everyone else's takes follow. Enters with the
- * same 180ms rise as everything else that appears, staggered down the list.
+ * One member's comment about a place. The entrance animation is staggered
+ * by `index`, 40ms per card.
  */
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';

@@ -1,10 +1,7 @@
 /**
- * Film grain — the tank pass.
- *
- * A 220px noise tile at a few percent, multiplied over whatever sits under
- * it, so the map reads as a place rather than a diagram and the sheet reads
- * as paper. A static image, never a filter: it costs one texture and nothing
- * per frame. Touches pass straight through.
+ * Grain overlay: a repeating 220px noise tile multiplied over the content
+ * below at low opacity. It is a static image, so it has no per-frame cost.
+ * It does not receive touches.
  */
 import { ImageBackground, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,11 +22,11 @@ export function Grain({
       {vignette ? (
         <>
           <LinearGradient
-            colors={[colors.ink + '14', colors.ink + '00']}
+            colors={[colors.vignette + '14', colors.vignette + '00']}
             style={[styles.edge, { top: 0 }]}
           />
           <LinearGradient
-            colors={[colors.ink + '00', colors.ink + '14']}
+            colors={[colors.vignette + '00', colors.vignette + '14']}
             style={[styles.edge, { bottom: 0 }]}
           />
         </>
@@ -39,6 +36,6 @@ export function Grain({
 }
 
 const styles = StyleSheet.create({
-  /** expo-linear-gradient has no radial; two soft edges read the same at map scale. */
+  /** expo-linear-gradient has no radial gradient, so the vignette is a top and a bottom edge. */
   edge: { position: 'absolute', left: 0, right: 0, height: 120 },
 });
