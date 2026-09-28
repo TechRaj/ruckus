@@ -49,7 +49,7 @@ export function SavedScreen({
   }));
 
   return (
-    <SheetModal onClose={onClose} height={0.9}>
+    <SheetModal onClose={onClose} height={0.9} dragAnywhere>
       <Grain opacity={0.035} />
       <View style={styles.body}>
         <View style={styles.stage}>
@@ -70,7 +70,7 @@ export function SavedScreen({
             <Image source={rascalStand.source} style={styles.rascal} resizeMode="contain" />
           </Animated.View>
           <View style={styles.line}>
-            <RascalBubble tail="left" delay={200} maxWidth={150}>{lines.saved}</RascalBubble>
+            <RascalBubble tail="left" delay={200} maxWidth={186}>{lines.saved}</RascalBubble>
           </View>
           <Text style={styles.sub}>
             {name} is on the map for {den?.name ?? 'your Den'}.

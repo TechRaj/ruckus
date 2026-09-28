@@ -10,7 +10,7 @@ import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { CategoryGlyph } from '../components/CategoryGlyph';
 import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
-import { Emblem } from '../components/Emblem';
+import { DenMenu, DenPill, useDenPicker } from '../components/DenPicker';
 import { EmptyState } from '../components/EmptyState';
 import {
   IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconSearch, PawPrint,
@@ -36,6 +36,7 @@ export function ConfirmScreen({
   onSaved: (name: string) => void;
 }) {
   const { den, addToStash, isPro, openPro } = useStash();
+  const picker = useDenPicker();
   const [mode, setMode] = useState<Mode>(startInSearch ? 'search' : 'resolving');
   const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null);
   const [results, setResults] = useState<PlaceCandidate[]>([]);
@@ -130,7 +131,7 @@ export function ConfirmScreen({
 
   if (failed) {
     return (
-      <SheetModal onClose={onClose} height={0.5}>
+      <SheetModal onClose={onClose} height={0.5} dragAnywhere>
         <View style={styles.centre}>
           <EmptyState
             line={lines.hiding}
@@ -149,7 +150,7 @@ export function ConfirmScreen({
 
   if (mode === 'resolving') {
     return (
-      <SheetModal onClose={onClose} height={0.62}>
+      <SheetModal onClose={onClose} height={0.62} dragAnywhere>
         <Sniffing url={sharedUrl} />
       </SheetModal>
     );
@@ -276,13 +277,10 @@ export function ConfirmScreen({
       </ScrollView>
 
       <View style={styles.footer}>
+        <DenMenu {...picker} />
         <View style={styles.savingTo}>
           <Kicker>Saving to</Kicker>
-          <View style={styles.denRow}>
-            <Emblem name={den?.emblem ?? 'lantern'} size={22} />
-            <Text style={styles.denName}>{den?.name}</Text>
-            <IconChevronDown size={14} />
-          </View>
+          <DenPill {...picker} />
         </View>
         {limitNote ? <Hint style={styles.limitNote}>{limitNote}</Hint> : null}
         <PrimaryButton
@@ -334,10 +332,8 @@ const styles = StyleSheet.create({
   },
   savingTo: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', paddingBottom: 13,
+    justifyContent: 'space-between', paddingBottom: 13, paddingTop: space.sm,
   },
-  denRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  denName: { ...type.chip, fontSize: 14, color: colors.ink },
   searchHead: { paddingHorizontal: space.xl, paddingBottom: 14 },
   back: { width: 44, height: 40, justifyContent: 'center', marginLeft: -11 },
   searchNote: { paddingHorizontal: space.xl, paddingVertical: space.md },

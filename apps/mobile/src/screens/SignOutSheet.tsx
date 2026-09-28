@@ -29,7 +29,7 @@ export function SignOutSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <SheetModal onClose={onClose} height={0.545} dismissable={!busy}>
+    <SheetModal onClose={onClose} height={0.545} dismissable={!busy} dragAnywhere>
       <View style={styles.body}>
         <Sprite sheet={trashcan} frame={8} width={196} style={styles.art} accessibilityLabel="Rascal peeking out of his trash can" />
         <Text style={styles.title}>Sign out?</Text>

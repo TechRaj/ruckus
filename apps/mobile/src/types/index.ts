@@ -69,6 +69,19 @@ export interface StashItem {
   address?: string;
 }
 
+/** A planned outing: one saved place on one day, with the people going. */
+export interface Caper {
+  id: string;
+  denId: string;
+  placeId: string;
+  /** Local calendar day, YYYY-MM-DD. */
+  date: string;
+  /** Free text such as "7 pm", or null when no time was picked. */
+  time: string | null;
+  createdBy: string;
+  going: string[];
+}
+
 export interface Member {
   userId: string;
   displayName: string;

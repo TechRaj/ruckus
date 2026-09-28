@@ -5,17 +5,18 @@
  */
 import { useMemo } from 'react';
 import { Marker } from 'react-native-maps';
-import { Category, Member, StashItem, isNearlyAPlan } from '../types';
+import { Caper, Category, Member, StashItem } from '../types';
 import { Pin } from '../components/Pin';
 
 export function useStashMarkers({
-  stash, focusedUser, category, selectedId, memberById, onPress,
+  stash, focusedUser, category, selectedId, memberById, caperByPlace, onPress,
 }: {
   stash: StashItem[];
   focusedUser: string | null;
   category: Category | null;
   selectedId: string | null;
   memberById: Map<string, Member>;
+  caperByPlace: Map<string, Caper>;
   onPress: (item: StashItem) => void;
 }) {
   return useMemo(() => stash.map(item => {
@@ -38,8 +39,8 @@ export function useStashMarkers({
         anchor={{ x: 0.5, y: 1 }}
         zIndex={selected ? 10 : 1}
       >
-        <Pin category={item.category} state={state} inCaper={isNearlyAPlan(item)} critter={critter} />
+        <Pin category={item.category} state={state} inCaper={caperByPlace.has(item.placeId)} critter={critter} />
       </Marker>
     );
-  }), [stash, focusedUser, category, selectedId, memberById, onPress]);
+  }), [stash, focusedUser, category, selectedId, memberById, caperByPlace, onPress]);
 }

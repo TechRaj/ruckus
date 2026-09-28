@@ -53,6 +53,22 @@ export function SecondaryButton({
   );
 }
 
+/** A short pill for use inside a row. `flare` commits, `paper` is the quieter choice. */
+export function RowButton({
+  label, onPress, tone = 'flare',
+}: { label: string; onPress: () => void; tone?: 'flare' | 'paper' }) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      haptic={tone === 'flare' ? 'impact' : 'selection'}
+      accessibilityRole="button"
+      style={[styles.rowButton, tone === 'flare' ? styles.rowFlare : styles.rowPaper]}
+    >
+      <Text style={[styles.rowLabel, { color: tone === 'flare' ? colors.onFlare : colors.inkSecondary }]}>{label}</Text>
+    </PressableScale>
+  );
+}
+
 export function TextButton({
   label, onPress, muted, danger,
 }: { label: string; onPress: () => void; muted?: boolean; danger?: boolean }) {
@@ -80,6 +96,10 @@ const styles = StyleSheet.create({
     ...edge(colors.hairline, 4),
   },
   secondaryLabel: { fontFamily: type.chip.fontFamily, fontSize: 16, color: colors.inkSecondary },
+  rowButton: { height: 38, paddingHorizontal: 14, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  rowFlare: { backgroundColor: colors.flare, ...edge(colors.flareDeep, 3) },
+  rowPaper: { backgroundColor: colors.paper, borderWidth: 1.5, borderColor: colors.hairline, ...edge(colors.hairline, 3) },
+  rowLabel: { ...type.chip, fontSize: 13 },
   text: { height: 48, alignItems: 'center', justifyContent: 'center' },
   textLabel: { fontFamily: type.chip.fontFamily, fontSize: 16, color: colors.inkSecondary },
 });

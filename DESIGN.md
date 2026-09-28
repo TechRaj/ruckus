@@ -244,6 +244,14 @@ Signing out always returns to the sign-in screen, with the email filled in.
 "I already have an account" on the welcome screen and "New here? Get started"
 on the sign-in screen switch between the two paths.
 
+### Capers
+
+A Caper is one saved place on one day, with the people going. Only someone who
+tapped "I'm in" on a place can make one, from the button beside that place on
+Home. Once made it shows in three places: under "Coming up" on Home, first in
+Places when sorted by Date, and as a butter dot on the map pin. The place then
+leaves "nearly a plan".
+
 ### Modal sheets
 
 Add, confirm, saved and place detail all appear in **one** modal sheet
@@ -253,7 +261,9 @@ content. It does not close and reopen.
 | Screen | Height |
 | --- | --- |
 | Place not found, missing event | 42% |
-| Sign out | 60% |
+| Sign out | 54.5% |
+| Make it a Caper | 82% |
+| Caper made | 90% |
 | Confirm, while resolving | 50% |
 | Add a place | 62% |
 | Place detail, confirm with choices | 88% |
@@ -436,7 +446,8 @@ Known gaps:
 
 - **The multi-place confirm screen.** Itinerary reels return up to 8 places and
   there is no "pick which to save" design. Today they fall back to picking one.
-- **Capers.** The word exists and nothing uses it.
+- **Capers on the backend.** The app keeps them for the session only. They need a table: Den, place, date, time, creator, who is going.
+- **After a Caper's date has passed.** Nothing marks it as done yet.
 - **Badges** (Scallywag, Ringleader, Night Owl) have no screen.
 - **A styled map.** The `map*` tokens are waiting on a renderer that supports them.
 - **Pin clustering**, once a Stash passes about 50 pins.

@@ -11,7 +11,8 @@ import { api } from '../api/client';
 import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
-import { Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
+import { isoDay } from '../lib/time';
+import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
 
 export type Overlay =
   | { kind: 'none' }
@@ -20,6 +21,8 @@ export type Overlay =
   | { kind: 'detail'; id: string }
   | { kind: 'missing-event' }
   | { kind: 'sign-out' }
+  | { kind: 'caper'; id: string }
+  | { kind: 'caper-made'; caperId: string }
   | { kind: 'saved'; name: string };
 
 export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
@@ -42,6 +45,12 @@ interface StashState {
   visible: StashItem[];
   /** Places with three or more people interested. Used by the Today filter and the Home card. */
   nearlyPlans: StashItem[];
+  /** Capers from today onward, soonest first, each with its place. */
+  upcoming: { caper: Caper; place: StashItem }[];
+  /** The upcoming Caper for a place, keyed by place id. */
+  caperByPlace: Map<string, Caper>;
+  /** Only for a place the current user wants to go to. */
+  createCaper: (args: { id: string; date: string; time: string | null; going: string[] }) => Promise<Caper>;
   memberById: Map<string, Member>;
   /** How many places each member has stashed. */
   savedCountBy: Map<string, number>;
@@ -104,6 +113,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [den, setDen] = useState<Den | null>(null);
   const [dens, setDens] = useState<Den[]>([]);
   const [stash, setStash] = useState<StashItem[]>([]);
+  const [capers, setCapers] = useState<Caper[]>([]);
   const [filter, setFilterState] = useState<Filter>({ kind: 'everyone' });
   const [category, setCategoryState] = useState<Category | null>(null);
   const [query, setQuery] = useState('');
@@ -120,7 +130,9 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const loadStash = useCallback(async (denId: string, quiet = false) => {
     if (!quiet) { setLoading(true); setError(null); }
     try {
-      setStash(await api.getStash(denId));
+      const [items, plans] = await Promise.all([api.getStash(denId), api.getCapers(denId)]);
+      setStash(items);
+      setCapers(plans);
     } catch {
       if (!quiet) setError("Couldn't load your Stash.");
     } finally {
@@ -184,7 +196,20 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     for (const s of stash) counts.set(s.savedBy, (counts.get(s.savedBy) ?? 0) + 1);
     return counts;
   }, [stash]);
-  const nearlyPlans = useMemo(() => stash.filter(isNearlyAPlan), [stash]);
+  const upcoming = useMemo(() => {
+    const today = isoDay(new Date());
+    const byPlace = new Map(stash.map(s => [s.placeId, s]));
+    return capers
+      .filter(c => c.date >= today && byPlace.has(c.placeId))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(caper => ({ caper, place: byPlace.get(caper.placeId)! }));
+  }, [capers, stash]);
+  const caperByPlace = useMemo(() => new Map(upcoming.map(u => [u.caper.placeId, u.caper])), [upcoming]);
+  /** A place with a Caper is a plan already, so it leaves this list. */
+  const nearlyPlans = useMemo(
+    () => stash.filter(s => isNearlyAPlan(s) && !caperByPlace.has(s.placeId)),
+    [stash, caperByPlace],
+  );
 
   /** Filters the list rows only. The map keeps every pin and draws the filtered-out ones as dots. */
   const visible = useMemo(() => {
@@ -199,10 +224,15 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
         || s.neighbourhood.toLowerCase().includes(q)
         || s.note.toLowerCase().includes(q));
     }
-    return sort === 'date'
-      ? [...list].sort((a, b) => b.savedAt.localeCompare(a.savedAt))
-      : list;
-  }, [stash, filter, category, query, sort]);
+    if (sort !== 'date') return list;
+    /** Date order is the calendar: Capers first, soonest at the top, then the rest by newest save. */
+    return [...list].sort((a, b) => {
+      const ca = caperByPlace.get(a.placeId), cb = caperByPlace.get(b.placeId);
+      if (ca && cb) return ca.date.localeCompare(cb.date);
+      if (ca || cb) return ca ? -1 : 1;
+      return b.savedAt.localeCompare(a.savedAt);
+    });
+  }, [stash, filter, category, query, sort, caperByPlace]);
 
   const setFilter = useCallback((f: Filter) => { setFilterState(f); setSelectedId(null); }, []);
   const setCategory = useCallback((c: Category | null) => { setCategoryState(c); setSelectedId(null); }, []);
@@ -284,6 +314,17 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     return saved;
   }, [den]);
 
+  const createCaper = useCallback(async (
+    { id, date, time, going }: { id: string; date: string; time: string | null; going: string[] },
+  ) => {
+    const item = stash.find(s => s.id === id);
+    if (!item || !den) throw new Error('place_not_in_stash');
+    if (!item.iWant) throw new Error('not_going');
+    const caper = await api.createCaper({ denId: den.id, placeId: item.placeId, date, time, going });
+    setCapers(prev => [...prev.filter(c => c.id !== caper.id), caper]);
+    return caper;
+  }, [stash, den]);
+
   const signOut = useCallback(async () => {
     await unregisterCurrentPushToken();
     await markSignedOut();
@@ -299,7 +340,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const value: StashState = {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,
     currentUserId,
-    visible, nearlyPlans, memberById, savedCountBy, overlay,
+    visible, nearlyPlans, upcoming, caperByPlace, createCaper, memberById, savedCountBy, overlay,
     isPro, openPro,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,

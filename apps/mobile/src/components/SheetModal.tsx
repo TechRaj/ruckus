@@ -2,11 +2,14 @@
  * Modal sheet over the map. It covers the tab bar and pads its bottom for
  * the home indicator. `SheetHost` owns the only Modal, and each screen's
  * `SheetModal` sets its height, so moving between screens resizes one sheet.
+ * Dragging the sheet down closes it. The drag starts from the top of the
+ * sheet, or from anywhere on a screen that does not scroll.
  */
 import React, {
   createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import { Keyboard, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn, runOnJS, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
@@ -15,7 +18,7 @@ import { colors, motion, radius, shadow } from '../theme/tokens';
 import { EASE_DRAWER, EASE_OUT, useReduceMotion } from '../theme/motion';
 
 interface Host {
-  configure: (height: number, dismissable: boolean) => void;
+  configure: (height: number, dismissable: boolean, dragAnywhere: boolean) => void;
   closeRef: React.MutableRefObject<() => void>;
 }
 const HostContext = createContext<Host | null>(null);
@@ -23,6 +26,11 @@ const HostContext = createContext<Host | null>(null);
 /** The exit is shorter than the entrance. */
 const EXIT_MS = 240;
 const RESIZE_MS = 260;
+/** Height of the strip at the top of the sheet that always takes a drag. It covers the handle and the title. */
+const GRAB = 96;
+/** A drag this far, or a flick this fast, closes the sheet. Points, and points per second. */
+const CLOSE_DISTANCE = 110;
+const CLOSE_VELOCITY = 900;
 
 export function SheetHost({
   open, contentKey, children,
@@ -38,6 +46,7 @@ export function SheetHost({
   const [mounted, setMounted] = useState(open);
   const [height, setHeight] = useState(0.8);
   const [dismissable, setDismissable] = useState(true);
+  const [dragAnywhere, setDragAnywhere] = useState(false);
   const closeRef = useRef<() => void>(() => {});
 
   /** Key of the last screen shown. It keeps that screen mounted during the exit animation. */
@@ -47,6 +56,8 @@ export function SheetHost({
   const top = Math.max(insets.top + 8, screen * (1 - height));
   const progress = useSharedValue(0);
   const topValue = useSharedValue(top);
+  /** How far the finger has pulled the sheet down. */
+  const drag = useSharedValue(0);
   /** True once the open animation has finished. Before that, a height change sets the open position without animating. */
   const settled = useRef(false);
   /** Top of the content box. When the sheet gets shorter, the box shrinks after the sheet has finished moving. */
@@ -67,6 +78,7 @@ export function SheetHost({
   useEffect(() => {
     if (open) {
       setMounted(true);
+      drag.value = 0;
       progress.value = withTiming(1, { duration: reduce ? 1 : motion.sheet, easing: EASE_DRAWER });
       const t = setTimeout(() => { settled.current = true; }, reduce ? 1 : motion.sheet);
       return () => clearTimeout(t);
@@ -78,26 +90,51 @@ export function SheetHost({
       /** `finished` is false when the sheet reopens during the exit. In that case it stays mounted. */
       if (finished) runOnJS(setMounted)(false);
     });
-  }, [open, reduce, progress]);
+  }, [open, reduce, progress, drag]);
 
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: topValue.value + (1 - progress.value) * (screen - topValue.value) }],
+    transform: [{ translateY: topValue.value + (1 - progress.value) * (screen - topValue.value) + drag.value }],
   }));
   /** The scrim reaches full opacity before the sheet finishes opening. */
-  const scrimStyle = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value * 1.6) }));
+  const scrimStyle = useAnimatedStyle(() => ({
+    /** Fades as the sheet is pulled down, so the map shows through before it closes. */
+    opacity: Math.min(1, progress.value * 1.6) * (1 - Math.min(0.6, drag.value / 400)),
+  }));
 
   const host = useMemo<Host>(() => ({
-    configure: (h, d) => { setHeight(h); setDismissable(d); },
+    configure: (h, d, a) => { setHeight(h); setDismissable(d); setDragAnywhere(a); },
     closeRef,
   }), []);
 
-  if (!mounted) return null;
-
   const close = () => { if (dismissable && open) closeRef.current(); };
+
+  /**
+   * Starts only on a downward drag, so taps and sideways swipes pass through.
+   * A sheet that cannot be dismissed still gives a little, then returns.
+   */
+  const pan = Gesture.Pan()
+    .enabled(open)
+    .activeOffsetY(10)
+    .failOffsetX([-24, 24])
+    .hitSlop(dragAnywhere ? undefined : { top: 0, height: GRAB })
+    .onUpdate(e => {
+      const pulled = Math.max(0, e.translationY);
+      drag.value = dismissable ? pulled : pulled * 0.2;
+    })
+    .onEnd(e => {
+      if (dismissable && (e.translationY > CLOSE_DISTANCE || e.velocityY > CLOSE_VELOCITY)) {
+        runOnJS(close)();
+      } else {
+        drag.value = withTiming(0, { duration: reduce ? 1 : 200, easing: EASE_OUT });
+      }
+    });
+
+  if (!mounted) return null;
 
   return (
     <Modal transparent animationType="none" onRequestClose={close} statusBarTranslucent>
-      <View style={styles.root}>
+      {/* Gestures inside a Modal need their own root view. */}
+      <GestureHandlerRootView style={styles.root}>
         <Animated.View style={[styles.scrim, scrimStyle]}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -105,6 +142,7 @@ export function SheetHost({
             accessibilityLabel="Close"
           />
         </Animated.View>
+        <GestureDetector gesture={pan}>
         <Animated.View style={[styles.sheet, shadow.sheet, sheetStyle]}>
           <View style={{ height: screen - boxTop, paddingBottom: insets.bottom }}>
             <View style={styles.handle} />
@@ -121,25 +159,30 @@ export function SheetHost({
             </HostContext.Provider>
           </View>
         </Animated.View>
-      </View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 export function SheetModal({
-  children, onClose, height = 0.8, dismissable = true,
+  children, onClose, height = 0.8, dismissable = true, dragAnywhere = false,
 }: {
   children: React.ReactNode;
   onClose: () => void;
   /** Fraction of the screen the sheet occupies. */
   height?: number;
   dismissable?: boolean;
+  /** Lets a drag start anywhere on the sheet. Only for screens with nothing that scrolls. */
+  dragAnywhere?: boolean;
 }) {
   const host = useContext(HostContext);
   if (!host) throw new Error('SheetModal must be rendered inside SheetHost');
 
   host.closeRef.current = onClose;
-  useLayoutEffect(() => { host.configure(height, dismissable); }, [host, height, dismissable]);
+  useLayoutEffect(() => {
+    host.configure(height, dismissable, dragAnywhere);
+  }, [host, height, dismissable, dragAnywhere]);
 
   return <>{children}</>;
 }

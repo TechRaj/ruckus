@@ -2,7 +2,7 @@
  * The backend interface the screens use. `mock.ts` and `ruckus.ts` implement
  * it and `client.ts` picks one. Screens import `api` from `client.ts` only.
  */
-import { Critter, Den, PlaceCandidate, StashItem } from '../types';
+import { Caper, Critter, Den, PlaceCandidate, StashItem } from '../types';
 
 export type ConfirmMode = 'single' | 'choose' | 'multi' | 'search';
 
@@ -46,6 +46,11 @@ export interface Api {
   /** Saves a place by id, with the reel URL if there is one. See CLAUDE.md §5.6. */
   saveToStash(args: { denId: string; placeId: string; sourceUrl: string | null }): Promise<StashItem>;
   setWant(denId: string, placeId: string, want: boolean): Promise<void>;
+
+  /** Every Caper in the Den, past ones included. */
+  getCapers(denId: string): Promise<Caper[]>;
+  /** The caller must want to go to the place. Other devices hear of it through onStashChange. */
+  createCaper(args: { denId: string; placeId: string; date: string; time: string | null; going: string[] }): Promise<Caper>;
 
   notifications: {
     /** Registers this device for event reminders under the signed-in user. */

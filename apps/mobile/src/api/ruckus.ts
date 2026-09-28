@@ -8,7 +8,7 @@ import 'react-native-url-polyfill/auto';
 import { createRuckus, DenRow, MemberRow, StashRow } from '@ruckus/api';
 import { ExtractResult, ResolvedPlace, extractFromReel, searchPlaces } from '@ruckus/ingest';
 import { Api, ResolveResult } from './types';
-import { Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
+import { Caper, Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
 
 const env = {
   url: process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
@@ -121,6 +121,13 @@ const ingestOpts = async () => ({
   accessToken: await accessToken(),
 });
 
+/**
+ * Capers have no table on the backend yet, so they are held here for the
+ * session and are not shared with other devices. The shape is the one the
+ * table needs: den, place, date, time, creator and who is going.
+ */
+const sessionCapers: Caper[] = [];
+
 /* ---------------------------------------------------------------- api -- */
 
 export const ruckusApi: Api = {
@@ -229,6 +236,16 @@ export const ruckusApi: Api = {
 
   async setWant(denId, placeId, want) {
     await ruckus.stash.setWant(denId, placeId, want);
+  },
+
+  async getCapers(denId) { return sessionCapers.filter(c => c.denId === denId); },
+  async createCaper({ denId, placeId, date, time, going }) {
+    const caper: Caper = {
+      id: `${placeId}:${date}`, denId, placeId, date, time,
+      createdBy: (await ruckus.auth.userId()) ?? '', going,
+    };
+    sessionCapers.push(caper);
+    return caper;
   },
 
   notifications: {

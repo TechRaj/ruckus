@@ -34,7 +34,7 @@ export function PlacesScreen() {
   const {
     loading, error, den, stash, visible, memberById,
     filter, category, query, sort, selectedId, currentUserId,
-    select, setFilter, setCategory, setQuery, setSort, openOverlay,
+    select, setFilter, setCategory, setQuery, setSort, openOverlay, caperByPlace,
   } = useStash();
 
   const reduce = useReduceMotion();
@@ -77,7 +77,7 @@ export function PlacesScreen() {
   }, [selectedId, visible]);
 
   const markers = useStashMarkers({
-    stash, focusedUser, category, selectedId, memberById, onPress: onPinPress,
+    stash, focusedUser, category, selectedId, memberById, caperByPlace, onPress: onPinPress,
   });
 
   const { kicker, headline, emptyLine } = describeView({
@@ -216,6 +216,7 @@ export function PlacesScreen() {
                   item={item}
                   savedBy={memberById.get(item.savedBy)}
                   selected={selectedId === item.id}
+                  caper={caperByPlace.get(item.placeId)}
                   onPress={() => onRowPress(item)}
                 />
               )}

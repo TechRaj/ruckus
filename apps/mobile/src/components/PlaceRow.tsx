@@ -5,20 +5,22 @@
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { dotted } from '../lib/time';
-import { colors, radius, space, type } from '../theme/tokens';
-import { Member, StashItem } from '../types';
+import { dayLabel, dotted } from '../lib/time';
+import { colors, font, radius, space, type } from '../theme/tokens';
+import { Caper, Member, StashItem } from '../types';
 import { CategoryGlyph } from './CategoryGlyph';
 import { CritterHead } from './CritterHead';
 
 export const ROW_HEIGHT = 84;
 
 export function PlaceRow({
-  item, savedBy, selected, onPress,
+  item, savedBy, selected, caper, onPress,
 }: {
   item: StashItem;
   savedBy: Member | undefined;
   selected: boolean;
+  /** Set when the place has an upcoming Caper. Its day leads the second line. */
+  caper?: Caper;
   onPress: () => void;
 }) {
   return (
@@ -38,6 +40,7 @@ export function PlaceRow({
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.meta} numberOfLines={1}>
+          {caper ? <Text style={styles.when}>{dotted(dayLabel(caper.date), caper.time)} · </Text> : null}
           {dotted(item.neighbourhood, item.distance)}
         </Text>
         <Text style={styles.note} numberOfLines={1}>{item.note}</Text>
@@ -69,5 +72,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0 },
   name: { ...type.rowTitle, color: colors.ink },
   meta: { ...type.meta, color: colors.inkMuted, marginTop: 1 },
+  when: { fontFamily: font.bold, color: colors.ink },
   note: { ...type.bodyMed, fontSize: 14, color: colors.inkSecondary, marginTop: 2 },
 });

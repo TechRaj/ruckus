@@ -2,14 +2,15 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PrimaryButton } from '../components/Buttons';
+import { RowButton } from '../components/Buttons';
+import { PressableScale } from '../components/PressableScale';
 import { Kicker, ScreenHeader } from '../components/Chrome';
 import { CritterHead, CritterStack } from '../components/CritterHead';
 import { EmptyState } from '../components/EmptyState';
 import { SkyCard } from '../components/SkyCard';
 import { Sprite } from '../components/Sprite';
 import { jump } from '../theme/sprites';
-import { ago, dotted } from '../lib/time';
+import { ago, dayLabel, dayParts, dotted } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, font, radius, space, type } from '../theme/tokens';
@@ -18,7 +19,9 @@ import { Member } from '../types';
 const RASCAL_WIDTH = 132;
 
 export function HomeScreen() {
-  const { den, stash, nearlyPlans, currentUserId, memberById } = useStash();
+  const {
+    den, stash, nearlyPlans, upcoming, currentUserId, memberById, openOverlay, toggleInterest,
+  } = useStash();
   const insets = useSafeAreaInsets();
 
   /** Latest saves in the Den. Includes the current user's so Home is never empty while Places has rows. */
@@ -37,32 +40,62 @@ export function HomeScreen() {
       </View>
       <SkyCard name={currentUserId ? memberById.get(currentUserId)?.displayName : undefined} />
 
-      {nearlyPlans.length >= 2 ? (
+      {upcoming.length > 0 ? (
+        <>
+          <View style={styles.sectionLabel}><Kicker>Coming up</Kicker></View>
+          {upcoming.map(({ caper, place }) => {
+            const day = dayParts(caper.date);
+            return (
+              <PressableScale
+                key={caper.id}
+                onPress={() => openOverlay({ kind: 'detail', id: place.id })}
+                scaleTo={0.985}
+                accessibilityRole="button"
+                accessibilityLabel={`${place.name}, ${dotted(dayLabel(caper.date), caper.time)}`}
+                style={styles.caper}
+              >
+                <View style={styles.date}>
+                  <Text style={styles.dateDay}>{day.weekday.toUpperCase()}</Text>
+                  <Text style={styles.dateNumber}>{day.date}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.planPlace} numberOfLines={1}>{place.name}</Text>
+                  <Text style={styles.planMeta} numberOfLines={1}>
+                    {dotted(dayLabel(caper.date), caper.time, place.neighbourhood)}
+                  </Text>
+                </View>
+                <CritterStack
+                  members={caper.going.map(id => memberById.get(id)).filter(Boolean) as Member[]}
+                  size={30}
+                />
+              </PressableScale>
+            );
+          })}
+        </>
+      ) : null}
+
+      {nearlyPlans.length > 0 ? (
         <View style={styles.plan}>
           <View style={styles.planHead}>
             <View style={styles.dot} />
             <Text style={styles.planKicker}>
-              {nearlyPlans.length === 2 ? 'Two' : nearlyPlans.length} places are nearly a plan
+              {nearlyPlans.length === 1 ? 'One place is' : `${nearlyPlans.length === 2 ? 'Two' : nearlyPlans.length} places are`} nearly a plan
             </Text>
           </View>
           {nearlyPlans.slice(0, 3).map(s => (
             <View key={s.id} style={styles.planRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.planPlace}>{s.name}</Text>
-                <Text style={styles.planMeta}>{dotted(s.neighbourhood, s.distance)}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.planPlace} numberOfLines={1}>{s.name}</Text>
+                <Text style={styles.planMeta} numberOfLines={1}>
+                  {dotted(s.neighbourhood, `${s.wantCount} in`)}
+                </Text>
               </View>
-              {s.interested.length > 0 ? (
-                <CritterStack
-                  members={s.interested.map(id => memberById.get(id)).filter(Boolean) as Member[]}
-                  size={32}
-                />
-              ) : (
-                <Kicker>{`${s.wantCount} in`}</Kicker>
-              )}
+              {/* Only someone who is in can make the Caper. Anyone else is offered "I'm in" first. */}
+              {s.iWant
+                ? <RowButton label="Make it a Caper" onPress={() => openOverlay({ kind: 'caper', id: s.id })} />
+                : <RowButton label="I'm in" tone="paper" onPress={() => toggleInterest(s.id)} />}
             </View>
           ))}
-          <View style={{ height: space.lg }} />
-          <PrimaryButton label="Make it a Caper" onPress={() => {}} />
         </View>
       ) : null}
 
@@ -107,6 +140,18 @@ const styles = StyleSheet.create({
   },
   planPlace: { ...type.rowTitle, fontSize: 17, color: colors.ink },
   planMeta: { ...type.meta, color: colors.inkSecondary, marginTop: 1 },
+  caper: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    marginHorizontal: space.xl, marginBottom: space.sm, padding: space.md,
+    borderRadius: radius.xl, backgroundColor: colors.flareWash,
+    borderWidth: 1.5, borderColor: colors.flare,
+  },
+  date: {
+    width: 52, paddingVertical: 5, borderRadius: radius.lg - 4, alignItems: 'center',
+    backgroundColor: colors.paper, borderWidth: 1.5, borderColor: colors.flareDeep,
+  },
+  dateDay: { fontFamily: font.mono, fontSize: 10, letterSpacing: 1, color: colors.inkMuted },
+  dateNumber: { fontFamily: font.display, fontSize: 22, lineHeight: 26, color: colors.ink },
   sectionLabel: { paddingHorizontal: space.xl, paddingTop: 28, paddingBottom: space.md },
   activity: {
     flexDirection: 'row', gap: 14, alignItems: 'center',

@@ -15,6 +15,7 @@ export const lines = {
     `nothing matches "${q}" in ${label.toLowerCase()}.`,
   searchFailed: "couldn't search just now. try again.",
   searchLimit: "that's today's search limit. try again tomorrow.",
+  caperFailed: "couldn't lock that in. try again.",
   quietHome: 'quiet so far. saves from your den show up here.',
   noTakes: 'no comments yet.',
 
@@ -26,7 +27,7 @@ export const lines = {
   ],
   hiding: "couldn't find that one. try searching, or add it by hand.",
   missingEvent: "that event isn't in your den anymore.",
-  saved: 'saved to the stash.',
+  saved: 'one step closer to making plans!',
 
   /** Hints. Rendered in the mono font, muted. */
   hint: {

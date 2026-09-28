@@ -1,5 +1,5 @@
 /**
- * Add a place by pasted link, search, or manual entry.
+ * Add a place by pasted link or by search.
  * CLAUDE.md §7: keep more than one source, a single-source app risks App Store rejection under Guideline 4.2.
  */
 import { useState } from 'react';
@@ -8,13 +8,10 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SecondaryButton } from '../components/Buttons';
-import { Emblem } from '../components/Emblem';
-import {
-  IconChevronDown, IconLink, IconPen, IconSearch, PawPrint,
-} from '../components/Icons';
+import { DenMenu, DenPill, useDenPicker } from '../components/DenPicker';
+import { IconLink, IconSearch, PawPrint } from '../components/Icons';
 import { Hint, keyboardDismissMode } from '../components/Chrome';
 import { SheetModal } from '../components/SheetModal';
-import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, radius, space, type } from '../theme/tokens';
 
@@ -25,8 +22,8 @@ export function AddPlaceScreen({
   onResolve: (url: string) => void;
   onManual: () => void;
 }) {
-  const { den } = useStash();
   const [url, setUrl] = useState('');
+  const picker = useDenPicker();
 
   const paste = async () => {
     const text = await Clipboard.getStringAsync();
@@ -34,7 +31,7 @@ export function AddPlaceScreen({
   };
 
   return (
-    <SheetModal onClose={onClose} height={0.62}>
+    <SheetModal onClose={onClose} height={0.59}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={keyboardDismissMode}
@@ -44,12 +41,9 @@ export function AddPlaceScreen({
       <View style={styles.body}>
         <View style={styles.head}>
           <Text style={styles.title}>Add a place</Text>
-          <Pressable style={styles.denPill} onPress={() => {}}>
-            <Emblem name={den?.emblem ?? 'lantern'} size={20} />
-            <Text style={styles.denName} numberOfLines={1}>{den?.name}</Text>
-            <IconChevronDown size={14} />
-          </Pressable>
+          <DenPill {...picker} />
         </View>
+        <View style={styles.menu}><DenMenu {...picker} /></View>
 
         <View style={styles.linkRow}>
           <IconLink />
@@ -78,10 +72,7 @@ export function AddPlaceScreen({
           <View style={styles.rule} />
         </View>
 
-        <View style={{ gap: space.md }}>
-          <SecondaryButton label="Search for a place" onPress={onManual} leading={<IconSearch size={20} color={colors.inkSecondary} />} />
-          <SecondaryButton label="Type in the details" onPress={onManual} leading={<IconPen />} />
-        </View>
+        <SecondaryButton label="Search for a place" onPress={onManual} leading={<IconSearch size={20} color={colors.inkSecondary} />} />
       </View>
 
       <View style={styles.footnote}>
@@ -94,17 +85,13 @@ export function AddPlaceScreen({
 }
 
 const styles = StyleSheet.create({
-  body: { flex: 1, paddingHorizontal: space.xl, paddingTop: 6 },
+  body: { flex: 1, paddingHorizontal: space.xl, paddingTop: 2 },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  title: { ...type.displaySm, fontSize: 28, color: colors.ink, flex: 1 },
-  denPill: {
-    height: 38, borderRadius: 19, flexDirection: 'row', alignItems: 'center',
-    gap: 8, paddingLeft: 7, paddingRight: 12, backgroundColor: colors.paperSunk,
-    maxWidth: 190,
-  },
-  denName: { ...type.meta, color: colors.inkSecondary, flexShrink: 1 },
+  menu: { marginTop: space.sm },
+  /** Baloo 2 clips the tops of letters when lineHeight is under about 1.3 times fontSize. */
+  title: { ...type.displaySm, fontSize: 28, lineHeight: 38, color: colors.ink, flex: 1 },
   linkRow: {
-    marginTop: 20, height: 60, borderRadius: radius.pill,
+    marginTop: space.md, height: 60, borderRadius: radius.pill,
     borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paper,
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     paddingLeft: space.lg, paddingRight: 10,

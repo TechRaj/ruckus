@@ -4,13 +4,14 @@
  */
 import { Api, ResolveResult } from './types';
 import { MOCK_USER_ID, mockCandidates, mockDen, mockSearch, mockStash } from './mockData';
-import { Den, StashItem } from '../types';
+import { Caper, Den, StashItem } from '../types';
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 let userId: string | null = null;
 let dens: Den[] = [];
 const stash: StashItem[] = mockStash.map(s => ({ ...s, takes: [...s.takes] }));
+const capers: Caper[] = [];
 const listeners = new Map<string, Set<() => void>>();
 
 const notify = (denId: string) => listeners.get(denId)?.forEach(cb => cb());
@@ -41,19 +42,23 @@ export const mockApi: Api = {
   async myDens() { await delay(200); return dens; },
   async createDen(name, emblem) {
     await delay(300);
-    const den = { ...mockDen, name, emblem };
+    /** The first Den made is the example one, with its places and members. Later ones start empty. */
+    const first = !dens.some(d => d.id === mockDen.id);
+    const den: Den = first
+      ? { ...mockDen, name, emblem }
+      : { id: `den_${dens.length + 1}`, name, emblem, members: mockDen.members.filter(m => m.userId === MOCK_USER_ID) };
     dens = [den, ...dens];
     return den;
   },
   async joinDen(code) {
     await delay(300);
     if (code.trim().length !== 6) throw new Error("That code doesn't match any Den.");
-    dens = [mockDen, ...dens];
+    if (!dens.some(d => d.id === mockDen.id)) dens = [mockDen, ...dens];
     return mockDen;
   },
   async getInviteLink() { await delay(200); return { code: '8FK2QD', url: 'https://ruckus.app/j/8FK2QD' }; },
 
-  async getStash() { await delay(320); return stash.map(s => ({ ...s })); },
+  async getStash(denId) { await delay(320); return stash.filter(s => s.denId === denId).map(s => ({ ...s })); },
   onStashChange(denId, cb) {
     if (!listeners.has(denId)) listeners.set(denId, new Set());
     listeners.get(denId)!.add(cb);
@@ -71,7 +76,7 @@ export const mockApi: Api = {
   },
   async saveToStash({ denId, placeId, sourceUrl }) {
     await delay(400);
-    const existing = stash.find(s => s.placeId === placeId);
+    const existing = stash.find(s => s.placeId === placeId && s.denId === denId);
     if (existing) return { ...existing };
     const c = [...mockCandidates, ...mockSearch].find(x => x.placeId === placeId) ?? mockCandidates[0];
     const item: StashItem = {
@@ -87,6 +92,17 @@ export const mockApi: Api = {
     notify(denId);
     return { ...item };
   },
+  async getCapers(denId) { await delay(120); return capers.filter(c => c.denId === denId).map(c => ({ ...c })); },
+  async createCaper({ denId, placeId, date, time, going }) {
+    await delay(300);
+    const caper: Caper = {
+      id: `caper_${capers.length + 1}`, denId, placeId, date, time, createdBy: MOCK_USER_ID, going,
+    };
+    capers.push(caper);
+    notify(denId);
+    return { ...caper };
+  },
+
   notifications: {
     async registerPushToken() {},
     async unregisterPushToken() {},
