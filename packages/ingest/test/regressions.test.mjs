@@ -20,7 +20,7 @@ import {
   configure, currentPatterns,
   decodeEntities, parseReelPage, shortcodeOf,
   scoreCandidate, refineWithGeocode, tierOf, explain,
-  normaliseCity, geocodeCandidates,
+  normaliseCity, geocodeCandidates, searchPlaces,
 } from '@ruckus/ingest';
 
 /** Build an og-tag page the way Instagram actually serves one. */
@@ -237,6 +237,22 @@ describe('geocode stage', () => {
     assert.equal(out.length, 1, 'the same place_id must not produce two saves');
     assert.equal(out[0].kind, 'venue', 'the higher-scoring row wins');
     assert.deepEqual(out[0].alsoSeenAs, ['event'], 'the other reading is remembered, not discarded');
+  });
+
+  test('search returns every match, not the single best one', async () => {
+    // The stub returns id_1 twice. Search must return all three places, deduped.
+    const out = await withStubProxy(
+      () => [place('Bloom Cafe', 'id_1'), place('Bloom Restaurant', 'id_2'), place('Bloom Bar', 'id_3'), place('Bloom Cafe', 'id_1')],
+      ep => searchPlaces('Bloom', { city: 'Toronto' }, { geocodeEndpoint: ep }));
+    assert.deepEqual(out.map(p => p.name), ['Bloom Cafe', 'Bloom Restaurant', 'Bloom Bar'], "all of them, in Google's order, once each");
+    for (const k of ['googlePlaceId', 'name', 'coordinate', 'address', 'neighbourhood',
+                     'city', 'kind', 'sourceUrl', 'score', 'tier', 'reasons', 'explanation']) {
+      assert.ok(k in out[0], `a search result is missing ${k}`);
+    }
+  });
+
+  test('an empty search asks nothing', async () => {
+    assert.deepEqual(await searchPlaces('   ', {}, { geocodeEndpoint: 'http://127.0.0.1:1/unused' }), []);
   });
 
   test('distinct places are kept', async () => {

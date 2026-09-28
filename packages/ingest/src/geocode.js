@@ -115,6 +115,47 @@ export async function geocodeCandidates(candidates, ctx = {}, opts = {}) {
 }
 
 /**
+ * Returns every place Text Search finds for a typed query, in Google's order.
+ * geocodeCandidates() returns only the single best match per candidate. The
+ * user picks from these results, so none are scored and every tier is 'high'.
+ * Makes one request. The proxy returns up to five places.
+ *
+ * @param {string} query
+ * @param {object} [ctx]   { city }, appended to the query as for a venue
+ * @param {object} [opts]  { signal, geocodeEndpoint, accessToken }
+ * @returns {Promise<object[]>} ResolvedPlace objects (CLAUDE.md §9)
+ */
+export async function searchPlaces(query, ctx = {}, opts = {}) {
+  const q = (query ?? '').trim();
+  if (!q) return [];
+  const results = await lookup(q, normaliseCity(ctx.city), opts);
+
+  return dedupeByPlace(results
+    .filter(r => r.placeId && r.lat != null && r.lng != null)
+    .map(r => ({
+      googlePlaceId: r.placeId,
+      name: r.name || q,
+      coordinate: { lat: r.lat, lng: r.lng },
+      address: r.address || null,
+      neighbourhood: r.neighbourhood ?? null,
+      city: r.city ?? null,
+      kind: 'venue',
+      // Google's first specific type, such as "cafe". The app maps it to eat, drink or do.
+      category: (r.types ?? []).find(t => t !== 'point_of_interest' && t !== 'establishment')?.replace(/_/g, ' ') ?? null,
+      when: null,
+      sourceUrl: null,
+      score: 0,
+      tier: 'high',
+      reasons: ['found by search'],
+      codes: ['searched_by_name'],
+      explanation: { text: 'Found by search', tone: 'good' },
+      modelName: q,
+      handle: null,
+      geocodeError: null,
+    })));
+}
+
+/**
  * Collapse candidates that resolved to the same real place.
  *
  * Event reels make the model emit one location twice - once as the venue and

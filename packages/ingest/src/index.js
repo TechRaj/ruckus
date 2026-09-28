@@ -30,7 +30,7 @@ export {
 } from './instagram.js';
 
 export { extractPlaces, SYSTEM, proxyHeaders } from './extract-llm.js';
-export { geocodeCandidates, normaliseCity } from './geocode.js';
+export { geocodeCandidates, normaliseCity, searchPlaces } from './geocode.js';
 export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode, explain } from './confidence.js';
 export { rankCandidates } from './ranker.js';
 
