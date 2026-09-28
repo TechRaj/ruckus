@@ -101,15 +101,22 @@ behind the critter room and the Saved screen.
 
 ### The sky card
 
-Home's greeting card has four moods. The sun or moon moves along an arc from the
-current time.
+Home's greeting card is a hand-drawn sky. There are four drawings, and the card
+picks one from the time of day. It follows the clock and not the theme switch,
+so day mode after dark still shows the night sky.
 
-| Mood | Hours | Top | Bottom | Orb |
-| --- | --- | --- | --- | --- |
-| morning | 5am–10am | `#FFDDB8` | `#C6ECF8` | `#FFD75E` |
-| day | 10am–5pm | `#A9E1F7` | `#E4F5E4` | `#FFD75E` |
-| evening | 5pm–8pm | `#FFB59C` | `#DCCBF6` | `#FF9E6B` |
-| night | 8pm–5am | `#1B1F4D` | `#41539A` | `#FFF0B3` |
+| Mood | Hours | Greeting colour |
+| --- | --- | --- |
+| morning | 5am to 10am | `#4A3B2E` |
+| day | 10am to 5pm | `#4A3B2E` |
+| evening | 5pm to 8pm | `#4A3B2E` |
+| night | 8pm to 5am | `#FFF3D1` |
+
+The sun or moon is a separate image that moves along an arc with the time. A
+cut-out of the hills is drawn over it, so it rises and sets behind them.
+
+Source art is in `design/sky/`. The app's copies are in
+`apps/mobile/assets/sky/`.
 
 ### Contrast
 
@@ -267,7 +274,7 @@ All in `apps/mobile/src/components/`.
 | `CritterRoom` | A grid of labelled heads | Onboarding picker and the Den on People. Heads bob 2px |
 | `Emblem` | Den crest: a pastel coin with one solid mark | lantern, acorn, moon, peak, leaf. The names are stored, so do not rename them |
 | `ThemeSwitch` | Day and night switch: moon left, sun right | Saves the choice and reloads the app. Does nothing in mock mode |
-| `SkyCard` | Greeting over a time-of-day sky | No animation; updates when the clock ticks |
+| `SkyCard` | Greeting over a hand-drawn sky for the time of day | Follows the clock, not the theme. No animation |
 | `TakeCard` | One member's comment | Cards enter 40ms apart |
 | `EmptyState` | Paw print, one line, optional action | Use on every empty screen |
 | `StashSearch` | 48px `paperSunk` pill | Visible at the full detent only |

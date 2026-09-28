@@ -1,31 +1,60 @@
 /**
- * Sky card on Home: a greeting over a sky that changes with the time of day.
- * The sun or moon is positioned from the current time. There is no
- * animation. The position updates when the clock ticks.
+ * Greeting card on Home. The sky is one of four drawings, picked by the
+ * time of day and not by the theme, and the sun or moon moves across it with the clock. The hills are a
+ * second copy of the drawing with the sky cut away, laid over the sun, so it
+ * rises and sets behind them. Nothing here animates.
  */
 import { useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { greetingAt, moodAt, orbAt, useNow } from '../theme/clock';
-import { colors, font, isNight, radius, sky, space } from '../theme/tokens';
+import { Image, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { greetingAt, moodAt, orbAt, useNow, type Mood } from '../theme/clock';
+import { colors, font, radius, space } from '../theme/tokens';
+
+const SKY: Record<Mood, { sky: number; hills: number; text: string }> = {
+  morning: {
+    sky: require('../../assets/sky/sky-morning.jpg'),
+    hills: require('../../assets/sky/hills-morning.png'), text: '#4A3B2E',
+  },
+  day: {
+    sky: require('../../assets/sky/sky-day.jpg'),
+    hills: require('../../assets/sky/hills-day.png'), text: '#4A3B2E',
+  },
+  evening: {
+    sky: require('../../assets/sky/sky-evening.jpg'),
+    hills: require('../../assets/sky/hills-evening.png'), text: '#4A3B2E',
+  },
+  night: {
+    sky: require('../../assets/sky/sky-night.jpg'),
+    hills: require('../../assets/sky/hills-night.png'), text: '#FFF3D1',
+  },
+};
+/** Yellow by morning and day, orange at sunset, the moon at night. */
+const ORBS: Record<Mood, number> = {
+  morning: require('../../assets/sky/sun.png'),
+  day: require('../../assets/sky/sun.png'),
+  evening: require('../../assets/sky/sun-evening.png'),
+  night: require('../../assets/sky/moon.png'),
+};
 
 const HEIGHT = 150;
-const ORB = 44;
-const STARS = [[0.18, 0.22], [0.64, 0.14], [0.82, 0.38], [0.4, 0.34]];
+const ORB = 48;
+/** Width over height of the sky drawings. */
+const ASPECT = 1180 / 500;
+/** The hills layer starts this far down the drawing, as a fraction of its height. */
+const HILLS_FROM = 260 / 500;
 
 export function SkyCard({ name }: { name?: string }) {
   const now = useNow();
   const [width, setWidth] = useState(0);
-  /**
-   * The sky matches the palette. In night mode it is always the night sky.
-   * In day mode after dark it holds on the evening sky.
-   */
-  const clock = moodAt(now);
-  const mood = isNight ? 'night' : clock === 'night' ? 'evening' : clock;
-  const night = mood === 'night';
-  const tone = sky[mood];
+  /** The sky follows the clock, whichever mode the theme switch is in. */
+  const mood = moodAt(now);
+  const tone = SKY[mood];
   const orb = orbAt(now);
   const greeting = name ? `${greetingAt(now)}, ${name}` : greetingAt(now);
+
+  /** The drawing covers the card and is centred, so a narrow phone trims its sides. */
+  const artWidth = Math.max(width, HEIGHT * ASPECT);
+  const artHeight = artWidth / ASPECT;
+  const art = { left: (width - artWidth) / 2, top: (HEIGHT - artHeight) / 2, width: artWidth };
 
   return (
     <View
@@ -35,22 +64,24 @@ export function SkyCard({ name }: { name?: string }) {
       onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
       style={styles.card}
     >
-      <LinearGradient colors={[tone.top, tone.bottom]} style={StyleSheet.absoluteFill} />
-      {night ? STARS.map(([x, y], i) => (
-        <View key={i} style={[styles.star, { left: `${x * 100}%`, top: `${y * 100}%` }]} />
-      )) : null}
-      <View style={[styles.cloud, night && styles.cloudNight, { left: '12%', top: '26%', width: 64 }]} />
-      <View style={[styles.cloud, night && styles.cloudNight, { left: '62%', top: '40%', width: 84 }]} />
       {width > 0 ? (
-        <View
-          style={[styles.orb, {
-            backgroundColor: tone.orb,
-            left: orb.x * width - ORB / 2, top: orb.y * HEIGHT - ORB / 2,
-          }]}
-        />
+        <>
+          <Image source={tone.sky} style={[styles.layer, art, { height: artHeight }]} />
+          <Image
+            source={ORBS[mood]}
+            style={[styles.layer, {
+              width: ORB, height: ORB,
+              left: orb.x * width - ORB / 2, top: orb.y * HEIGHT - ORB / 2,
+            }]}
+          />
+          <Image
+            source={tone.hills}
+            style={[styles.layer, art, {
+              top: art.top + artHeight * HILLS_FROM, height: artHeight * (1 - HILLS_FROM),
+            }]}
+          />
+        </>
       ) : null}
-      <View style={[styles.hill, styles.hillBack, { backgroundColor: tone.hillBack }]} />
-      <View style={[styles.hill, styles.hillFront, { backgroundColor: tone.hill }]} />
       <Text style={[styles.greeting, { color: tone.text }]} numberOfLines={2}>{greeting}</Text>
     </View>
   );
@@ -60,15 +91,9 @@ const styles = StyleSheet.create({
   card: {
     height: HEIGHT, marginTop: space.lg, marginHorizontal: space.xl,
     borderRadius: radius.xl + 4, overflow: 'hidden',
-    borderWidth: 1.5, borderColor: colors.hairline,
+    borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paperSunk,
   },
-  star: { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFF6D0' },
-  cloud: { position: 'absolute', height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.75)' },
-  cloudNight: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  orb: { position: 'absolute', width: ORB, height: ORB, borderRadius: ORB / 2 },
-  hill: { position: 'absolute', height: 96, borderRadius: 200 },
-  hillBack: { left: '34%', right: '-30%', bottom: -54 },
-  hillFront: { left: '-10%', right: '30%', bottom: -50 },
+  layer: { position: 'absolute' },
   greeting: {
     position: 'absolute', left: 18, right: 18, bottom: 12,
     fontFamily: font.display, fontSize: 24, lineHeight: 30,

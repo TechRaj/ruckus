@@ -81,14 +81,6 @@ export const dusk = {
 export const isNight = launchedAtNight;
 export const colors: Record<keyof typeof day, string> = isNight ? dusk : day;
 
-/** Colours for the sky card on Home, per time of day. `orb` is the sun or moon. */
-export const sky = {
-  morning: { top: '#FFDDB8', bottom: '#C6ECF8', orb: '#FFD75E', hill: '#B1DF9C', hillBack: '#8CCB7C', text: '#4A3B2E' },
-  day: { top: '#A9E1F7', bottom: '#E4F5E4', orb: '#FFD75E', hill: '#B1DF9C', hillBack: '#8CCB7C', text: '#4A3B2E' },
-  evening: { top: '#FFB59C', bottom: '#DCCBF6', orb: '#FF9E6B', hill: '#A9CF95', hillBack: '#86B67C', text: '#4A3B2E' },
-  night: { top: '#1B1F4D', bottom: '#41539A', orb: '#FFF0B3', hill: '#2B5E52', hillBack: '#224A45', text: '#FFF3D1' },
-} as const;
-
 /**
  * Translucent material for the Places sheet only. A tinted fill over a blur
  * with a 1px rim, so the map stays visible through the sheet.
