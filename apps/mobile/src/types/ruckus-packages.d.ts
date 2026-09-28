@@ -1,8 +1,6 @@
 /**
- * Types for the two workspace packages the app talks to. Both are plain
- * JavaScript with JSDoc (so they run in Node for tests and in React Native),
- * so this file is what TypeScript sees. Only what the adapter uses is typed;
- * extend it as you reach for more.
+ * Types for @ruckus/api and @ruckus/ingest, which are plain JavaScript with
+ * JSDoc. Only what the adapter uses is typed. Add to it as needed.
  */
 
 declare module '@ruckus/api' {
@@ -15,7 +13,7 @@ declare module '@ruckus/api' {
 
   export class RuckusError extends Error {
     code: RuckusErrorCode;
-    /** true when the right response is the Ruckus Pro paywall */
+    /** True when the app should respond by showing the Ruckus Pro paywall. */
     needsUpgrade: boolean;
     cause?: unknown;
   }
@@ -33,7 +31,7 @@ declare module '@ruckus/api' {
   export interface MemberRow {
     id: string;
     display_name: string;
-    /** key into the critter set, not a URL */
+    /** A critter name. This is a key, and it is never a URL. */
     avatar: string | null;
     role?: string;
     joinedAt?: string;
@@ -58,7 +56,7 @@ declare module '@ruckus/api' {
     wantCount: number;
     iWant: boolean;
     wanters: { id: string; displayName: string; avatar: string | null }[];
-    /** One line per person, oldest first. */
+    /** One take per person, oldest first. */
     takes: { userId: string; text: string; at: string }[];
   }
 
@@ -84,7 +82,7 @@ declare module '@ruckus/api' {
       leave(denId: string): Promise<void>;
       mine(): Promise<DenRow[]>;
       members(denId: string): Promise<MemberRow[]>;
-      /** placeLimit is null once the Den's owner has Pro. */
+      /** `placeLimit` is null when the Den's owner has Pro. */
       capacity(denId: string): Promise<{ places: number; placeLimit: number | null; iOwnIt: boolean }>;
     };
     stash: {
@@ -97,7 +95,7 @@ declare module '@ruckus/api' {
       remove(saveId: string): Promise<void>;
       onChange(denId: string, cb: () => void): () => void;
     };
-    /** One take per person per place per Den; set again to replace yours. */
+    /** One take per person per place per Den. Calling `set` again replaces it. */
     takes: {
       set(denId: string, placeId: string, text: string): Promise<unknown>;
       remove(denId: string, placeId: string): Promise<void>;
@@ -115,7 +113,7 @@ declare module '@ruckus/api' {
 }
 
 declare module '@ruckus/ingest' {
-  /** CLAUDE.md §9 — what the pipeline returns and what stash.save wants back verbatim. */
+  /** The pipeline's output (CLAUDE.md §9). `stash.save` takes these objects back unchanged. */
   export interface ResolvedPlace {
     googlePlaceId: string | null;
     name: string;
@@ -160,6 +158,12 @@ declare module '@ruckus/ingest' {
   export function geocodeCandidates(
     candidates: { name: string; kind?: string; score?: number; reasons?: string[]; geocodeQuery?: string }[],
     ctx?: { city?: string | null; sourceUrl?: string },
+    opts?: IngestOptions,
+  ): Promise<ResolvedPlace[]>;
+  /** Returns every match for a typed query. */
+  export function searchPlaces(
+    query: string,
+    ctx?: { city?: string | null },
     opts?: IngestOptions,
   ): Promise<ResolvedPlace[]>;
 }

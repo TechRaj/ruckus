@@ -1,10 +1,6 @@
 /**
- * The interface every screen builds against — the one seam to the backend.
- *
- * Two adapters satisfy it: `mock.ts` (in-memory, runs in Expo Go with no
- * keys) and `ruckus.ts` (@ruckus/api over Supabase + @ruckus/ingest via the
- * proxy). `client.ts` picks one. Screens import `api` from client and never
- * name Supabase, a table, or a URL.
+ * The backend interface the screens use. `mock.ts` and `ruckus.ts` implement
+ * it and `client.ts` picks one. Screens import `api` from `client.ts` only.
  */
 import { Critter, Den, PlaceCandidate, StashItem } from '../types';
 
@@ -17,7 +13,7 @@ export interface ResolveResult {
 
 export interface Api {
   auth: {
-    /** Email a 6-digit code. */
+    /** Emails a 6-digit code. */
     sendCode(email: string, displayName?: string): Promise<void>;
     /** Returns the signed-in user id. */
     verifyCode(email: string, code: string): Promise<string>;
@@ -34,30 +30,31 @@ export interface Api {
   createDen(name: string, emblem: string): Promise<Den>;
   joinDen(code: string): Promise<Den>;
   /**
-   * The Den's six-character join code. `url` is for later: nobody owns
-   * ruckus.app yet, so a link can't open the app - share the code instead.
+   * The Den's six-character join code. The ruckus.app domain is not registered,
+   * so `url` cannot open the app yet. Share the code.
    */
   getInviteLink(denId: string): Promise<{ code: string; url: string }>;
 
   getStash(denId: string, pos?: { lat: number; lng: number }): Promise<StashItem[]>;
-  /** A friend saved or voted; re-fetch. Returns unsubscribe. */
+  /** Calls `cb` when the Den's Stash changes on the server. Returns an unsubscribe function. */
   onStashChange(denId: string, cb: () => void): () => void;
 
-  /** A shared reel → ranked candidates. Runs on device against the proxy. */
+  /** Resolves a shared reel URL to ranked candidates. Runs on device and calls the proxy. */
   resolveSharedUrl(url: string): Promise<ResolveResult>;
-  searchPlaces(query: string): Promise<PlaceCandidate[]>;
-  /** The one write on save: a place id, nothing else leaves the device (§5.6). */
+  /** Set `fromLink` when searching inside a link's confirm flow. The search is then biased to that link's city. */
+  searchPlaces(query: string, opts?: { fromLink?: boolean }): Promise<PlaceCandidate[]>;
+  /** Saves a place by id, with the reel URL if there is one. See CLAUDE.md §5.6. */
   saveToStash(args: { denId: string; placeId: string; sourceUrl: string | null }): Promise<StashItem>;
   setWant(denId: string, placeId: string, want: boolean): Promise<void>;
 
   notifications: {
-    /** Register this device for event reminders. The token is the signed-in user's. */
+    /** Registers this device for event reminders under the signed-in user. */
     registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
-    /** Forget one device. Call before sign-out, while the session still exists. */
+    /** Removes one device. Call before sign-out, while the session still exists. */
     unregisterPushToken(token: string): Promise<void>;
   };
 
-  /** Comments: one per person per place. Stored in the `takes` table; add and update are the same write. */
+  /** Comments, one per person per place, stored in the `takes` table. Add and update are the same write. */
   addTake(denId: string, placeId: string, text: string): Promise<void>;
   updateTake(denId: string, placeId: string, text: string): Promise<void>;
   deleteTake(denId: string, placeId: string): Promise<void>;

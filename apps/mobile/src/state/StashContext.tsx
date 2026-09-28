@@ -1,13 +1,8 @@
 /**
- * Shared session, selection, filter, and overlay state — the deep module.
- *
- * Screens read derived views from here (visible, nearlyPlans, savedCountBy)
- * and call verbs; they never derive or fetch themselves. §4 calls two-way
- * pin/row sync "the real engineering cost of the pattern" — the fix is that
- * neither the map nor the list owns selection; both observe this.
- *
- * Session is a small state machine: signed out → no Den yet → ready. The
- * navigator shows sign-in, onboarding, or the tabs accordingly.
+ * Shared session, selection, filter and overlay state. Screens read the
+ * derived lists from here and call its functions. The map and the list both
+ * read `selectedId` from here, which keeps pin and row selection in sync
+ * (CLAUDE.md §4).
  */
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useState,
@@ -34,24 +29,24 @@ interface StashState {
   den: Den | null;
   stash: StashItem[];
   filter: Filter;
-  /** The second filter axis. Composes with `filter`: "Mia's drinks". */
+  /** Category filter. Applied together with `filter`. */
   category: Category | null;
-  /** Search across name, neighbourhood and note. Composes with both. */
+  /** Search across name, neighbourhood and note. Applied together with both filters. */
   query: string;
   sort: Sort;
   selectedId: string | null;
   currentUserId: string | null;
-  /** The list after both filter axes, the query, and the sort. */
+  /** The Stash after both filters, the query and the sort. */
   visible: StashItem[];
-  /** Places with three or more people in — Today's list, Home's card. */
+  /** Places with three or more people interested. Used by the Today filter and the Home card. */
   nearlyPlans: StashItem[];
   memberById: Map<string, Member>;
   /** How many places each member has stashed. */
   savedCountBy: Map<string, number>;
   overlay: Overlay;
-  /** The RevenueCat entitlement — instant, and what the app shows. The Den limit is the server's. */
+  /** The RevenueCat entitlement. Display only. The server enforces the Den limit. */
   isPro: boolean;
-  /** The paywall, or the Customer Center for someone who's already Pro. */
+  /** Opens the paywall, or the Customer Center if the user is already Pro. */
   openPro: () => Promise<void>;
   setFilter: (f: Filter) => void;
   setCategory: (c: Category | null) => void;
@@ -64,24 +59,25 @@ interface StashState {
   deleteTake: (id: string) => void;
   addToStash: (placeId: string, sourceUrl: string | null) => Promise<StashItem>;
   openOverlay: (o: Overlay) => void;
-  /** A reminder tap. Opens the event, or says it is gone. */
+  /** Handles a reminder tap. Opens the event, or the missing-event overlay if it no longer exists. */
   openReminder: (denId: string, placeId: string) => Promise<void>;
-  /** Every Den I'm in - for the switcher. `den` is the one on screen. */
+  /** Every Den the user is in. `den` is the active one. */
   dens: Den[];
-  /** Make another Den the one on screen. Remembered across launches. */
+  /** Sets the active Den. The choice persists across launches. */
   switchDen: (denId: string) => Promise<void>;
   /**
-   * After sign-in, onboarding, a join or a new Den: re-read who I am and which
-   * Den. Pass `preferDenId` to land on a specific one (the Den just joined).
+   * Reloads the user, their Dens and the active Den's Stash. Call after
+   * sign-in, onboarding, joining or creating a Den. `preferDenId` sets which
+   * Den becomes active.
    */
   refreshSession: (preferDenId?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
 /**
- * Which Den was on screen last. Per device, not per account: it's a view
- * preference, and a stale id just falls back to the newest Den. Required
- * lazily so the mock path (no native modules) never loads AsyncStorage.
+ * The last active Den, stored per device. An id that no longer matches falls
+ * back to the newest Den. AsyncStorage is required lazily so the mock path,
+ * which has no native modules, never loads it.
  */
 const ACTIVE_DEN_KEY = 'ruckus.activeDen';
 const storage = () => {
@@ -114,15 +110,19 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
   const [isPro, setIsPro] = useState(false);
 
-  const loadStash = useCallback(async (denId: string) => {
-    setLoading(true);
-    setError(null);
+  /**
+   * `quiet` reloads without touching `loading` or `error`. Use it for realtime
+   * updates and rollbacks, so the list stays on screen and a failed reload
+   * keeps the Stash already loaded.
+   */
+  const loadStash = useCallback(async (denId: string, quiet = false) => {
+    if (!quiet) { setLoading(true); setError(null); }
     try {
       setStash(await api.getStash(denId));
     } catch {
-      setError("Couldn't load your Stash.");
+      if (!quiet) setError("Couldn't load your Stash.");
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, []);
 
@@ -130,13 +130,13 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await api.auth.userId();
       setCurrentUserId(me);
-      /** Not awaited: billing being slow or down never holds up the session. */
+      /** Not awaited, so a slow or failed billing call does not delay the session. */
       identify(me).then(setIsPro);
       if (!me) { setSession('signedOut'); setDen(null); setDens([]); setStash([]); rememberDen(null); return; }
       const mine = await api.myDens();
       setDens(mine);
       if (mine.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
-      // the Den just joined or made > the one on screen last time > the newest
+      // Order of preference: `preferDenId`, then the remembered Den, then the newest.
       const wanted = preferDenId ?? await rememberedDen();
       const active = mine.find(d => d.id === wanted) ?? mine[0];
       setDen(active);
@@ -151,7 +151,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const switchDen = useCallback(async (denId: string) => {
     const target = dens.find(d => d.id === denId);
     if (!target || target.id === den?.id) return;
-    // a person filter or a selection from the old Den means nothing in the new one
+    // The person filter and the selection refer to the previous Den, so reset both.
     setFilterState({ kind: 'everyone' });
     setSelectedId(null);
     setDen(target);
@@ -167,10 +167,10 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     if (await showPaywall()) setIsPro(true);
   }, [isPro]);
 
-  /** A friend's save or vote arrives without a pull-to-refresh. */
+  /** Reloads quietly when another member saves, votes or comments. */
   useEffect(() => {
     if (!den) return;
-    return api.onStashChange(den.id, () => { loadStash(den.id); });
+    return api.onStashChange(den.id, () => { loadStash(den.id, true); });
   }, [den, loadStash]);
 
   const memberById = useMemo(
@@ -184,10 +184,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   }, [stash]);
   const nearlyPlans = useMemo(() => stash.filter(isNearlyAPlan), [stash]);
 
-  /**
-   * Filtering hides rows but never removes pins — §12.2 collapses other
-   * people's pins to dots instead, so the map keeps its shape.
-   */
+  /** Filters the list rows only. The map keeps every pin and draws the filtered-out ones as dots. */
   const visible = useMemo(() => {
     let list = stash;
     if (filter.kind === 'person') list = list.filter(s => s.savedBy === filter.userId);
@@ -208,12 +205,12 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const setFilter = useCallback((f: Filter) => { setFilterState(f); setSelectedId(null); }, []);
   const setCategory = useCallback((c: Category | null) => { setCategoryState(c); setSelectedId(null); }, []);
 
-  /** Optimistic: the change shows at once and the Stash reloads only on failure. */
+  /** Optimistic update. The change applies locally and the Stash reloads only if the write fails. */
   const patch = useCallback((id: string, fn: (s: StashItem) => StashItem) => {
     setStash(prev => prev.map(s => (s.id === id ? fn(s) : s)));
   }, []);
   const orReload = useCallback(async (p: Promise<unknown>) => {
-    try { await p; } catch { if (den) loadStash(den.id); }
+    try { await p; } catch { if (den) loadStash(den.id, true); }
   }, [den, loadStash]);
 
   const toggleInterest = useCallback((id: string) => {
@@ -227,24 +224,32 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     orReload(api.setWant(den.id, item.placeId, want));
   }, [stash, den, currentUserId, patch, orReload]);
 
+  /**
+   * Screens pass the item's `id`. The write uses its `placeId`. The two are
+   * equal on the real backend and differ in the mock.
+   */
   const addTake = useCallback((id: string, text: string) => {
-    if (!den || !currentUserId) return;
+    const item = stash.find(s => s.id === id);
+    if (!item || !den || !currentUserId) return;
     const take = { userId: currentUserId, text, at: new Date().toISOString() };
-    patch(id, s => ({ ...s, takes: [...s.takes, take] }));
-    orReload(api.addTake(den.id, id, text));
-  }, [den, currentUserId, patch, orReload]);
+    /** One take per person per place. Adding again replaces the existing one, matching the backend. */
+    patch(id, s => ({ ...s, takes: [...s.takes.filter(t => t.userId !== currentUserId), take] }));
+    orReload(api.addTake(den.id, item.placeId, text));
+  }, [stash, den, currentUserId, patch, orReload]);
 
   const updateTake = useCallback((id: string, text: string) => {
-    if (!den || !currentUserId) return;
+    const item = stash.find(s => s.id === id);
+    if (!item || !den || !currentUserId) return;
     patch(id, s => ({ ...s, takes: s.takes.map(t => (t.userId === currentUserId ? { ...t, text } : t)) }));
-    orReload(api.updateTake(den.id, id, text));
-  }, [den, currentUserId, patch, orReload]);
+    orReload(api.updateTake(den.id, item.placeId, text));
+  }, [stash, den, currentUserId, patch, orReload]);
 
   const deleteTake = useCallback((id: string) => {
-    if (!den || !currentUserId) return;
+    const item = stash.find(s => s.id === id);
+    if (!item || !den || !currentUserId) return;
     patch(id, s => ({ ...s, takes: s.takes.filter(t => t.userId !== currentUserId) }));
-    orReload(api.deleteTake(den.id, id));
-  }, [den, currentUserId, patch, orReload]);
+    orReload(api.deleteTake(den.id, item.placeId));
+  }, [stash, den, currentUserId, patch, orReload]);
 
   const openReminder = useCallback(async (denId: string, placeId: string) => {
     try {

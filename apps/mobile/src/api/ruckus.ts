@@ -1,17 +1,12 @@
 /**
- * The real adapter: @ruckus/api over Supabase for accounts, Dens and the
- * Stash; @ruckus/ingest through the proxy for reel → places. This file is
- * the only place in the app that knows either package exists.
- *
- * Shape translation lives here too. The backend returns one row per place
- * with everyone who saved it; the app's StashItem is that row with the
- * first saver as `savedBy`, `distanceM` formatted, and his free-text
- * category folded into eat / drink / do for the pin glyph.
+ * The real adapter. Uses @ruckus/api for accounts, Dens and the Stash, and
+ * @ruckus/ingest through the proxy to resolve reels. It also converts backend
+ * rows to the app's types. No other file in the app imports either package.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import 'react-native-url-polyfill/auto';
 import { createRuckus, DenRow, MemberRow, StashRow } from '@ruckus/api';
-import { ExtractResult, ResolvedPlace, extractFromReel, geocodeCandidates } from '@ruckus/ingest';
+import { ExtractResult, ResolvedPlace, extractFromReel, searchPlaces } from '@ruckus/ingest';
 import { Api, ResolveResult } from './types';
 import { Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
 
@@ -37,22 +32,31 @@ async function toDen(d: DenRow): Promise<Den> {
 }
 
 /**
- * The backend's category is whatever the model wrote ("specialty coffee");
- * the pin needs one of three glyphs. Kind decides first, then keywords.
+ * Maps the backend's free-text category (for example "specialty coffee") to
+ * eat, drink or do. `kind` is checked first, then keywords.
  */
 export function toCategory(kind: StashRow['kind'], text: string | null | undefined): Category {
   if (kind === 'trail' || kind === 'region' || kind === 'event') return 'do';
   const t = (text ?? '').toLowerCase();
-  if (/\b(bar|pub|brew|wine|cocktail|beer|drink|lounge|club|sake|taproom|cider|distill)/.test(t)) return 'drink';
-  if (/(caf|coffee|restaurant|food|ramen|pizza|baker|taco|sushi|bbq|diner|bistro|kitchen|eat|dessert|ice cream|gelato|brunch|noodle|dumpling|grill|burger|patisserie|tea|deli|butcher|market)/.test(t)) return 'eat';
+  if (DRINK.test(t)) return 'drink';
+  if (EAT.test(t)) return 'eat';
+  if (DO.test(t)) return 'do';
   return kind === 'venue' ? 'eat' : 'do';
 }
+
+/**
+ * These match whole words, so "theater" does not match "eat". Food is tested
+ * before places so that "coffee shop" maps to eat.
+ */
+const DRINK = /\b(bars?|pubs?|brew\w*|wine\w*|cocktails?|beer\w*|lounges?|night ?clubs?|sake|taprooms?|cider\w*|distill\w*|speakeasy|izakaya)\b/;
+const EAT = /\b(caf[eé]s?|coffee|restaurants?|food|ramen|pizza\w*|baker\w*|tacos?|sushi|bbq|diners?|bistros?|kitchens?|eatery|desserts?|ice cream|gelato|brunch|breakfast|noodles?|dumplings?|grills?|burgers?|patisserie|tea|deli\w*|butchers?|markets?|meal|sandwich\w*|donuts?|juice|steak\w*|seafood)\b/;
+const DO = /\b(parks?|trails?|museums?|gallery|galleries|beach\w*|gardens?|lakes?|zoo|theaters?|theatres?|cinemas?|gyms?|stadiums?|attractions?|playgrounds?|library|campgrounds?|spa|parking|malls?|shopping|stores?|shops?|airports?|stations?|embassy|consulate|hotels?)\b/;
 
 const formatDistance = (m: number | null) =>
   m == null ? '' : m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1)} km`;
 
 function toStashItem(r: StashRow, denId: string): StashItem | null {
-  if (!r.coordinate) return null;   // can't be pinned; the backend routed it to search anyway
+  if (!r.coordinate) return null;   // A row without a coordinate cannot be pinned.
   return {
     id: r.placeId,
     denId,
@@ -78,11 +82,17 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
 /* ------------------------------------------------------------ resolve -- */
 
 /**
- * stash.save wants the ResolvedPlace objects back exactly as ingest returned
- * them, so the last resolve is kept here keyed by place id. confirmations.log
- * wants the whole offered list and the chosen index — same cache.
+ * The last resolve, keyed by place id. `stash.save` needs the ResolvedPlace
+ * objects exactly as ingest returned them, and `confirmations.log` needs the
+ * offered list and the chosen index.
  */
 let lastResolve: { result: ExtractResult; byId: Map<string, ResolvedPlace> } | null = null;
+
+/**
+ * Search results are cached separately from the last resolve, so a search can
+ * be saved without a link having been resolved first.
+ */
+const searched = new Map<string, ResolvedPlace>();
 
 const tierConfidence = { high: 0.9, medium: 0.6, low: 0.3 } as const;
 
@@ -118,7 +128,11 @@ export const ruckusApi: Api = {
     sendCode: (email, displayName) => ruckus.auth.sendCode(email, { displayName }),
     verifyCode: (email, code) => ruckus.auth.verifyCode(email, code),
     userId: () => ruckus.auth.userId(),
-    signOut: () => ruckus.auth.signOut(),
+    async signOut() {
+      lastResolve = null;
+      searched.clear();
+      await ruckus.auth.signOut();
+    },
   },
 
   profile: {
@@ -150,38 +164,67 @@ export const ruckusApi: Api = {
     for (const p of result.candidates) if (p.googlePlaceId) byId.set(p.googlePlaceId, p);
     lastResolve = { result, byId };
     const candidates = result.candidates.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
-    /** Itinerary reels want a pick-several screen the app doesn't have yet; offer them one at a time. */
+    /** The app has no multi-select confirm screen, so `multi` is shown as `choose`. */
     const mode = result.confirmMode === 'multi' ? 'choose' : result.confirmMode;
     return { candidates, mode: candidates.length ? mode : 'search' };
   },
 
-  async searchPlaces(query) {
+  async searchPlaces(query, { fromLink = false } = {}) {
     const q = query.trim();
     if (!q) return [];
-    const places = await geocodeCandidates(
-      [{ name: q, kind: 'venue', score: 0, reasons: [] }],
-      { city: lastResolve?.result.city ?? null },
-      await ingestOpts(),
-    );
-    for (const p of places) if (p.googlePlaceId) lastResolve?.byId.set(p.googlePlaceId, p);
+    /** Returns every match, because the user picks from the list. */
+    const city = fromLink ? lastResolve?.result.city ?? null : null;
+    const places = await searchPlaces(q, { city }, await ingestOpts());
+    for (const p of places) if (p.googlePlaceId) searched.set(p.googlePlaceId, p);
     return places.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
   },
 
   async saveToStash({ denId, placeId, sourceUrl }) {
-    const place = lastResolve?.byId.get(placeId);
+    const place = lastResolve?.byId.get(placeId) ?? searched.get(placeId);
     if (!place) throw new Error('place_missing_id');
     await ruckus.stash.save({ denId, places: [place], sourceUrl });
-    if (lastResolve) {
+    /**
+     * Log a confirmation only when the save came from a link. A manual add has
+     * no offered list, and logging it against the last resolve would record a
+     * false "none of these".
+     */
+    if (lastResolve && sourceUrl) {
       const offered = lastResolve.result.candidates;
       const chosen = offered.findIndex(p => p.googlePlaceId === placeId);
       ruckus.confirmations.log({
         mode: lastResolve.result.confirmMode, offered,
         chosen: chosen >= 0 ? [chosen] : [], engine: lastResolve.result.engine,
-      }).catch(() => {});   // a lost training row must never fail a save
+      }).catch(() => {});   // A failed log must not fail the save.
     }
-    const saved = (await ruckusApi.getStash(denId)).find(s => s.placeId === placeId);
-    if (!saved) throw new Error('place_not_in_stash');
-    return saved;
+    /**
+     * Read the saved row back by `googlePlaceId`. `placeId` here is Google's
+     * id, and the Stash row's own `placeId` is the database id. Retries once
+     * after 700 ms.
+     */
+    for (const wait of [0, 700]) {
+      if (wait) await new Promise(r => setTimeout(r, wait));
+      try {
+        const row = (await ruckus.stash.list(denId)).find(r => r.googlePlaceId === placeId);
+        const saved = row ? toStashItem(row, denId) : null;
+        if (saved) return saved;
+      } catch { /* The save already succeeded, so a failed read is ignored. */ }
+    }
+
+    /**
+     * The save is already in the database, so this function must not throw
+     * from here on. If the read-back finds nothing, return an item built from
+     * the cached place. The next Stash reload replaces it with the real row.
+     */
+    return {
+      id: placeId, denId, savedBy: (await ruckus.auth.userId()) ?? '', placeId,
+      name: place.name,
+      neighbourhood: place.neighbourhood ?? place.city ?? '',
+      category: toCategory(place.kind, place.category),
+      lat: place.coordinate?.lat ?? 0, lng: place.coordinate?.lng ?? 0,
+      sourceUrl: sourceUrl ?? null, savedAt: new Date().toISOString(),
+      wantCount: 0, iWant: false, interested: [],
+      note: '', takes: [], distance: '', address: place.address ?? undefined,
+    };
   },
 
   async setWant(denId, placeId, want) {
@@ -193,8 +236,8 @@ export const ruckusApi: Api = {
     unregisterPushToken: token => ruckus.notifications.unregisterPushToken(token),
   },
 
-  // One take per person per place: add and update are the same write. Both
-  // reach the other phones through onStashChange, like saves and votes.
+  // One take per person per place, so add and update are the same write.
+  // Other devices receive the change through onStashChange.
   async addTake(denId, placeId, text) { await ruckus.takes.set(denId, placeId, text); },
   async updateTake(denId, placeId, text) { await ruckus.takes.set(denId, placeId, text); },
   async deleteTake(denId, placeId) { await ruckus.takes.remove(denId, placeId); },

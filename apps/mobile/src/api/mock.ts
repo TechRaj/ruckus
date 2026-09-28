@@ -1,8 +1,6 @@
 /**
- * The in-memory adapter. Runs in Expo Go with no keys and walks the whole
- * flow: sign in with any email and any 6 digits, make a Den, and the Stash
- * arrives with six places in it. State lives in this module for the life
- * of the process — reload the app to start over.
+ * In-memory adapter. Needs no keys. Sign in with any email and any six digits.
+ * State is held in this module and resets when the app reloads.
  */
 import { Api, ResolveResult } from './types';
 import { MOCK_USER_ID, mockCandidates, mockDen, mockSearch, mockStash } from './mockData';
@@ -104,18 +102,26 @@ export const mockApi: Api = {
     notify(denId);
   },
 
-  async addTake(_denId, placeId, text) {
+  // Each write notifies listeners, as the real backend does over realtime.
+  async addTake(denId, placeId, text) {
     await delay(180);
-    find(placeId).takes.push({ userId: MOCK_USER_ID, text, at: new Date().toISOString() });
+    const item = find(placeId);
+    item.takes = [
+      ...item.takes.filter(t => t.userId !== MOCK_USER_ID),
+      { userId: MOCK_USER_ID, text, at: new Date().toISOString() },
+    ];
+    notify(denId);
   },
-  async updateTake(_denId, placeId, text) {
+  async updateTake(denId, placeId, text) {
     await delay(180);
     const item = find(placeId);
     item.takes = item.takes.map(t => (t.userId === MOCK_USER_ID ? { ...t, text } : t));
+    notify(denId);
   },
-  async deleteTake(_denId, placeId) {
+  async deleteTake(denId, placeId) {
     await delay(180);
     const item = find(placeId);
     item.takes = item.takes.filter(t => t.userId !== MOCK_USER_ID);
+    notify(denId);
   },
 };

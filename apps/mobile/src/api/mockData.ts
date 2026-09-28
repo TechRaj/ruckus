@@ -81,7 +81,7 @@ export const mockStash: StashItem[] = [
   },
 ];
 
-/** What the pipeline hands the confirm screen. Three candidates, ranked. */
+/** Candidates for the confirm screen, ranked best first. */
 export const mockCandidates: PlaceCandidate[] = [
   {
     placeId: 'p_dualcitizen', name: 'Dual Citizen Coffee Bar',
@@ -100,7 +100,7 @@ export const mockCandidates: PlaceCandidate[] = [
   },
 ];
 
-/** Manual-entry search results — §9 keeps this path load-bearing for review. */
+/** Results for the manual search. */
 export const mockSearch: PlaceCandidate[] = [
   ...mockCandidates,
   {

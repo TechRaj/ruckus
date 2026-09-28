@@ -1,8 +1,6 @@
 /**
- * The words the Places sheet uses for the current view. Pure: takes the
- * filter state and says what the kicker, headline and empty line should
- * read. Keeps a 17-line ternary tree out of the screen and lets the copy be
- * checked without rendering anything.
+ * Copy for the Places sheet. A pure function from the filter state to the
+ * kicker, headline and empty line, so it can be tested without rendering.
  */
 import { lines } from '../theme/lines';
 import { CATEGORY_LABEL, Category, Filter } from '../types';

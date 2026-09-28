@@ -1,30 +1,26 @@
 /**
- * The four shapes — context §9.
- * Agreed with the backend before either track opened an editor.
- * Do not change these without changing them on both sides.
+ * The app's data types. They are shared with the backend, so change them on
+ * both sides together.
  */
 
-/** Three values for launch. Everything Places returns maps into one. */
+/** Every category the backend returns is mapped to one of these three. */
 export type Category = 'eat' | 'drink' | 'do';
 export const CATEGORIES: Category[] = ['eat', 'drink', 'do'];
 export const CATEGORY_LABEL: Record<Category, string> = { eat: 'Food', drink: 'Drinks', do: 'Outdoors' };
 
-/**
- * A vibe check — one friend's line about a place, added after "I'm in".
- * Embedded on the item: one read, one shape, mirrors `interested`.
- */
+/** One member's comment on a place. Returned embedded on the StashItem. */
 export interface Take {
   userId: string;
   text: string;
   at: string;
 }
 
-/** Urban scavengers — §13.6. The first four ship; the rest are a render away. */
+/** Avatar animals. Only the first four have images in `theme/critters.ts`. */
 export type Critter =
   | 'raccoon' | 'possum' | 'squirrel' | 'skunk'
   | 'chipmunk' | 'pigeon' | 'fox' | 'crow';
 
-/** A candidate at or above this confidence is shown alone on confirm — §5.7. */
+/** A candidate at or above this confidence is shown alone on the confirm screen. */
 export const CONFIDENT = 0.75;
 
 /** A ranked guess from the pipeline, shown on the confirm screen. */
@@ -35,20 +31,20 @@ export interface PlaceCandidate {
   lat: number;
   lng: number;
   category: Category;
-  /** 0–1. Drives which confirm variant renders — see §5.7. */
+  /** From 0 to 1. Decides which confirm variant renders. */
   confidence: number;
-  /** Why the ranker picked it, shown under the name so the tap is informed. */
+  /** Why the pipeline picked it. Shown under the name. */
   reason?: string;
 }
 
 /**
- * A place in a Den's Stash — one row per place, however many people saved it.
- * `id` is the place id; the backend dedupes across reels on it.
+ * A place in a Den's Stash. There is one row per place regardless of how many
+ * people saved it. `id` is the place id, which the backend dedupes on.
  */
 export interface StashItem {
   id: string;
   denId: string;
-  /** Whoever saved it first. */
+  /** The user who saved it first. */
   savedBy: string;
   placeId: string;
   name: string;
@@ -56,19 +52,19 @@ export interface StashItem {
   category: Category;
   lat: number;
   lng: number;
-  /** The original reel or link. Deep-linked out, never embedded (§5.6). */
+  /** The original reel or link. Open it as a deep link and never embed it (CLAUDE.md §5.6). */
   sourceUrl: string | null;
   savedAt: string;
-  /** How many people in the Den want to go, and whether I'm one of them. */
+  /** How many Den members want to go, and whether the current user is one of them. */
   wantCount: number;
   iWant: boolean;
-  /** Who wants to go, when the backend tells us. Faces are drawn from this; counts never depend on it. */
+  /** User ids of members who want to go. May be incomplete, so use `wantCount` for counts. */
   interested: string[];
-  /** One human line about why it is saved — §13.6. The point of the app. */
+  /** The saver's one-line note about the place. */
   note: string;
-  /** Everyone else's one line. The saver's `note` is the first card in the stack. */
+  /** Other members' comments. The saver's `note` is shown before them. */
   takes: Take[];
-  /** Straight-line distance from the user, pre-formatted by the server. */
+  /** Straight-line distance from the user, already formatted for display. */
   distance: string;
   address?: string;
 }
@@ -86,13 +82,13 @@ export interface Den {
   members: Member[];
 }
 
-/** Three or more people want to go: nearly a plan. Drives Today, the Caper dot, and Home. */
+/** Minimum `wantCount` for a place to appear under Today, show the Caper dot and appear on Home. */
 export const PLAN_THRESHOLD = 3;
 export const isNearlyAPlan = (item: StashItem) => item.wantCount >= PLAN_THRESHOLD;
 
 /**
- * The two filter axes on the Stash — §4. People first: Everyone / Today /
- * one per member. Category composes with it ("Mia's drinks").
+ * The people filter on the Stash (CLAUDE.md §4): everyone, today, or one
+ * member. The category filter is separate and applies together with it.
  */
 export type Filter = { kind: 'everyone' } | { kind: 'today' } | { kind: 'person'; userId: string };
 export type Sort = 'nearby' | 'date';
