@@ -6,7 +6,7 @@ import React from 'react';
 import { Platform, StyleSheet, Text, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
 import { PressableScale } from './PressableScale';
 import { colors, edge, radius, shadow, space, type } from '../theme/tokens';
-import { ClockPill } from './ClockPill';
+import { ThemeSwitch } from './ThemeSwitch';
 import { IconCalendar, IconNav } from './Icons';
 import { Sort } from '../types';
 
@@ -27,7 +27,7 @@ export function ScreenHeader({
 }: { kicker: string; title: string; style?: ViewStyle }) {
   return (
     <View style={[styles.header, style]}>
-      <ClockPill />
+      <ThemeSwitch />
       <Kicker>{kicker}</Kicker>
       <Text style={styles.title}>{title}</Text>
     </View>

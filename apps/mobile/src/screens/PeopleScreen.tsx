@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Field, Hint, Kicker } from '../components/Chrome';
-import { ClockPill } from '../components/ClockPill';
+import { ThemeSwitch } from '../components/ThemeSwitch';
 import { CritterRoom } from '../components/CritterRoom';
 import { IconChevronRight } from '../components/Icons';
 import { EMBLEMS, Emblem } from '../components/Emblem';
@@ -66,7 +66,7 @@ export function PeopleScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: space.xxl }}
     >
       <View style={styles.pad}>
-        <ClockPill />
+        <ThemeSwitch />
         <Emblem name={den.emblem} size={68} />
         <Text style={styles.title}>{den.name}</Text>
         <Text style={styles.meta}>

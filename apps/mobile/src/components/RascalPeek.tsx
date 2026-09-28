@@ -1,18 +1,18 @@
 /**
- * Rascal image that sits on the top edge of the sheet at the peek detent.
- * It follows the sheet's animated position so it tracks the drag. The paws
- * are at about 83% of the image height, and that line is anchored to the
- * sheet's top edge. It renders above the sheet so the paws stay visible.
+ * Rascal hanging from the top edge of the sheet at the peek detent. He
+ * follows the sheet's animated position, so he tracks the drag. The image's
+ * paw line is anchored to the sheet's top edge, and he renders above the
+ * sheet so the claws hang over it.
  */
 import { Image, StyleSheet } from 'react-native';
 import Animated, {
   Extrapolation, interpolate, useAnimatedStyle, type SharedValue,
 } from 'react-native-reanimated';
-import { RASCAL_ASPECT, rascal } from '../theme/critters';
+import { rascalHang } from '../theme/critters';
 
-const WIDTH = 112;
-const HEIGHT = WIDTH / RASCAL_ASPECT;
-const PAW_LINE = 0.83;
+const WIDTH = 140;
+const HEIGHT = WIDTH / rascalHang.aspect;
+const PAW_LINE = rascalHang.pawLine;
 
 export function RascalPeek({
   animatedPosition, peekTop, halfTop,
@@ -35,7 +35,7 @@ export function RascalPeek({
 
   return (
     <Animated.View pointerEvents="none" style={[styles.rascal, style]}>
-      <Image source={rascal} resizeMode="contain" style={styles.image} />
+      <Image source={rascalHang.source} resizeMode="contain" style={styles.image} />
     </Animated.View>
   );
 }

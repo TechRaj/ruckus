@@ -1,7 +1,7 @@
 /** Onboarding. Two steps: name and critter, then create or join a Den. */
 import { useState } from 'react';
 import {
-  Image, Pressable, ScrollView, StyleSheet, Text, View,
+  Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
@@ -13,12 +13,15 @@ import { CritterRoom } from '../components/CritterRoom';
 import { EMBLEMS, Emblem } from '../components/Emblem';
 import { Grain } from '../components/Grain';
 import { IconChevronLeft, PawPrint } from '../components/Icons';
-import { RASCAL_ASPECT, rascal } from '../theme/critters';
+import { Sprite } from '../components/Sprite';
+import { trashcan } from '../theme/sprites';
 import { lines } from '../theme/lines';
 import { colors, launchCritters, space, type } from '../theme/tokens';
 import { Critter as CritterName } from '../types';
 
 type Step = 'welcome' | 'you' | 'den' | 'join';
+
+const ART_WIDTH = 200;
 
 /**
  * Shown when the user is signed in but has no Den. The name and critter are
@@ -64,21 +67,23 @@ export function OnboardingScreen() {
 
   if (step === 'welcome') {
     return (
-      <View style={[styles.root, pad]}>
+      <View style={[styles.root, styles.centred, pad]}>
         <Grain opacity={0.035} />
-        <View style={styles.hero}>
-          <LinearGradient
-            pointerEvents="none"
-            colors={[colors.mapWater + '00', colors.mapWater + '4D', colors.mapWater + '00']}
-            style={styles.glow}
-          />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[colors.mapWater + '00', colors.mapWater + '4D', colors.mapWater + '00']}
+          style={styles.glow}
+        />
+        <View>
           <Kicker>A places app for friends</Kicker>
           <Text style={styles.wordmark}>Ruckus</Text>
-          <View style={styles.heroArt}>
-            <Image source={rascal} style={styles.rascal} resizeMode="contain" />
-          </View>
           <Text style={styles.tagline}>Places worth leaving the group chat for.</Text>
+          <Sprite
+            sheet={trashcan} width={ART_WIDTH} style={styles.heroArt}
+            accessibilityLabel="A raccoon popping out of a trash can"
+          />
         </View>
+        {/* Drawn after the can, so the button covers the can's flat base. */}
         <PrimaryButton label="Get started" onPress={() => setStep('you')} />
         <Pressable onPress={() => setStep('join')} style={styles.joinHint} accessibilityRole="button">
           <Hint style={{ textAlign: 'center' }}>{lines.hint.joinLink}</Hint>
@@ -193,17 +198,17 @@ function Back({ onPress }: { onPress: () => void }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: space.xl },
-  hero: { flex: 1, justifyContent: 'center' },
-  glow: { position: 'absolute', left: -60, right: -60, bottom: 0, height: '55%' },
-  /** Negative margin so the image overlaps the wordmark's baseline. */
-  heroArt: { height: 200, marginTop: -26 },
-  rascal: { position: 'absolute', left: -4, top: 0, width: 200, height: 200 / RASCAL_ASPECT },
+  /** The welcome screen is one block, button included, centred between the top and bottom insets. */
+  centred: { justifyContent: 'center' },
+  glow: { position: 'absolute', left: 0, right: 0, top: '30%', height: '50%' },
+  /** The can stands on the button: the overlap hides the base, which the art cuts off flat. */
+  heroArt: { alignSelf: 'center', marginTop: space.sm, marginBottom: -8 },
   wordmark: {
     /** Baloo 2 clips the tops of letters when lineHeight is under about 1.3 times fontSize. */
     fontFamily: type.display.fontFamily, fontSize: 72, lineHeight: 96,
     color: colors.ink, marginTop: -4,
   },
-  tagline: { ...type.body, fontSize: 17, lineHeight: 24, color: colors.inkSecondary, marginTop: 12, maxWidth: 300 },
+  tagline: { ...type.body, fontSize: 17, lineHeight: 24, color: colors.inkSecondary, marginTop: 4, maxWidth: 300 },
   joinHint: { height: 44, justifyContent: 'center' },
   error: { color: colors.warn, marginTop: space.md },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.xl },

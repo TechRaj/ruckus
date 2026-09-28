@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { greetingAt, moodAt, orbAt, useNow } from '../theme/clock';
-import { colors, font, radius, sky, space } from '../theme/tokens';
+import { colors, font, isNight, radius, sky, space } from '../theme/tokens';
 
 const HEIGHT = 150;
 const ORB = 44;
@@ -16,7 +16,12 @@ const STARS = [[0.18, 0.22], [0.64, 0.14], [0.82, 0.38], [0.4, 0.34]];
 export function SkyCard({ name }: { name?: string }) {
   const now = useNow();
   const [width, setWidth] = useState(0);
-  const mood = moodAt(now);
+  /**
+   * The sky matches the palette. In night mode it is always the night sky.
+   * In day mode after dark it holds on the evening sky.
+   */
+  const clock = moodAt(now);
+  const mood = isNight ? 'night' : clock === 'night' ? 'evening' : clock;
   const night = mood === 'night';
   const tone = sky[mood];
   const orb = orbAt(now);

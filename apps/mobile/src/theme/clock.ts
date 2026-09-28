@@ -1,13 +1,14 @@
 /**
- * Time of day. The day palette applies from 5am and the night palette from
- * 8pm, and only inside the app: sign-in and onboarding are always day. The
- * palette is picked once at load because StyleSheets read `colors` at module
- * scope. This file must not import from tokens, which imports it.
+ * Day and night. The app follows the clock, night from 8pm to 5am, until the
+ * theme switch is used. After that the chosen mode stays. Night applies only
+ * inside the app: sign-in and onboarding are always day. The palette is
+ * picked once at load because StyleSheets read `colors` at module scope.
+ * This file must not import from tokens, which imports it.
  */
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { reloadAppAsync } from 'expo';
-import { hasEntered, markEntered } from './entered';
+import { Mode, chooseMode, chosenMode, hasEntered, markEntered } from './entered';
 
 export const NIGHT_FROM = 20;
 export const NIGHT_UNTIL = 5;
@@ -21,8 +22,18 @@ export const moodAt = (d: Date): Mood => {
 };
 export const isNightAt = (d: Date) => moodAt(d) === 'night';
 
+/** The chosen mode if there is one, otherwise the clock. */
+const wantsNight = () => (chosenMode() ? chosenMode() === 'night' : isNightAt(new Date()));
+
 /** Evaluated once when the bundle loads. Tokens uses it to pick the palette. */
-export const launchedAtNight = hasEntered() && isNightAt(new Date());
+export const launchedAtNight = hasEntered() && wantsNight();
+
+/** Saves the mode and reloads into it. `after` leaves time for the switch to finish moving. */
+export function switchMode(next: Mode, after = 0) {
+  chooseMode(next).then(() => {
+    setTimeout(() => { reloadAppAsync('theme switch').catch(() => {}); }, after);
+  });
+}
 
 /** The current time, refreshed every `everyMs`. */
 export function useNow(everyMs = 15000) {
@@ -35,7 +46,7 @@ export function useNow(everyMs = 15000) {
 }
 
 const reloadIfPaletteIsStale = (inside: boolean) => {
-  if ((inside && isNightAt(new Date())) !== launchedAtNight) {
+  if ((inside && wantsNight()) !== launchedAtNight) {
     reloadAppAsync('day/night palette').catch(() => {});
   }
 };
@@ -66,15 +77,6 @@ export function useFollowTheClock(inside: boolean | null, idle: boolean, persist
     return () => sub.remove();
   }, [persists]);
 }
-
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-export const formatClock = (d: Date) => ({
-  time: `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`,
-  meridiem: d.getHours() < 12 ? 'AM' : 'PM',
-  date: `${DAYS[d.getDay()]} · ${MONTHS[d.getMonth()]} ${d.getDate()}`,
-});
 
 export const greetingAt = (d: Date) => {
   const h = d.getHours();

@@ -7,11 +7,15 @@ import { Kicker, ScreenHeader } from '../components/Chrome';
 import { CritterHead, CritterStack } from '../components/CritterHead';
 import { EmptyState } from '../components/EmptyState';
 import { SkyCard } from '../components/SkyCard';
+import { Sprite } from '../components/Sprite';
+import { jump } from '../theme/sprites';
 import { ago, dotted } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
+
+const RASCAL_WIDTH = 124;
 
 export function HomeScreen() {
   const { den, stash, nearlyPlans, currentUserId, memberById } = useStash();
@@ -27,7 +31,10 @@ export function HomeScreen() {
       style={styles.root}
       contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: space.xxl }}
     >
-      <ScreenHeader kicker={den?.name ?? 'Ruckus'} title="This week" />
+      <View>
+        <ScreenHeader kicker={den?.name ?? 'Ruckus'} title="This week" />
+        <Sprite sheet={jump} width={RASCAL_WIDTH} style={styles.rascal} accessibilityLabel="Rascal hopping" />
+      </View>
       <SkyCard name={currentUserId ? memberById.get(currentUserId)?.displayName : undefined} />
 
       {nearlyPlans.length >= 2 ? (
@@ -86,6 +93,8 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.paper },
+  /** Beside the title, feet on the top edge of the sky card. The frame leaves room above for the hop. */
+  rascal: { position: 'absolute', right: space.lg, bottom: -20, zIndex: 1 },
   plan: {
     marginTop: space.xl, marginHorizontal: space.xl,
     backgroundColor: colors.butterWash, borderRadius: radius.xl + 2, padding: 20,

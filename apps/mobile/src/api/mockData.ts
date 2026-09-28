@@ -5,7 +5,7 @@ export const MOCK_USER_ID = 'u_amelia';
 const members: Member[] = [
   { userId: 'u_amelia', displayName: 'Amelia', critter: 'raccoon' },
   { userId: 'u_mia',    displayName: 'Mia',    critter: 'possum' },
-  { userId: 'u_josh',   displayName: 'Josh',   critter: 'squirrel' },
+  { userId: 'u_josh',   displayName: 'Josh',   critter: 'chipmunk' },
   { userId: 'u_zoe',    displayName: 'Zoe',    critter: 'skunk' },
 ];
 

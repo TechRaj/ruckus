@@ -103,7 +103,7 @@ export const glass = {
 } as const;
 
 /** Critters available at launch. Each image includes its own colour, so there is no colour table. */
-export const launchCritters = ['raccoon', 'possum', 'squirrel', 'skunk'] as const;
+export const launchCritters = ['raccoon', 'possum', 'chipmunk', 'skunk'] as const;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 

@@ -1,0 +1,53 @@
+.sprite {
+  background-image: url('spritesheet.png');
+  background-repeat: no-repeat;
+  display: inline-block;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-1 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1px -1px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-2 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1386px -1px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-3 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -2771px -1px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-4 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1px -1386px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-5 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1386px -1386px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-6 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -2771px -1386px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-7 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1px -2771px;
+}
+
+.sprite.sprite-ezgif-com-crop-frame-8 {
+  width: 1384px;
+  height: 1384px;
+  background-position: -1386px -2771px;
+}

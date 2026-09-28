@@ -1,0 +1,95 @@
+.sprite {
+  background-image: url('spritesheet.png');
+  background-repeat: no-repeat;
+  display: inline-block;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-01 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -1px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-02 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -1922px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-03 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -3843px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-04 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -5764px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-05 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -7685px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-06 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -9606px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-07 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -11527px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-08 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -13448px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-09 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -15369px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-10 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -17290px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-11 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -19211px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-12 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -21132px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-13 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -23053px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-14 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -24974px -1px;
+}
+
+.sprite.sprite-ruckus-raccoon-frame-15 {
+  width: 1920px;
+  height: 1920px;
+  background-position: -26895px -1px;
+}
