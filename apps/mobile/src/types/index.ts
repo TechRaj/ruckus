@@ -86,6 +86,22 @@ export interface Member {
   userId: string;
   displayName: string;
   critter: Critter;
+  /** The owner's Ruckus Pro is what lifts the Den's place limit. */
+  role?: 'owner' | 'member';
+}
+
+/** How full a Den is. `placeLimit` is null once the owner has Ruckus Pro. */
+export interface DenCapacity {
+  places: number;
+  placeLimit: number | null;
+  /** Only the owner can lift the limit, so only they are offered the paywall. */
+  iOwnIt: boolean;
+}
+
+/** How many Dens I'm in. `denLimit` is null for Ruckus Pro. */
+export interface DenAllowance {
+  dens: number;
+  denLimit: number | null;
 }
 
 export interface Den {
@@ -97,6 +113,9 @@ export interface Den {
 
 /** Minimum `wantCount` for a place to appear under Today, show the Caper dot and appear on Home. */
 export const PLAN_THRESHOLD = 3;
+
+/** Show the Den's room meter once this share of its free places is used. */
+export const ROOM_WARNING = 0.8;
 export const isNearlyAPlan = (item: StashItem) => item.wantCount >= PLAN_THRESHOLD;
 
 /**

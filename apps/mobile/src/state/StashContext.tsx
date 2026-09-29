@@ -12,7 +12,7 @@ import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
 import { isoDay } from '../lib/time';
-import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan } from '../types';
+import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan, DenAllowance, DenCapacity } from '../types';
 
 export type Overlay =
   | { kind: 'none' }
@@ -74,6 +74,10 @@ interface StashState {
   /** Handles a reminder tap. Opens the event, or the missing-event overlay if it no longer exists. */
   openReminder: (denId: string, placeId: string) => Promise<void>;
   /** Every Den the user is in. `den` is the active one. */
+  /** How full the Den on screen is. null until loaded. */
+  capacity: DenCapacity | null;
+  /** How many Dens I'm in, out of how many. null until loaded. */
+  denAllowance: DenAllowance | null;
   dens: Den[];
   /** Sets the active Den. The choice persists across launches. */
   switchDen: (denId: string) => Promise<void>;
@@ -113,6 +117,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [den, setDen] = useState<Den | null>(null);
   const [dens, setDens] = useState<Den[]>([]);
+  const [capacity, setCapacity] = useState<DenCapacity | null>(null);
+  const [denAllowance, setDenAllowance] = useState<DenAllowance | null>(null);
   const [stash, setStash] = useState<StashItem[]>([]);
   const [capers, setCapers] = useState<Caper[]>([]);
   const [filter, setFilterState] = useState<Filter>({ kind: 'everyone' });
@@ -134,6 +140,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       const [items, plans] = await Promise.all([api.getStash(denId), api.getCapers(denId)]);
       setStash(items);
       setCapers(plans);
+      // not awaited, and never an error on screen: the count is a nicety
+      api.getCapacity(denId).then(setCapacity).catch(() => setCapacity(null));
     } catch {
       if (!quiet) setError("Couldn't load your Stash.");
     } finally {
@@ -154,6 +162,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       if (!me) { setSession('signedOut'); setDen(null); setDens([]); setStash([]); rememberDen(null); return; }
       const mine = await api.myDens();
       setDens(mine);
+      api.getDenAllowance().then(setDenAllowance).catch(() => setDenAllowance(null));
       if (mine.length === 0) { setSession('noDen'); setDen(null); setStash([]); return; }
       // Order of preference: `preferDenId`, then the remembered Den, then the newest.
       const wanted = preferDenId ?? await rememberedDen();
@@ -173,6 +182,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     // The person filter and the selection refer to the previous Den, so reset both.
     setFilterState({ kind: 'everyone' });
     setSelectedId(null);
+    setCapacity(null);
     setDen(target);
     rememberDen(target.id);
     await loadStash(target.id);
@@ -319,6 +329,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     if (!den) throw new Error('not_a_member');
     const saved = await api.saveToStash({ denId: den.id, placeId, sourceUrl });
     setStash(prev => (prev.some(s => s.placeId === saved.placeId) ? prev : [saved, ...prev]));
+    api.getCapacity(den.id).then(setCapacity).catch(() => {});
     return saved;
   }, [den]);
 
@@ -349,7 +360,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,
     currentUserId,
     visible, nearlyPlans, upcoming, caperByPlace, createCaper, memberById, savedCountBy, overlay,
-    isPro, openPro,
+    isPro, openPro, capacity, denAllowance,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,
     toggleInterest,

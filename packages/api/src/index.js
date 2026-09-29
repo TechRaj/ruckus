@@ -218,6 +218,12 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       return { places: row?.places ?? 0, placeLimit: row?.place_limit ?? null, iOwnIt: Boolean(row?.i_own_it) };
     },
 
+    /** How many Dens I'm in and my limit: `{ dens, denLimit }`. denLimit is null for Pro. */
+    async allowance() {
+      const [row] = await rpc('my_den_allowance', {});
+      return { dens: row?.dens ?? 0, denLimit: row?.den_limit ?? null };
+    },
+
     /** Everyone in a Den, for the People screen. */
     async members(denId) {
       const rows = await run(supabase

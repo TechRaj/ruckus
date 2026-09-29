@@ -15,10 +15,12 @@ import { IconChevronRight } from '../components/Icons';
 import { EMBLEMS, Emblem } from '../components/Emblem';
 import { PressableScale } from '../components/PressableScale';
 import { useStash } from '../state/StashContext';
+import { ROOM_WARNING } from '../types';
+import { lines } from '../theme/lines';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession } = useStash();
+  const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession, capacity, denAllowance } = useStash();
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -57,6 +59,16 @@ export function PeopleScreen() {
 
   if (!den) return <View style={styles.root} />;
 
+  // The Den's free place limit. Nothing shows for a Pro-owned Den (no limit).
+  const limit = capacity?.placeLimit ?? null;
+  const places = capacity?.places ?? stash.length;
+  const full = limit != null && places >= limit;
+  const showRoom = limit != null && places >= Math.ceil(limit * ROOM_WARNING);
+  const owner = den.members.find(m => m.role === 'owner')?.displayName ?? 'the owner';
+  const roomLine = !showRoom ? null
+    : capacity?.iOwnIt ? (full ? lines.room.fullOwner : lines.room.nearlyFullOwner)
+    : (full ? lines.room.full(owner) : lines.room.nearlyFull(owner));
+
   const copy = async () => {
     if (!invite) return;
     await Clipboard.setStringAsync(invite);
@@ -72,9 +84,27 @@ export function PeopleScreen() {
       <View style={styles.pad}>
         <Emblem name={den.emblem} size={68} />
         <Text style={styles.title}>{den.name}</Text>
-        <Text style={styles.meta}>
-          {den.members.length} people · {stash.length} in the Stash
+        <Text style={[styles.meta, styles.tabular]}>
+          {den.members.length} people · {limit != null ? `${places} of ${limit} places` : `${stash.length} in the Stash`}
         </Text>
+        {showRoom ? (
+          <View style={styles.room}>
+            <View
+              style={styles.roomTrack}
+              accessible
+              accessibilityRole="progressbar"
+              accessibilityLabel="Room in this Den"
+              accessibilityValue={{ min: 0, max: limit ?? 0, now: places }}
+            >
+              <View style={[styles.roomFill, {
+                width: `${Math.min(100, Math.round((places / (limit || 1)) * 100))}%`,
+                backgroundColor: full ? colors.warn : colors.inkMuted,
+              }]} />
+            </View>
+            {roomLine ? <Text style={[styles.roomLine, full && { color: colors.warn }]}>{roomLine}</Text> : null}
+            {capacity?.iOwnIt ? <TextButton label="Get Ruckus Pro" onPress={openPro} /> : null}
+          </View>
+        ) : null}
 
         <View style={{ height: 18 }} />
         <CritterRoom
@@ -126,7 +156,7 @@ export function PeopleScreen() {
           <View style={styles.panel}>
             {panel === 'switch' ? (
               <>
-                <Kicker>Your Dens</Kicker>
+                <Kicker>{denAllowance?.denLimit != null ? `Your Dens · ${denAllowance.dens} of ${denAllowance.denLimit}` : 'Your Dens'}</Kicker>
                 <View style={{ height: space.sm }} />
                 {dens.map(d => {
                   const here = d.id === den.id;
@@ -199,6 +229,12 @@ export function PeopleScreen() {
 }
 
 const styles = StyleSheet.create({
+  // changing numbers keep their width, so the line doesn't shift as it counts
+  tabular: { fontVariant: ['tabular-nums'] },
+  room: { marginTop: space.md, gap: space.sm },
+  roomTrack: { height: 8, borderRadius: radius.pill, backgroundColor: colors.paperSunk, overflow: 'hidden' },
+  roomFill: { height: '100%', borderRadius: radius.pill },
+  roomLine: { ...type.hint, color: colors.inkSecondary },
   root: { flex: 1, backgroundColor: colors.paper },
   pad: { paddingHorizontal: space.xl },
   title: { ...type.display, color: colors.ink, marginTop: space.lg },

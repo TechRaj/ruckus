@@ -305,6 +305,21 @@ All in `apps/mobile/src/components/`.
 | `Sprite` | Plays a sprite sheet | Shows the sheet's rest frame under Reduce Motion |
 | `Icons` | The icon set | 24px grid, 1.9 stroke, round caps and joins |
 
+### The room meter
+
+On People, under the Den name. The meta line reads **"4 people · 6 of 25 places"**
+while the Den has a free place limit, in tabular numerals so it doesn't shift as
+it counts; a Pro-owned Den reads "6 in the Stash" as before.
+
+Once a Den has used `ROOM_WARNING` (80%) of its places, a slim meter appears
+below: an 8px `paperSunk` pill track with an `inkMuted` fill, turning `warn` when
+full. It is not flare — it isn't tappable. One `hint` line under it says what
+happened and what to do (`lines.room`). The owner also gets a **Get Ruckus Pro**
+text button; a member is told who can make room, since buying Pro themselves
+wouldn't lift someone else's Den. The Den panel's kicker reads **"YOUR DENS · 2 OF 3"**
+for a free account. Every number comes from the server; the app never writes the
+limits down.
+
 ### Pin states
 
 | State | Size | Look |

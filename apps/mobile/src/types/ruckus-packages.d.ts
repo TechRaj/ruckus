@@ -83,6 +83,7 @@ declare module '@ruckus/api' {
       mine(): Promise<DenRow[]>;
       members(denId: string): Promise<MemberRow[]>;
       /** `placeLimit` is null when the Den's owner has Pro. */
+      allowance(): Promise<{ dens: number; denLimit: number | null }>;
       capacity(denId: string): Promise<{ places: number; placeLimit: number | null; iOwnIt: boolean }>;
     };
     stash: {

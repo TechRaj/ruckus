@@ -24,6 +24,7 @@ const toCritter = (avatar: string | null | undefined): Critter =>
 
 const toMember = (m: MemberRow): Member => ({
   userId: m.id, displayName: m.display_name || 'Someone', critter: toCritter(m.avatar),
+  role: m.role === 'owner' ? 'owner' : 'member',
 });
 
 async function toDen(d: DenRow): Promise<Den> {
@@ -154,6 +155,8 @@ export const ruckusApi: Api = {
   },
   createDen: async (name, emblem) => toDen(await ruckus.dens.create(name, emblem)),
   joinDen: async (code) => toDen(await ruckus.dens.join(code)),
+  getCapacity: denId => ruckus.dens.capacity(denId),
+  getDenAllowance: () => ruckus.dens.allowance(),
   getInviteLink: async (denId) => {
     const code = await ruckus.dens.invite(denId);
     return { code, url: `https://ruckus.app/j/${code}` };

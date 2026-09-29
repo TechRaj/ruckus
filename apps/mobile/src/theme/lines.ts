@@ -19,6 +19,14 @@ export const lines = {
   quietHome: 'quiet so far. saves from your den show up here.',
   noTakes: 'no comments yet.',
 
+  /** The Den's free place limit, shown on People once it's nearly used up. */
+  room: {
+    nearlyFullOwner: 'almost out of room. ruckus pro makes this den unlimited.',
+    fullOwner: "this den's full. ruckus pro makes it unlimited.",
+    nearlyFull: (owner: string) => `almost out of room. only ${owner.toLowerCase()} can make more, with ruckus pro.`,
+    full: (owner: string) => `this den's full. only ${owner.toLowerCase()} can make room, with ruckus pro.`,
+  },
+
   /** Shown while a link resolves. One is picked at random each time. */
   sniffing: [
     'reading the link…',

@@ -40,6 +40,11 @@ export const mockApi: Api = {
   },
 
   async myDens() { await delay(200); return dens; },
+  async getCapacity(denId) {
+    await delay(120);
+    return { places: stash.filter(s => s.denId === denId).length, placeLimit: 25, iOwnIt: true };
+  },
+  async getDenAllowance() { await delay(120); return { dens: dens.length, denLimit: 3 }; },
   async createDen(name, emblem) {
     await delay(300);
     /** The first Den made is the example one, with its places and members. Later ones start empty. */

@@ -2,7 +2,7 @@
  * The backend interface the screens use. `mock.ts` and `ruckus.ts` implement
  * it and `client.ts` picks one. Screens import `api` from `client.ts` only.
  */
-import { Caper, Critter, Den, PlaceCandidate, StashItem } from '../types';
+import { Caper, Critter, Den, DenAllowance, DenCapacity, PlaceCandidate, StashItem } from '../types';
 
 export type ConfirmMode = 'single' | 'choose' | 'multi' | 'search';
 
@@ -27,6 +27,10 @@ export interface Api {
 
   /** Every Den the user is in, newest first, with members. */
   myDens(): Promise<Den[]>;
+  /** How full a Den is, for "6 of 25 places". */
+  getCapacity(denId: string): Promise<DenCapacity>;
+  /** How many Dens I'm in, for "2 of 3". The limit comes from the server. */
+  getDenAllowance(): Promise<DenAllowance>;
   createDen(name: string, emblem: string): Promise<Den>;
   joinDen(code: string): Promise<Den>;
   /**

@@ -289,6 +289,7 @@ select t.ok((public.create_den('One')).name = 'One', 'free user: first Den');
 select t.ok((public.create_den('Two')).name = 'Two', 'free user: second Den');
 select t.ok((public.create_den('Three')).name = 'Three', 'free user: third Den');
 select t.throws('select public.create_den(''Four'')', 'den_limit_reached', 'free user: fourth Den hits the paywall');
+select t.ok((select dens = 3 and den_limit = 3 from public.my_den_allowance()), 'the app can show "3 of 3 Dens"');
 select t.throws(format('select public.join_den(%L)', t.get('code')), 'den_limit_reached',
                 'joining counts toward the limit too');
 
@@ -297,6 +298,7 @@ update public.profiles set is_pro = true where id = t.id('carol');   -- what the
 set role authenticated;
 select t.login('carol');
 select t.ok((public.create_den('Four')).name = 'Four', 'Pro user: no Den limit');
+select t.ok((select den_limit is null from public.my_den_allowance()), 'a Pro user has no Den limit to show');
 
 -- ------------------------------------------------------- invite lifecycle
 reset role;
