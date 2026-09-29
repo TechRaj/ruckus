@@ -56,3 +56,45 @@ export const dayParts = (day: string) => {
   const d = fromIsoDay(day);
   return { weekday: WEEKDAYS[d.getDay()].slice(0, 3), date: d.getDate() };
 };
+
+/**
+ * A saved event's date, as the pipeline read it from the caption. `text` is
+ * the caption's own wording; `start` / `end` are only set when the date could
+ * be pinned down (CLAUDE.md §9).
+ */
+export interface EventWhen {
+  text: string | null;
+  start: string | null;
+  end: string | null;
+  recurring: string | null;
+}
+
+/**
+ * The line a saved event shows in its row, in the same words a Caper uses:
+ * "Tomorrow", "Friday", "Sat, Oct 3". A run that's under way reads
+ * "On till Sep 20"; one that's over reads "Ended Sep 20". Recurring things
+ * show their rhythm ("Saturdays"). With no pinned date, the caption's words.
+ */
+export function eventLabel(when: EventWhen | null | undefined, now = new Date()) {
+  if (!when) return null;
+  if (when.recurring) return when.recurring;
+  if (!when.start) return when.text;
+  const today = isoDay(now);
+  const last = when.end ?? when.start;
+  const short = (day: string) => { const d = fromIsoDay(day); return `${MONTHS[d.getMonth()]} ${d.getDate()}`; };
+  if (last < today) return `Ended ${short(last)}`;
+  if (when.start <= today) return when.end ? `On till ${short(when.end)}` : 'Tonight';
+  return dayLabel(when.start, now);
+}
+
+/**
+ * Where a place sits in the Date sort: the day it next happens, or null for
+ * no date. Something under way counts as today; something over counts as past.
+ */
+export function eventDay(when: EventWhen | null | undefined, now = new Date()): { day: string; past: boolean } | null {
+  if (!when?.start) return null;
+  const today = isoDay(now);
+  const last = when.end ?? when.start;
+  if (last < today) return { day: last, past: true };
+  return { day: when.start < today ? today : when.start, past: false };
+}

@@ -1,3 +1,5 @@
+import type { EventWhen } from '../lib/time';
+
 /**
  * The app's data types. They are shared with the backend, so change them on
  * both sides together.
@@ -66,6 +68,10 @@ export interface StashItem {
   takes: Take[];
   /** Straight-line distance from the user, already formatted for display. */
   distance: string;
+  /** Metres from the user, for the Nearby sort. null without a location. */
+  distanceM?: number | null;
+  /** When it happens, if the reel was an event (CLAUDE.md §9). */
+  when?: EventWhen | null;
   address?: string;
 }
 

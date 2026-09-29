@@ -5,7 +5,7 @@
  */
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableScale } from './PressableScale';
-import { dayLabel, dotted } from '../lib/time';
+import { dayLabel, dotted, eventLabel } from '../lib/time';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { Caper, Member, StashItem } from '../types';
 import { CategoryGlyph } from './CategoryGlyph';
@@ -40,7 +40,9 @@ export function PlaceRow({
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.meta} numberOfLines={1}>
-          {caper ? <Text style={styles.when}>{dotted(dayLabel(caper.date), caper.time)} · </Text> : null}
+          {/* a Caper is the plan the Den made; otherwise the event's own date from the reel */}
+          {caper ? <Text style={styles.when}>{dotted(dayLabel(caper.date), caper.time)} · </Text>
+            : eventLabel(item.when) ? <Text style={styles.when}>{eventLabel(item.when)} · </Text> : null}
           {dotted(item.neighbourhood, item.distance)}
         </Text>
         <Text style={styles.note} numberOfLines={1}>{item.note}</Text>

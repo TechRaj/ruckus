@@ -14,7 +14,7 @@ import { EmptyState } from '../components/EmptyState';
 import { IconCheck, IconExternal, IconNav } from '../components/Icons';
 import { SheetModal } from '../components/SheetModal';
 import { TakeCard } from '../components/TakeCard';
-import { ago, dotted } from '../lib/time';
+import { ago, dotted, eventLabel } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapImpact, useReduceMotion } from '../theme/motion';
@@ -71,6 +71,9 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
         <Kicker>{dotted(item.neighbourhood, CATEGORY_LABEL[item.category])}</Kicker>
         <Text style={styles.title}>{item.name}</Text>
         <Text style={styles.where}>{dotted(item.address ?? item.neighbourhood, item.distance)}</Text>
+        {item.when && eventLabel(item.when) ? (
+          <Text style={styles.where}>{dotted(eventLabel(item.when), item.when.text !== eventLabel(item.when) ? item.when.text : null)}</Text>
+        ) : null}
 
         <View style={{ height: space.lg }} />
         <TakeCard member={savedBy} text={item.note} meta={`stashed it · ${ago(item.savedAt)}`} />

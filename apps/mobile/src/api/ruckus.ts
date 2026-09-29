@@ -75,6 +75,8 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
     interested: (r.wanters ?? []).map(w => w.id),
     note: r.note ?? '',
     distance: formatDistance(r.distanceM),
+    distanceM: r.distanceM ?? null,
+    when: r.when ?? null,
     address: r.address ?? undefined,
     takes: r.takes,
   };

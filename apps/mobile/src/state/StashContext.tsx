@@ -11,7 +11,7 @@ import { api } from '../api/client';
 import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
-import { isoDay } from '../lib/time';
+import { eventDay, isoDay } from '../lib/time';
 import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan, DenAllowance, DenCapacity } from '../types';
 
 export type Overlay =
@@ -243,11 +243,22 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
         || s.note.toLowerCase().includes(q));
     }
     if (sort !== 'date') return list;
-    /** Date order is the calendar: Capers first, soonest at the top, then the rest by newest save. */
+    /**
+     * Date order is the calendar. Anything with a day ahead comes first,
+     * soonest at the top - a Caper's day, or the event's own date from the
+     * reel. Then everything undated, newest save first. Events that are over
+     * go last, most recent first.
+     */
+    const dayOf = (s: StashItem) => {
+      const caper = caperByPlace.get(s.placeId);
+      if (caper) return { day: caper.date, past: false };
+      return eventDay(s.when);
+    };
+    const rank = (d: { past: boolean } | null) => (d == null ? 1 : d.past ? 2 : 0);
     return [...list].sort((a, b) => {
-      const ca = caperByPlace.get(a.placeId), cb = caperByPlace.get(b.placeId);
-      if (ca && cb) return ca.date.localeCompare(cb.date);
-      if (ca || cb) return ca ? -1 : 1;
+      const da = dayOf(a), db = dayOf(b);
+      if (rank(da) !== rank(db)) return rank(da) - rank(db);
+      if (da && db) return da.past ? db.day.localeCompare(da.day) : da.day.localeCompare(db.day);
       return b.savedAt.localeCompare(a.savedAt);
     });
   }, [stash, filter, category, query, sort, caperByPlace]);
