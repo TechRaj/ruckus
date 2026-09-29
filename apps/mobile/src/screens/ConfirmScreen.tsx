@@ -27,10 +27,12 @@ import type { ConfirmMode } from '../api/types';
 type Mode = 'resolving' | 'pick' | 'search' | 'saving';
 
 export function ConfirmScreen({
-  sharedUrl, startInSearch, onClose, onBack, onSaved,
+  sharedUrl, startInSearch, initialQuery, onClose, onBack, onSaved,
 }: {
   sharedUrl: string | null;
   startInSearch?: boolean;
+  /** Text shared without a link - an address, a name - starts the search with it. */
+  initialQuery?: string;
   onClose: () => void;
   /** Where Back goes when there are no matches to return to. */
   onBack: () => void;
@@ -43,7 +45,7 @@ export function ConfirmScreen({
   /** The pipeline's own call on how sure it is (CLAUDE.md §5.8). The screen follows it. */
   const [linkMode, setLinkMode] = useState<ConfirmMode | null>(null);
   const [results, setResults] = useState<PlaceCandidate[]>([]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const [chosen, setChosen] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [failed, setFailed] = useState(false);

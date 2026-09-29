@@ -45,7 +45,14 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
     case 'confirm':
       return (
         <ConfirmScreen
+          /**
+           * Keyed on the link: a second reel shared while this screen is open
+           * must start fresh. Without the key the screen kept the first reel's
+           * pick and saved it against the second reel's link.
+           */
+          key={overlay.url ?? `search:${overlay.query ?? ''}`}
           sharedUrl={overlay.url}
+          initialQuery={overlay.query}
           startInSearch={overlay.url === null}
           onClose={close}
           /** Back from search returns to Add a place. */

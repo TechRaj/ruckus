@@ -9,6 +9,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconHome, IconPeople, IconPin } from '../components/Icons';
+import { IncomingShares } from './IncomingShares';
 import { OverlayHost } from './OverlayHost';
 import { HomeScreen } from '../screens/HomeScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
@@ -72,6 +73,7 @@ export function RootNavigator() {
         <Tab.Screen name="People" component={PeopleScreen} options={tabItem('People', IconPeople)} />
       </Tab.Navigator>
       <OverlayHost />
+      <IncomingShares />
     </NavigationContainer>
   );
 }

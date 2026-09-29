@@ -1,8 +1,8 @@
 # apps/mobile
 
 `@ruckus/mobile` — the Ruckus iOS app. React Native on Expo SDK 57 (RN 0.86,
-TypeScript). Runs in Expo Go today, with RevenueCat in its preview mock; real
-purchases and the share extension need the dev build (`npm run ios`).
+TypeScript). Needs the dev build (`npm run mobile:build`): RevenueCat, location and the
+share extension are native code.
 
     npm install                    # from the repo root — this is a workspace
     npm run mobile:build           # once, and after adding any native package: builds + installs the app
@@ -67,15 +67,17 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
 
 ## Known gaps
 
-- The real adapter has been written against the package types but **not yet run
-  against the Supabase project** — needs `apps/mobile/.env` filled in, then a
-  pass through sign-in → Den → share → save on a device.
-- The paywall opens from the Ruckus Pro row on People and on any `needsUpgrade`
-  (a 4th Den, or an owner's 26th place). After a purchase the app calls
-  `api.syncPro()` so the server knows at once, then retries the blocked action once.
+- The real adapter runs against the live Supabase project; the paywall opens from
+  the Ruckus Pro row on People and on any `needsUpgrade` (a 4th Den, or an owner's
+  26th place). After a purchase the app calls `api.syncPro()` so the server knows
+  at once, then retries the blocked action once. **Not yet tested on a device:** a
+  Test Store purchase.
 - No ads. RevenueCat tracks ads, it doesn't serve them; "no ads" needs an ad
   SDK first, gated on `isPro` from `useStash()`.
-- No share extension yet; `api.resolveSharedUrl` is a mock. Needs a dev build (§11.3).
+- The share extension ("Save to Ruckus", `expo-share-intent`) is built but **not yet
+  tested on a phone** — the simulator has no Instagram. Set a signing Team on both
+  the `ruckus` and `SavetoRuckus` targets in Xcode first. Links are stored without
+  tracking parameters (`cleanLink` in `lib/links.ts`).
 - Rascal has one render. `rascalSniff` and `rascalCheer` alias the peek pose until
   the other two are rendered off the same rig.
 - The glass sheet blurs over `MapView`. Test the drag on a real device at all three
@@ -105,8 +107,8 @@ place** with everyone who saved it; `StashItem` takes the first saver as
 
 **Still open on the backend side** — ask before working around:
 
-- `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one"; the
-  pick-several screen isn't designed yet.
+- `confirmMode: 'multi'` (itinerary reels) is downgraded to "pick one" until
+  Amelia's pick-several screen lands.
 
 ## Talking to the backend
 

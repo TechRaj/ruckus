@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.techraj.ruckus"
+      "bundleIdentifier": "com.techraj.ruckus",
+      "infoPlist": {
+        "CFBundleDisplayName": "Ruckus"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,6 +37,18 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Ruckus uses your location to sort your Stash by what's nearby and show how far each place is. It isn't saved or shared with your Den."
+        }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "disableAndroid": true,
+          "iosShareExtensionName": "Save to Ruckus"
         }
       ]
     ],

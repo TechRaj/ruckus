@@ -8,6 +8,7 @@ import 'react-native-url-polyfill/auto';
 import { createRuckus, DenRow, MemberRow, StashRow } from '@ruckus/api';
 import { ExtractResult, ResolvedPlace, extractFromReel, searchPlaces } from '@ruckus/ingest';
 import { Api, ResolveResult } from './types';
+import { cleanLink } from '../lib/links';
 import { Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
 
 const env = {
@@ -183,7 +184,7 @@ export const ruckusApi: Api = {
   async saveToStash({ denId, placeId, sourceUrl }) {
     const place = lastResolve?.byId.get(placeId) ?? searched.get(placeId);
     if (!place) throw new Error('place_missing_id');
-    await ruckus.stash.save({ denId, places: [place], sourceUrl });
+    await ruckus.stash.save({ denId, places: [place], sourceUrl: cleanLink(sourceUrl) ?? place.sourceUrl });
     /**
      * Log a confirmation only when the save came from a link. A manual add has
      * no offered list, and logging it against the last resolve would record a

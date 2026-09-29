@@ -18,7 +18,7 @@ import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan, D
 export type Overlay =
   | { kind: 'none' }
   | { kind: 'add' }
-  | { kind: 'confirm'; url: string | null }
+  | { kind: 'confirm'; url: string | null; query?: string }
   | { kind: 'detail'; id: string }
   | { kind: 'missing-event' }
   | { kind: 'sign-out' }
