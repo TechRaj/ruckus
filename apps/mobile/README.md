@@ -83,6 +83,8 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
 - Apple Maps basemap is unstyled beyond light/dark; the `map*` tokens wait for MapLibre.
 - "Remove from Stash" is a no-op. Capers are kept in memory for the session — there is no table yet.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
+- Location (`expo-location`, 29 Sept) needs a rebuild: `npm run mobile:build`. On an
+  older build it's skipped rather than crashing — Nearby falls back to newest-first.
 
 ## The backend seam
 

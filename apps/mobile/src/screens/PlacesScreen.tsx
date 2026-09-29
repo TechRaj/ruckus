@@ -31,11 +31,7 @@ import { colors, isNight, layout, motion, space, type } from '../theme/tokens';
 import { StashItem } from '../types';
 
 export function PlacesScreen() {
-  const {
-    loading, error, den, stash, visible, memberById,
-    filter, category, query, sort, selectedId, currentUserId,
-    select, setFilter, setCategory, setQuery, setSort, openOverlay, caperByPlace,
-  } = useStash();
+  const { loading, error, den, stash, visible, memberById, filter, category, query, sort, selectedId, currentUserId, select, setFilter, setCategory, setQuery, setSort, openOverlay, caperByPlace, position } = useStash();
 
   const reduce = useReduceMotion();
   const sheetRef = useRef<BottomSheet>(null);
@@ -76,6 +72,17 @@ export function PlacesScreen() {
     }
   }, [selectedId, visible]);
 
+  /**
+   * Open on the Den's own pins. Once per Den: after that the user is driving
+   * the camera, and a friend's new save shouldn't yank the map away.
+   */
+  const framedDen = useRef<string | null>(null);
+  useEffect(() => {
+    if (!den || framedDen.current === den.id || stash.length === 0) return;
+    framedDen.current = den.id;
+    camera.fitTo(stash, geo.snapPoints[1] ?? 0);
+  }, [den, stash, camera, geo.snapPoints]);
+
   const markers = useStashMarkers({
     stash, focusedUser, category, selectedId, memberById, caperByPlace, onPress: onPinPress,
   });
@@ -104,6 +111,7 @@ export function PlacesScreen() {
         {...({ showsPointsOfInterest: false } as object)}
         userInterfaceStyle={isNight ? 'dark' : 'light'}
         showsCompass={false}
+        showsUserLocation={Boolean(position)}
         showsMyLocationButton={false}
         toolbarEnabled={false}
         mapPadding={{ top: 0, right: 0, bottom: layout.sheetPeek, left: 0 }}
@@ -131,7 +139,7 @@ export function PlacesScreen() {
           style={{ position: 'absolute', top: geo.insets.top + 14, left: 0, right: 0 }}
         />
         {/* Placed beside the title so the controls stay clear of the sheet at the half detent. */}
-        <MapControls top={geo.insets.top + 70} onZoom={camera.zoom} onRecentre={camera.recentre} />
+        <MapControls top={geo.insets.top + 70} onZoom={camera.zoom} onRecentre={() => camera.recentre({ position, points: stash, bottomInset: geo.snapPoints[detentIndex] ?? 0 })} />
       </Animated.View>
 
       <RascalPeek animatedPosition={animatedPosition} peekTop={geo.peekTop} halfTop={geo.halfTop} />

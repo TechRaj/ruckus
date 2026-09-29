@@ -29,6 +29,12 @@
         {
           "color": "#ACE1AF"
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Ruckus uses your location to sort your Stash by what's nearby and show how far each place is. It isn't saved or shared with your Den."
+        }
       ]
     ],
     "scheme": "ruckus"

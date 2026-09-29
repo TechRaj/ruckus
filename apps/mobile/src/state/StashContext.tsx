@@ -5,9 +5,10 @@
  * (CLAUDE.md §4).
  */
 import React, {
-  createContext, useCallback, useContext, useEffect, useMemo, useState,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { api } from '../api/client';
+import { currentPosition, Position } from '../lib/location';
 import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
@@ -74,6 +75,8 @@ interface StashState {
   /** Handles a reminder tap. Opens the event, or the missing-event overlay if it no longer exists. */
   openReminder: (denId: string, placeId: string) => Promise<void>;
   /** Every Den the user is in. `den` is the active one. */
+  /** Where the user is, if they allowed it. Drives Nearby, distances and the map. */
+  position: Position | null;
   /** How full the Den on screen is. null until loaded. */
   capacity: DenCapacity | null;
   /** How many Dens I'm in, out of how many. null until loaded. */
@@ -118,6 +121,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const [den, setDen] = useState<Den | null>(null);
   const [dens, setDens] = useState<Den[]>([]);
   const [capacity, setCapacity] = useState<DenCapacity | null>(null);
+  const [position, setPosition] = useState<Position | null>(null);
+  const positionRef = useRef<Position | null>(null);
   const [denAllowance, setDenAllowance] = useState<DenAllowance | null>(null);
   const [stash, setStash] = useState<StashItem[]>([]);
   const [capers, setCapers] = useState<Caper[]>([]);
@@ -137,7 +142,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   const loadStash = useCallback(async (denId: string, quiet = false) => {
     if (!quiet) { setLoading(true); setError(null); }
     try {
-      const [items, plans] = await Promise.all([api.getStash(denId), api.getCapers(denId)]);
+      const [items, plans] = await Promise.all([api.getStash(denId, positionRef.current ?? undefined), api.getCapers(denId)]);
       setStash(items);
       setCapers(plans);
       // not awaited, and never an error on screen: the count is a nicety
@@ -242,6 +247,13 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
         || s.neighbourhood.toLowerCase().includes(q)
         || s.note.toLowerCase().includes(q));
     }
+    if (sort === 'nearby') {
+      // closest first; anything without a distance (no location yet, or no
+      // coordinates) keeps its newest-first place at the end
+      if (!list.some(x => x.distanceM != null)) return list;
+      return [...list].sort((a, b) =>
+        (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity) || b.savedAt.localeCompare(a.savedAt));
+    }
     if (sort !== 'date') return list;
     /**
      * Date order is the calendar. Anything with a day ahead comes first,
@@ -262,6 +274,23 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       return b.savedAt.localeCompare(a.savedAt);
     });
   }, [stash, filter, category, query, sort, caperByPlace]);
+
+  /**
+   * Ask for location once the user is in a Den - the moment Nearby and the map
+   * can use it - rather than at launch, before they know why. A fix arriving
+   * later reloads the Stash quietly so distances fill in.
+   */
+  const askedForPosition = useRef(false);
+  useEffect(() => {
+    if (session !== 'ready' || !den || askedForPosition.current) return;
+    askedForPosition.current = true;
+    currentPosition({ ask: true }).then(p => {
+      if (!p) return;
+      positionRef.current = p;
+      setPosition(p);
+      loadStash(den.id, true);
+    });
+  }, [session, den, loadStash]);
 
   const setFilter = useCallback((f: Filter) => { setFilterState(f); setSelectedId(null); }, []);
   const setCategory = useCallback((c: Category | null) => { setCategoryState(c); setSelectedId(null); }, []);
@@ -323,7 +352,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       setDen(target);
       rememberDen(target.id);
       setSession('ready');
-      const items = await api.getStash(denId);
+      const items = await api.getStash(denId, positionRef.current ?? undefined);
       setStash(items);
       if (!items.some(s => s.id === placeId)) {
         setOverlay({ kind: 'missing-event' });
@@ -371,7 +400,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,
     currentUserId,
     visible, nearlyPlans, upcoming, caperByPlace, createCaper, memberById, savedCountBy, overlay,
-    isPro, openPro, capacity, denAllowance,
+    isPro, openPro, capacity, denAllowance, position,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,
     toggleInterest,
