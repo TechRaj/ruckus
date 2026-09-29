@@ -93,6 +93,7 @@ declare module '@ruckus/api' {
         engine?: string | null; sourceUrl?: string | null; sourceKind?: string;
       }): Promise<unknown>;
       setWant(denId: string, placeId: string, want: boolean): Promise<number>;
+      removePlace(denId: string, placeId: string): Promise<number>;
       remove(saveId: string): Promise<void>;
       onChange(denId: string, cb: () => void): () => void;
     };

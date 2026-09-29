@@ -123,6 +123,9 @@ async function main() {
   ok(bobsView?.time === '7 pm' && bobsView.going.length === 2, 'a Caper is shared with the Den, and outsiders are dropped from "going"');
   ok((await carol.capers.list(den.id)).length === 0, 'a stranger sees no Capers');
 
+  ok((await bob.stash.removePlace(den.id, dual.placeId)) === 1, 'removing a place a friend also saved keeps it for them');
+  ok((await alice.stash.list(den.id)).some(r => r.placeId === dual.placeId), '...so it is still in the Stash');
+
   await rejects(carol.stash.list(den.id), 'not_a_member', 'a stranger cannot read the Stash');
   ok((await carol.dens.mine()).length === 0, 'a stranger sees no Dens');
   await rejects(carol.dens.join('ZZZZZZ'), 'invite_invalid', 'a wrong code is refused with a usable error');

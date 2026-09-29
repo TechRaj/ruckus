@@ -291,6 +291,39 @@ select t.throws(format('insert into public.capers (den_id, place_id, day) values
                        t.get('den'), t.get('dual'), '2026-10-03'),
                 'permission denied', 'Capers cannot be inserted around make_caper()');
 
+-- ------------------------------------------------------ remove from Stash
+-- dual is saved by alice AND bob, and has votes, comments and Capers on it
+select t.login('carol');
+select t.throws(format('select public.remove_from_stash(%L, %L)', t.get('den'), t.get('dual')), 'not_a_member',
+                'an outsider cannot remove anything');
+select t.login('alice');
+select t.ok(public.remove_from_stash(t.get('den')::uuid, t.get('dual')::uuid) = 1,
+            'removing a place a friend also saved takes away only your save');
+select t.ok((select count(*) from public.capers where place_id = t.get('dual')::uuid) > 0,
+            '...and its Capers and comments stay, because it''s still in the Stash');
+select t.throws(format('select public.remove_from_stash(%L, %L)', t.get('den'), t.get('dual')), 'not_your_save',
+                'you cannot remove a save that isn''t yours');
+-- put alice's save back so the tests after this one see the Den as before
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_dual","name":"Dual Citizen","kind":"venue","coordinate":{"lat":43.6509,"lng":-79.3843}}]');
+
+-- a place only alice saved, with a Caper on it: removing it clears everything
+do $$
+declare solo uuid;
+begin
+  perform public.save_places(t.get('den')::uuid,
+    '[{"googlePlaceId":"ChIJ_solo","name":"Solo Spot","kind":"venue","coordinate":{"lat":43.6,"lng":-79.4}}]');
+  solo := (select id from public.places where google_place_id = 'ChIJ_solo');
+  perform public.set_want_to_go(t.get('den')::uuid, solo, true);
+  perform public.set_take(t.get('den')::uuid, solo, 'just me');
+  perform public.make_caper(t.get('den')::uuid, solo, '2026-10-05', null, array[t.id('alice')]);
+  perform t.ok(public.remove_from_stash(t.get('den')::uuid, solo) = 0, 'removing the last save takes the place out of the Stash');
+  perform t.ok(not exists (select 1 from public.want_to_go where place_id = solo)
+           and not exists (select 1 from public.takes where place_id = solo)
+           and not exists (select 1 from public.capers where place_id = solo),
+           '...along with its votes, comments and Capers');
+end $$;
+
 -- -------------------------------------------------- privilege escalation
 select t.login('bob');
 select t.throws(format('update public.profiles set is_pro = true where id = %L', t.id('bob')),

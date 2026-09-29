@@ -43,6 +43,8 @@ export interface StashItem {
   denId: string;
   /** The user who saved it first. */
   savedBy: string;
+  /** Everyone in the Den who saved it. Only they can take it out of the Stash. */
+  savers?: string[];
   placeId: string;
   name: string;
   neighbourhood: string;

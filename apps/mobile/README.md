@@ -81,7 +81,6 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
 - The glass sheet blurs over `MapView`. Test the drag on a real device at all three
   detents; Reduce Transparency's opaque path is the fallback.
 - Apple Maps basemap is unstyled beyond light/dark; the `map*` tokens wait for MapLibre.
-- "Remove from Stash" is a no-op.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
 - Location (`expo-location`, 29 Sept) needs a rebuild: `npm run mobile:build`. On an
   older build it's skipped rather than crashing — Nearby falls back to newest-first.

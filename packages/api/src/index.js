@@ -36,6 +36,7 @@ export const ERRORS = {
   invite_used_up:     'That invite has been used too many times. Ask for a new one.',
   place_missing_id:   "We couldn't pin that place. Try searching for it.",
   place_not_in_stash: "That place isn't in this Den's Stash.",
+  not_your_save:      "Only the people who saved it can take it out.",
   take_empty:         'Write something first.',
   caper_needs_a_day:  'Pick a day for the plan.',
   // sign-in: these come from Supabase Auth, not our database
@@ -285,6 +286,13 @@ export function createRuckus({ url, anonKey, storage } = {}) {
     /** Toggle "want to go". Returns how many people in the Den want to go. */
     setWant: (denId, placeId, want) =>
       rpc('set_want_to_go', { p_den: denId, p_place: placeId, p_want: want }),
+
+    /**
+     * Remove a place from the Stash - your save of it. If a friend saved it too
+     * it stays, under their name. Resolves to how many people still have it
+     * (0 = gone, and its votes, comments and Capers with it).
+     */
+    removePlace: (denId, placeId) => rpc('remove_from_stash', { p_den: denId, p_place: placeId }),
 
     /** Only your own saves can be removed. */
     async remove(saveId) {

@@ -71,6 +71,8 @@ interface StashState {
   updateTake: (id: string, text: string) => void;
   deleteTake: (id: string) => void;
   addToStash: (placeId: string, sourceUrl: string | null) => Promise<StashItem>;
+  /** Take my save out of the Stash. A friend's save of the same place keeps it there. */
+  removeFromStash: (id: string) => Promise<void>;
   openOverlay: (o: Overlay) => void;
   /** Handles a reminder tap. Opens the event, or the missing-event overlay if it no longer exists. */
   openReminder: (denId: string, placeId: string) => Promise<void>;
@@ -373,6 +375,27 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     return saved;
   }, [den]);
 
+  const removeFromStash = useCallback(async (id: string) => {
+    if (!den || !currentUserId) return;
+    const item = stash.find(x => x.id === id);
+    if (!item) return;
+    const others = (item.savers ?? [item.savedBy]).filter(u => u !== currentUserId);
+    // Optimistic: the row goes if I was the only one who saved it; otherwise it
+    // stays, now under whoever else saved it.
+    if (others.length === 0) {
+      setStash(prev => prev.filter(x => x.id !== id));
+      setSelectedId(prev => (prev === id ? null : prev));
+    } else {
+      patch(id, x => ({ ...x, savers: others, savedBy: others[0] }));
+    }
+    try {
+      await api.removeFromStash(den.id, item.placeId);
+      api.getCapacity(den.id).then(setCapacity).catch(() => {});
+    } catch {
+      loadStash(den.id, true);   // put the truth back
+    }
+  }, [den, currentUserId, stash, patch, loadStash]);
+
   const createCaper = useCallback(async (
     { id, date, time, going }: { id: string; date: string; time: string | null; going: string[] },
   ) => {
@@ -405,7 +428,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     select: setSelectedId,
     toggleInterest,
     addTake, updateTake, deleteTake,
-    addToStash,
+    addToStash, removeFromStash,
     openOverlay: setOverlay,
     openReminder,
     dens, switchDen,

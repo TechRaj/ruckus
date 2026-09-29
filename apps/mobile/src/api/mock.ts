@@ -63,6 +63,12 @@ export const mockApi: Api = {
   },
   async getInviteLink() { await delay(200); return { code: '8FK2QD' }; },
 
+  async removeFromStash(denId, placeId) {
+    await delay(200);
+    const i = stash.findIndex(s => s.denId === denId && s.placeId === placeId);
+    if (i >= 0) stash.splice(i, 1);
+    return 0;
+  },
   async getStash(denId) { await delay(320); return stash.filter(s => s.denId === denId).map(s => ({ ...s })); },
   onStashChange(denId, cb) {
     if (!listeners.has(denId)) listeners.set(denId, new Set());

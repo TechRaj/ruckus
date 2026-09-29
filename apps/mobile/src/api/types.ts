@@ -46,6 +46,11 @@ export interface Api {
   searchPlaces(query: string, opts?: { fromLink?: boolean }): Promise<PlaceCandidate[]>;
   /** Saves a place by id, with the reel URL if there is one. See CLAUDE.md §5.6. */
   saveToStash(args: { denId: string; placeId: string; sourceUrl: string | null }): Promise<StashItem>;
+  /**
+   * Take my save of a place out of the Stash. A friend's save of it stays. Resolves
+   * to how many people still have it; 0 means it's gone, with its comments and plans.
+   */
+  removeFromStash(denId: string, placeId: string): Promise<number>;
   setWant(denId: string, placeId: string, want: boolean): Promise<void>;
 
   /** Every Caper in the Den, past ones included. */

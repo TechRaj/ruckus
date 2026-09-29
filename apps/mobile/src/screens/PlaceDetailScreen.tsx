@@ -23,7 +23,7 @@ import { CATEGORY_LABEL, Member } from '../types';
 
 export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => void }) {
   const {
-    stash, memberById, currentUserId, toggleInterest, addTake, updateTake, deleteTake,
+    stash, memberById, currentUserId, toggleInterest, addTake, updateTake, deleteTake, removeFromStash,
   } = useStash();
   const reduce = useReduceMotion();
   const [draft, setDraft] = useState('');
@@ -58,6 +58,16 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
       { text: 'Keep it', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => { setEditing(false); setDraft(''); deleteTake(item.id); } },
     ]);
+  };
+
+  const confirmRemove = () => {
+    const others = (item.savers ?? [item.savedBy]).filter(u => u !== currentUserId);
+    const friend = others.length ? memberById.get(others[0])?.displayName ?? 'a friend' : null;
+    Alert.alert('Remove from your Stash?',
+      friend ? `It stays in the Den for ${friend}, who saved it too.` : 'Its comments and plans go with it.', [
+        { text: 'Keep it', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => { onClose(); removeFromStash(item.id); } },
+      ]);
   };
 
   return (
@@ -159,7 +169,10 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
       </ScrollView>
 
       <View style={styles.footer}>
-        <TextButton label="Remove from Stash" onPress={onClose} muted />
+        {/* only the people who saved it can take it out */}
+        {currentUserId && (item.savers ?? [item.savedBy]).includes(currentUserId) ? (
+          <TextButton label="Remove from Stash" onPress={confirmRemove} muted />
+        ) : null}
       </View>
     </SheetModal>
   );

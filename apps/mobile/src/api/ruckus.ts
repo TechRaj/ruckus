@@ -62,6 +62,7 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
     id: r.placeId,
     denId,
     savedBy: r.savers[0]?.id ?? '',
+    savers: r.savers.map(x => x.id),
     placeId: r.placeId,
     name: r.name,
     neighbourhood: r.neighbourhood ?? r.city ?? '',
@@ -216,7 +217,7 @@ export const ruckusApi: Api = {
      * the cached place. The next Stash reload replaces it with the real row.
      */
     return {
-      id: placeId, denId, savedBy: (await ruckus.auth.userId()) ?? '', placeId,
+      id: placeId, denId, savedBy: (await ruckus.auth.userId()) ?? '', savers: [(await ruckus.auth.userId()) ?? ''], placeId,
       name: place.name,
       neighbourhood: place.neighbourhood ?? place.city ?? '',
       category: toCategory(place.kind, place.category),
@@ -231,6 +232,7 @@ export const ruckusApi: Api = {
     await ruckus.stash.setWant(denId, placeId, want);
   },
 
+  removeFromStash: (denId, placeId) => ruckus.stash.removePlace(denId, placeId),
   getCapers: denId => ruckus.capers.list(denId),
   async createCaper({ denId, placeId, date, time, going }) {
     const caper = await ruckus.capers.make({ denId, placeId, date, time, going });
