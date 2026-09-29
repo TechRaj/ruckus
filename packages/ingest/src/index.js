@@ -35,8 +35,8 @@ export { scoreCandidate, refineWithGeocode, tierOf, confirmationMode, explain } 
 export { rankCandidates } from './ranker.js';
 
 import { fetchPage, shortcodeOf, parseReelPage, resolveHandle } from './instagram.js';
-import { extractPlaces } from './extract-llm.js';
-import { geocodeCandidates } from './geocode.js';
+import { extractPlaces, extractEndpoint } from './extract-llm.js';
+import { geocodeCandidates, geocodeEndpoint } from './geocode.js';
 import { confirmationMode } from './confidence.js';
 
 /** Never resolve more than this many handles - each one is a round trip. */
@@ -57,6 +57,16 @@ const MAX_HANDLES = 3;
  * @returns {Promise<object>}   parsed metadata + ResolvedPlace[] + confirm mode
  */
 export async function extractFromReel(url, opts = {}) {
+  // No server configured is a setup mistake, not a bad reel. It used to fall
+  // through to a placeholder host, fail, and quietly return the offline
+  // ranker's guesses - which look plausible and are much worse. Say so instead.
+  if (!(opts.endpoint ?? extractEndpoint())) {
+    throw new Error('No extract endpoint: pass opts.endpoint or set EXTRACT_ENDPOINT (the proxy /extract URL).');
+  }
+  if (opts.geocode !== false && !(opts.geocodeEndpoint ?? geocodeEndpoint())) {
+    throw new Error('No geocode endpoint: pass opts.geocodeEndpoint or set GEOCODE_ENDPOINT (the proxy /geocode URL).');
+  }
+
   const shortcode = shortcodeOf(url);
   if (!shortcode) throw new Error('Not an Instagram reel or post URL.');
 

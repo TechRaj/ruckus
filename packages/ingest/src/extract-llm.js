@@ -53,8 +53,8 @@ export async function proxyError(route, res) {
   return err;
 }
 
-const extractEndpoint = () =>
-  process.env.EXTRACT_ENDPOINT ?? 'https://your-api.example.com/extract';
+export const extractEndpoint = () =>
+  (typeof process !== 'undefined' ? process.env?.EXTRACT_ENDPOINT : undefined) ?? null;
 
 // Exported for the proxy, which is the only thing that sends it. The client
 // used to send this with every request and the proxy trusted it - so anyone

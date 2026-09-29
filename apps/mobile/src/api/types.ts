@@ -33,11 +33,8 @@ export interface Api {
   getDenAllowance(): Promise<DenAllowance>;
   createDen(name: string, emblem: string): Promise<Den>;
   joinDen(code: string): Promise<Den>;
-  /**
-   * The Den's six-character join code. The ruckus.app domain is not registered,
-   * so `url` cannot open the app yet. Share the code.
-   */
-  getInviteLink(denId: string): Promise<{ code: string; url: string }>;
+  /** The Den's six-character join code. There's no invite link: nobody owns a domain for one. */
+  getInviteLink(denId: string): Promise<{ code: string }>;
 
   getStash(denId: string, pos?: { lat: number; lng: number }): Promise<StashItem[]>;
   /** Calls `cb` when the Den's Stash changes on the server. Returns an unsubscribe function. */

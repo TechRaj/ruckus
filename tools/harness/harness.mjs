@@ -40,9 +40,8 @@ async function main() {
     process.exit(1);
   }
   if (!process.env.EXTRACT_ENDPOINT) {
-    console.error('EXTRACT_ENDPOINT is unset - extract-llm.js would call the');
-    console.error('placeholder your-api.example.com and silently fall back to');
-    console.error('the heuristic ranker, which is the thing you are not testing.');
+    console.error('EXTRACT_ENDPOINT is unset - every call would fail and fall back');
+    console.error('to the heuristic ranker, which is the thing you are not testing.');
     console.error('  EXTRACT_ENDPOINT=http://localhost:3000/extract npm run harness');
     process.exit(1);
   }

@@ -36,7 +36,7 @@ export function ConfirmScreen({
   onBack: () => void;
   onSaved: (name: string) => void;
 }) {
-  const { den, addToStash, isPro, openPro } = useStash();
+  const { addToStash, isPro, openPro } = useStash();
   const picker = useDenPicker();
   const [mode, setMode] = useState<Mode>(startInSearch ? 'search' : 'resolving');
   const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null);
@@ -179,7 +179,7 @@ export function ConfirmScreen({
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder={den ? 'Toronto' : 'Search'}
+              placeholder="A place or an address"
               placeholderTextColor={colors.inkMuted}
               autoFocus
               returnKeyType="search"

@@ -61,7 +61,7 @@ export const mockApi: Api = {
     if (!dens.some(d => d.id === mockDen.id)) dens = [mockDen, ...dens];
     return mockDen;
   },
-  async getInviteLink() { await delay(200); return { code: '8FK2QD', url: 'https://ruckus.app/j/8FK2QD' }; },
+  async getInviteLink() { await delay(200); return { code: '8FK2QD' }; },
 
   async getStash(denId) { await delay(320); return stash.filter(s => s.denId === denId).map(s => ({ ...s })); },
   onStashChange(denId, cb) {

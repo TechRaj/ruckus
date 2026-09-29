@@ -14,8 +14,8 @@ import { refineWithGeocode, tierOf, explain } from './confidence.js';
 import { proxyHeaders, proxyError } from './extract-llm.js';
 
 // Call time, not module load - see the note in extract-llm.js.
-const geocodeEndpoint = () =>
-  process.env.GEOCODE_ENDPOINT ?? 'https://your-api.example.com/geocode';
+export const geocodeEndpoint = () =>
+  (typeof process !== 'undefined' ? process.env?.GEOCODE_ENDPOINT : undefined) ?? null;
 
 /**
  * The model's `city` is inconsistent (§6): "Banff", "Banff National Park,
