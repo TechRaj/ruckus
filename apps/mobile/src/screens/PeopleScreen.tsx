@@ -37,14 +37,18 @@ export function PeopleScreen() {
   const closePanel = () => { setPanel('closed'); setCode(''); setDenName(''); setPanelError(null); };
 
   /** Joins or makes a Den, then switches to it. Opens the paywall when the free Den limit is reached. */
-  const run = async (action: () => Promise<{ id: string }>) => {
+  const run = async (action: () => Promise<{ id: string }>, retried = false): Promise<void> => {
     setBusy(true); setPanelError(null);
     try {
       const d = await action();
       closePanel();
       await refreshSession(d.id);
     } catch (err) {
-      if ((err as { needsUpgrade?: boolean }).needsUpgrade) { await openPro(); return; }
+      if ((err as { needsUpgrade?: boolean }).needsUpgrade) {
+        // bought Pro and the server knows -> do what they were trying to do
+        if ((await openPro()) && !retried) return run(action, true);
+        return;
+      }
       setPanelError(err instanceof Error && err.message ? err.message : 'That didn\'t work. Try again.');
     } finally {
       setBusy(false);
@@ -111,7 +115,7 @@ export function PeopleScreen() {
           <Emblem name="moon" size={32} />
           <View style={{ flex: 1 }}>
             <Text style={styles.proTitle}>Ruckus Pro</Text>
-            <Text style={styles.meta}>{isPro ? 'Manage your plan' : 'Unlimited Dens, no ads'}</Text>
+            <Text style={styles.meta}>{isPro ? 'Manage your plan' : 'Unlimited Dens and places'}</Text>
           </View>
           <IconChevronRight />
         </Pressable>

@@ -70,10 +70,9 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
 - The real adapter has been written against the package types but **not yet run
   against the Supabase project** — needs `apps/mobile/.env` filled in, then a
   pass through sign-in → Den → share → save on a device.
-- The paywall opens from the Ruckus Pro row on People, but nothing calls it on
-  `needsUpgrade` yet — there's no way to make a second Den (Switch Den is a
-  no-op). When there is: `showPaywallIfNeeded()`, then retry. `is_pro` lands by
-  webhook a few seconds after the purchase, so the retry needs a short backoff.
+- The paywall opens from the Ruckus Pro row on People and on any `needsUpgrade`
+  (a 4th Den, or an owner's 26th place). After a purchase the app calls
+  `api.syncPro()` so the server knows at once, then retries the blocked action once.
 - No ads. RevenueCat tracks ads, it doesn't serve them; "no ads" needs an ad
   SDK first, gated on `isPro` from `useStash()`.
 - No share extension yet; `api.resolveSharedUrl` is a mock. Needs a dev build (§11.3).
@@ -82,7 +81,7 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
 - The glass sheet blurs over `MapView`. Test the drag on a real device at all three
   detents; Reduce Transparency's opaque path is the fallback.
 - Apple Maps basemap is unstyled beyond light/dark; the `map*` tokens wait for MapLibre.
-- "Make it a Caper", "Remove from Stash" and "Switch Den" are no-ops.
+- "Remove from Stash" is a no-op. Capers are kept in memory for the session — there is no table yet.
 - No clustering. Add `supercluster` once a Stash passes ~50 pins.
 
 ## The backend seam

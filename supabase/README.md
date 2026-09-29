@@ -95,7 +95,15 @@ Dashboard steps that are not in the repo:
 3. Apply the migration (`npm run db:push`).
 4. Point a cron at the dispatch URL above.
 
-## RevenueCat webhook setup
+## RevenueCat setup
+
+Pro is decided by asking RevenueCat whether the user has `ruckus_pro` active —
+not from the webhook event's type — so a lapsed monthly can't remove a lifetime
+purchase, and a restore onto another account (`TRANSFER`) updates both. That
+needs `REVENUECAT_SECRET_KEY` on Railway (`/health` says `"pro": "verified"`).
+The app also calls `/pro/sync` right after buying, so nobody waits on the webhook.
+
+### Webhook
 
 RevenueCat dashboard → Project settings → Integrations → Webhooks:
 

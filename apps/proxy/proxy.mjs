@@ -20,6 +20,7 @@
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
 import { SYSTEM } from '@ruckus/ingest';
+import { UUID, usersInEvent, entitlementActive, decideFromEvent, fetchSubscriber } from './revenuecat.mjs';
 import {
   createSupabaseReminderDb, dispatchEventReminders, sendExpoPush, timeZoneFromCoordinate,
 } from '@ruckus/reminders';
@@ -403,27 +404,48 @@ app.post('/alarm', (req, res) => {
 
 
 /* ------------------------------------------------------------------ *
- * /webhooks/revenuecat - the only thing that ever sets profiles.is_pro.
+ * Ruckus Pro - the only code that ever sets profiles.is_pro.
  *
- * The database uses is_pro to lift the free Den limit, and users cannot set
- * it themselves (column grants in the migration). RevenueCat calls this on
- * every purchase event; we write the result with the service role key.
+ * The database uses is_pro to lift the free limits (3 Dens, 25 places per
+ * owned Den), and users can't set it themselves. Two ways in:
  *
- * Needs, on Railway: REVENUECAT_WEBHOOK_AUTH (the exact Authorization value
- * you type into RevenueCat's webhook settings), SUPABASE_URL and
- * SUPABASE_SERVICE_ROLE_KEY. The app must call Purchases.logIn(supabaseUserId)
- * after sign-in, or events arrive with an anonymous id we cannot map to a user.
+ *   POST /webhooks/revenuecat  RevenueCat, on any purchase event
+ *   POST /pro/sync             the app, right after a purchase and at launch
+ *
+ * Both ask RevenueCat whether the user has PRO_ENTITLEMENT active right now
+ * and write that answer - the event only says WHO to check (revenuecat.mjs
+ * explains why). /pro/sync means a buyer doesn't wait for the webhook, and a
+ * missed webhook heals itself next launch.
+ *
+ * Railway: REVENUECAT_SECRET_KEY (sk_...), REVENUECAT_WEBHOOK_AUTH,
+ * SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. Without the secret key the webhook
+ * falls back to reading the event, entitlement-aware but less exact, and
+ * /pro/sync is off.
  * ------------------------------------------------------------------ */
 
-const GRANTS_PRO = new Set([
-  'INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'NON_RENEWING_PURCHASE',
-  'PRODUCT_CHANGE', 'SUBSCRIPTION_EXTENDED', 'TEMPORARY_ENTITLEMENT_GRANT',
-]);
-const ENDS_PRO = new Set(['EXPIRATION']);
-// CANCELLATION and BILLING_ISSUE deliberately change nothing: a cancelled
-// subscription keeps working until it expires, and EXPIRATION tells us when.
+const PRO_ENTITLEMENT = process.env.PRO_ENTITLEMENT || 'ruckus_pro';
+const RC_SECRET = () => process.env.REVENUECAT_SECRET_KEY;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function writeIsPro(userId, pro) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal',
+    },
+    body: JSON.stringify({ is_pro: pro, pro_updated_at: new Date().toISOString() }),
+  });
+  if (!r.ok) throw new Error(`supabase ${r.status} ${(await r.text()).slice(0, 120)}`);
+}
+
+/** RevenueCat's answer, written to the database. Returns the answer. */
+async function syncPro(userId) {
+  const pro = entitlementActive(await fetchSubscriber(userId, RC_SECRET()), PRO_ENTITLEMENT);
+  await writeIsPro(userId, pro);
+  return pro;
+}
 
 app.post('/webhooks/revenuecat', async (req, res) => {
   const expected = process.env.REVENUECAT_WEBHOOK_AUTH;
@@ -435,42 +457,47 @@ app.post('/webhooks/revenuecat', async (req, res) => {
   }
 
   const ev = req.body?.event ?? {};
-  const pro = GRANTS_PRO.has(ev.type) ? true : ENDS_PRO.has(ev.type) ? false : null;
-  // 200 on everything we choose to ignore, or RevenueCat retries it forever
-  if (pro === null) return res.json({ ok: true, ignored: ev.type ?? 'unknown' });
-
-  const userId = [ev.app_user_id, ev.original_app_user_id, ...(ev.aliases ?? [])]
-    .find(id => typeof id === 'string' && UUID.test(id));
-  if (!userId) {
-    console.warn(`[revenuecat] ${ev.type} for an anonymous id - is Purchases.logIn() being called?`);
-    return res.json({ ok: true, ignored: 'anonymous user' });
+  const users = usersInEvent(ev);
+  // 200 on anything we can't act on, or RevenueCat retries it forever
+  if (!users.length) {
+    if (ev.type && ev.type !== 'TEST') {
+      console.warn(`[revenuecat] ${ev.type} for an anonymous id - is Purchases.logIn() being called?`);
+    }
+    return res.json({ ok: true, ignored: ev.type === 'TEST' ? 'test event' : 'no signed-in user' });
   }
 
-  // Events can arrive out of order. Only apply one newer than what we have,
-  // so a late RENEWAL can't resurrect Pro after an EXPIRATION.
-  const at = new Date(ev.event_timestamp_ms ?? Date.now()).toISOString();
-  const url = `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}` +
-              `&or=(pro_updated_at.is.null,pro_updated_at.lt.${encodeURIComponent(at)})`;
   try {
-    const r = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({ is_pro: pro, pro_updated_at: at }),
-    });
-    if (!r.ok) {
-      console.error('[revenuecat] supabase', r.status, (await r.text()).slice(0, 200));
-      return res.status(500).json({ error: 'write failed' });   // RevenueCat will retry
+    const results = {};
+    for (const userId of users) {
+      if (RC_SECRET()) {
+        results[userId.slice(0, 8)] = await syncPro(userId);
+      } else {
+        const pro = decideFromEvent(ev, PRO_ENTITLEMENT);
+        if (pro === null) continue;
+        await writeIsPro(userId, pro);
+        results[userId.slice(0, 8)] = pro;
+      }
     }
-    console.log(`[revenuecat] ${ev.type} -> is_pro=${pro} for ${userId.slice(0, 8)}…`);
+    console.log(`[revenuecat] ${ev.type} -> ${JSON.stringify(results)} (${RC_SECRET() ? 'verified' : 'from event'})`);
     res.json({ ok: true });
   } catch (err) {
     console.error('[revenuecat]', err.message);
-    res.status(500).json({ error: 'write failed' });
+    res.status(500).json({ error: 'sync failed' });   // RevenueCat retries
+  }
+});
+
+app.post('/pro/sync', requireCaller, async (req, res) => {
+  // a signed-in user checking themselves - never a user id from the body
+  if (!UUID.test(req.caller ?? '')) return res.status(401).json({ error: 'sign in required' });
+  if (rateLimited(req.caller)) return res.status(429).json({ error: 'slow down' });
+  if (!RC_SECRET() || !SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: 'pro sync not configured' });
+  }
+  try {
+    res.json({ isPro: await syncPro(req.caller) });
+  } catch (err) {
+    console.error('[pro/sync]', err.message);
+    res.status(502).json({ error: 'sync failed' });
   }
 });
 
@@ -517,6 +544,8 @@ app.get('/health', (_, res) => {
     geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
     reminders: Boolean(SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.PROXY_SECRET),
     auth: AUTH_ENFORCED ? 'enforced' : 'OPEN',
+    // 'verified' = Pro is read from RevenueCat; 'events-only' = no secret key yet
+    pro: process.env.REVENUECAT_SECRET_KEY ? 'verified' : 'events-only',
     usageToday: (() => {
       if (usageDay !== today()) return { day: today(), users: 0, extract: 0, geocode: 0, atLimit: 0 };
       let extract = 0, geocode = 0, atLimit = 0;

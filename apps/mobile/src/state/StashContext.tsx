@@ -58,7 +58,8 @@ interface StashState {
   /** The RevenueCat entitlement. Display only. The server enforces the Den limit. */
   isPro: boolean;
   /** Opens the paywall, or the Customer Center if the user is already Pro. */
-  openPro: () => Promise<void>;
+  /** Resolves true if they're Pro afterwards and the server knows, so a blocked action can be retried. */
+  openPro: () => Promise<boolean>;
   setFilter: (f: Filter) => void;
   setCategory: (c: Category | null) => void;
   setQuery: (q: string) => void;
@@ -145,7 +146,11 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       const me = await api.auth.userId();
       setCurrentUserId(me);
       /** Not awaited, so a slow or failed billing call does not delay the session. */
-      identify(me).then(setIsPro);
+      identify(me).then(pro => {
+        setIsPro(pro);
+        // RevenueCat says Pro: make sure the server agrees, in case a webhook was missed
+        if (pro) api.syncPro().catch(() => {});
+      });
       if (!me) { setSession('signedOut'); setDen(null); setDens([]); setStash([]); rememberDen(null); return; }
       const mine = await api.myDens();
       setDens(mine);
@@ -177,8 +182,11 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => onProChange(setIsPro), []);
 
   const openPro = useCallback(async () => {
-    if (isPro) return showCustomerCenter();
-    if (await showPaywall()) setIsPro(true);
+    if (isPro) { await showCustomerCenter(); return true; }
+    if (!(await showPaywall())) return false;
+    setIsPro(true);
+    // don't make them wait for the webhook: tell the server now
+    return api.syncPro();
   }, [isPro]);
 
   /** Reloads quietly when another member saves, votes or comments. */

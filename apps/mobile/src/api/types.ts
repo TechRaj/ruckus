@@ -52,6 +52,12 @@ export interface Api {
   /** The caller must want to go to the place. Other devices hear of it through onStashChange. */
   createCaper(args: { denId: string; placeId: string; date: string; time: string | null; going: string[] }): Promise<Caper>;
 
+  /**
+   * Ask the server to re-read my Pro status from RevenueCat, now. Right after a
+   * purchase the webhook can take a few seconds; this closes that gap. Resolves
+   * to whether the server now has me as Pro.
+   */
+  syncPro(): Promise<boolean>;
   notifications: {
     /** Registers this device for event reminders under the signed-in user. */
     registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;

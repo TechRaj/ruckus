@@ -248,6 +248,16 @@ export const ruckusApi: Api = {
     return caper;
   },
 
+  async syncPro() {
+    const token = await accessToken();
+    if (!token || !env.proxy) return false;
+    try {
+      const r = await fetch(`${env.proxy}/pro/sync`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      return r.ok ? Boolean((await r.json()).isPro) : false;
+    } catch {
+      return false;   // the webhook still gets there; this is only the fast path
+    }
+  },
   notifications: {
     registerPushToken: (token, platform) => ruckus.notifications.registerPushToken(token, platform),
     unregisterPushToken: token => ruckus.notifications.unregisterPushToken(token),

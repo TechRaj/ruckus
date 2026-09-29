@@ -103,6 +103,7 @@ export const mockApi: Api = {
     return { ...caper };
   },
 
+  async syncPro() { return false; },
   notifications: {
     async registerPushToken() {},
     async unregisterPushToken() {},

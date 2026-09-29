@@ -103,7 +103,7 @@ export function ConfirmScreen({
     }
   };
 
-  async function save() {
+  async function save(retried = false) {
     if (!chosen) return;
     const all = [...(candidates ?? []), ...results];
     const name = all.find(c => c.placeId === chosen)?.name ?? 'That place';
@@ -118,10 +118,12 @@ export function ConfirmScreen({
       const e = err as { code?: string; needsUpgrade?: boolean; message?: string };
       if (e.needsUpgrade) {
         setMode(back);
-        // After a purchase the app knows about Pro before the server does, which
-        // learns by webhook a few seconds later. Skip the paywall in that window.
+        // Already Pro (the server just hadn't heard yet) -> sync it. Not Pro ->
+        // the paywall, which syncs on purchase. Either way, if the server now
+        // agrees, save again once so they don't have to tap twice.
+        const ready = isPro ? await api.syncPro() : await openPro();
+        if (ready && !retried) return save(true);
         if (isPro) setLimitNote('Your upgrade is on its way. Try again in a few seconds.');
-        else await openPro();
         return;
       }
       if (e.code === 'den_full') { setMode(back); setLimitNote(e.message ?? 'This Den is full.'); return; }
@@ -285,7 +287,7 @@ export function ConfirmScreen({
         {limitNote ? <Hint style={styles.limitNote}>{limitNote}</Hint> : null}
         <PrimaryButton
           label="Add to Stash"
-          onPress={save}
+          onPress={() => save()}
           loading={mode === 'saving'}
           disabled={!chosen}
         />

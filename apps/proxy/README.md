@@ -14,6 +14,8 @@ Stateless — no database, no sessions. Scale it or restart it freely.
 | `POST /geocode` | Place name → `place_id`, coords, address. Cached in memory. |
 | `GET /config` | The two fragile regexes (§5.4), so a format change is a deploy not an App Store review. |
 | `POST /alarm` | Counts `wrapperOk:false`. Logs loudly past a 25% sustained failure rate. |
+| `POST /webhooks/revenuecat` | RevenueCat purchase events. Re-reads the user's Pro status from RevenueCat and writes `profiles.is_pro`. |
+| `POST /pro/sync` | The signed-in app asking for the same re-read, right after a purchase and at launch. |
 | `GET /health` | Liveness, which model, whether geocoding is configured, wrapper failure rate. |
 
 ## Deploying to Railway
@@ -37,6 +39,9 @@ Then set variables in the Railway dashboard:
 | `RATE_MAX` | no | Requests per minute per caller, default 20. Raise only for batch tooling. |
 | `DAILY_EXTRACT_MAX` | no | Reels a user can resolve per UTC day, default 100. |
 | `DAILY_GEOCODE_MAX` | no | Place lookups per user per UTC day, default 800 (a reel uses up to 8). |
+| `REVENUECAT_SECRET_KEY` | for Pro | RevenueCat **secret** key (`sk_…`). Pro is then read from RevenueCat, not guessed from events, and `/pro/sync` works. Server only — never in the app. |
+| `REVENUECAT_WEBHOOK_AUTH` | for Pro | The exact Authorization value set in RevenueCat's webhook settings. |
+| `PRO_ENTITLEMENT` | no | Defaults to `ruckus_pro`. Must match the app and RevenueCat. |
 | `WRAPPER_RE` | no | Emergency override for the caption regex. |
 | `PROFILE_NAME_RE` | no | Emergency override for the profile-name regex. |
 
