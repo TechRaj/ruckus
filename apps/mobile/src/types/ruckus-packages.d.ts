@@ -101,6 +101,10 @@ declare module '@ruckus/api' {
       set(denId: string, placeId: string, text: string): Promise<unknown>;
       remove(denId: string, placeId: string): Promise<void>;
     };
+    capers: {
+      list(denId: string): Promise<{ id: string; denId: string; placeId: string; date: string; time: string | null; createdBy: string; going: string[] }[]>;
+      make(args: { denId: string; placeId: string; date: string; time?: string | null; going?: string[] }): Promise<{ id: string; denId: string; placeId: string; date: string; time: string | null; createdBy: string; going: string[] } | undefined>;
+    };
     confirmations: {
       log(args: { mode: string; offered: unknown[]; chosen?: number[]; engine?: string | null }): Promise<unknown>;
     };

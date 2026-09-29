@@ -258,6 +258,39 @@ select t.throws(format('select public.set_take(%L, %L, %L)', t.get('den'), t.get
 select t.throws(format('select public.delete_take(%L, %L)', t.get('den'), t.get('dual')), 'not_a_member',
                 'an outsider cannot delete one');
 
+-- ----------------------------------------------------------------- capers
+select t.login('alice');
+do $$
+declare c uuid; again uuid;
+begin
+  -- carol isn't in the Den, so she's dropped from "going" whatever the app sends
+  c := public.make_caper(t.get('den')::uuid, t.get('dual')::uuid, '2026-10-02', '7 pm',
+                         array[t.id('alice'), t.id('bob'), t.id('carol')]);
+  perform t.put('caper', c::text);
+  perform t.ok((select count(*) from public.caper_going where caper_id = c) = 2, 'a Caper is made, with only Den members going');
+  again := public.make_caper(t.get('den')::uuid, t.get('dual')::uuid, '2026-10-02', '8 pm', array[t.id('alice')]);
+  perform t.ok(again = c, 'the same place and day updates the Caper instead of duplicating it');
+  perform t.ok((select time_text from public.capers where id = c) = '8 pm'
+               and (select count(*) from public.caper_going where caper_id = c) = 1, '...with the new time and who''s going');
+  perform public.make_caper(t.get('den')::uuid, t.get('dual')::uuid, '2026-10-09', null, '{}');
+  perform t.ok((select count(*) from public.capers where den_id = t.get('den')::uuid) = 2, 'another day is another Caper');
+end $$;
+select t.throws(format('select public.make_caper(%L, gen_random_uuid(), %L)', t.get('den'), '2026-10-02'),
+                'place_not_in_stash', 'a Caper needs a place the Den saved');
+
+select t.login('bob');
+select t.ok((select count(*) from public.capers where den_id = t.get('den')::uuid) = 2, 'Den-mates see the Den''s Capers');
+select t.ok((select count(*) from public.caper_going where caper_id = t.get('caper')::uuid) = 1, '...and who''s going');
+
+select t.login('carol');
+select t.ok((select count(*) from public.capers) = 0, 'an outsider sees no Capers');
+select t.ok((select count(*) from public.caper_going) = 0, '...and not who''s going');
+select t.throws(format('select public.make_caper(%L, %L, %L)', t.get('den'), t.get('dual'), '2026-10-02'),
+                'not_a_member', 'an outsider cannot make a Caper');
+select t.throws(format('insert into public.capers (den_id, place_id, day) values (%L, %L, %L)',
+                       t.get('den'), t.get('dual'), '2026-10-03'),
+                'permission denied', 'Capers cannot be inserted around make_caper()');
+
 -- -------------------------------------------------- privilege escalation
 select t.login('bob');
 select t.throws(format('update public.profiles set is_pro = true where id = %L', t.id('bob')),

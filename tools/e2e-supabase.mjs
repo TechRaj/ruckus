@@ -115,6 +115,14 @@ async function main() {
   ok((await alice.stash.list(den.id)).find(r => r.placeId === dual.placeId)?.takes.length === 1, 'a take can be removed');
   await rejects(carol.takes.set(den.id, dual.placeId, 'hi'), 'not_a_member', 'a stranger cannot leave a take');
 
+  const caper = await alice.capers.make({
+    denId: den.id, placeId: dual.placeId, date: '2026-10-03', time: '7 pm',
+    going: [await alice.auth.userId(), await bob.auth.userId(), await carol.auth.userId()],
+  });
+  const bobsView = (await bob.capers.list(den.id)).find(c => c.id === caper?.id);
+  ok(bobsView?.time === '7 pm' && bobsView.going.length === 2, 'a Caper is shared with the Den, and outsiders are dropped from "going"');
+  ok((await carol.capers.list(den.id)).length === 0, 'a stranger sees no Capers');
+
   await rejects(carol.stash.list(den.id), 'not_a_member', 'a stranger cannot read the Stash');
   ok((await carol.dens.mine()).length === 0, 'a stranger sees no Dens');
   await rejects(carol.dens.join('ZZZZZZ'), 'invite_invalid', 'a wrong code is refused with a usable error');

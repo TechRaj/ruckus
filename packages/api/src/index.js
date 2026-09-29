@@ -37,6 +37,7 @@ export const ERRORS = {
   place_missing_id:   "We couldn't pin that place. Try searching for it.",
   place_not_in_stash: "That place isn't in this Den's Stash.",
   take_empty:         'Write something first.',
+  caper_needs_a_day:  'Pick a day for the plan.',
   // sign-in: these come from Supabase Auth, not our database
   code_invalid:       "That code didn't work. Check it, or ask for a new one.",
   too_many_codes:     "That's a lot of codes. Wait a minute, then try again.",
@@ -302,8 +303,35 @@ export function createRuckus({ url, anonKey, storage } = {}) {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'saves', filter: `den_id=eq.${denId}` }, () => cb())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'want_to_go', filter: `den_id=eq.${denId}` }, () => cb())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'takes', filter: `den_id=eq.${denId}` }, () => cb())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'capers', filter: `den_id=eq.${denId}` }, () => cb())
         .subscribe();
       return () => { supabase.removeChannel(channel); };
+    },
+  };
+
+  /* -------------------------------------------------------------- capers -- */
+
+  const capers = {
+    /** Every Caper in the Den, soonest first: `{ id, denId, placeId, date, time, createdBy, going[] }`. */
+    async list(denId) {
+      const rows = await run(supabase
+        .from('capers')
+        .select('id, den_id, place_id, day, time_text, created_by, caper_going(profile_id)')
+        .eq('den_id', denId)
+        .order('day'));
+      return rows.map(r => ({
+        id: r.id, denId: r.den_id, placeId: r.place_id, date: r.day, time: r.time_text,
+        createdBy: r.created_by, going: (r.caper_going ?? []).map(g => g.profile_id),
+      }));
+    },
+
+    /**
+     * Make a Caper - or update it, if the place already has one that day.
+     * `going` is filtered to people in the Den on the server.
+     */
+    async make({ denId, placeId, date, time = null, going = [] }) {
+      const id = await rpc('make_caper', { p_den: denId, p_place: placeId, p_day: date, p_time: time, p_going: going });
+      return (await capers.list(denId)).find(c => c.id === id);
     },
   };
 
@@ -349,7 +377,7 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       rpc('unregister_push_token', { p_token: token }),
   };
 
-  return { supabase, auth, profile, dens, stash, takes, confirmations, notifications };
+  return { supabase, auth, profile, dens, stash, takes, capers, confirmations, notifications };
 }
 
 /** snake_case row from den_stash() -> the camelCase shape screens use */

@@ -461,7 +461,6 @@ Known gaps:
 
 - **The multi-place confirm screen.** Itinerary reels return up to 8 places and
   there is no "pick which to save" design. Today they fall back to picking one.
-- **Capers on the backend.** The app keeps them for the session only. They need a table: Den, place, date, time, creator, who is going.
 - **After a Caper's date has passed.** Nothing marks it as done yet.
 - **Badges** (Scallywag, Ringleader, Night Owl) have no screen.
 - **A styled map.** The `map*` tokens are waiting on a renderer that supports them.
