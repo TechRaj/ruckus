@@ -97,7 +97,6 @@ let lastResolve: { result: ExtractResult; byId: Map<string, ResolvedPlace> } | n
  */
 const searched = new Map<string, ResolvedPlace>();
 
-const tierConfidence = { high: 0.9, medium: 0.6, low: 0.3 } as const;
 
 function toCandidate(p: ResolvedPlace): PlaceCandidate | null {
   if (!p.googlePlaceId || !p.coordinate) return null;
@@ -108,7 +107,6 @@ function toCandidate(p: ResolvedPlace): PlaceCandidate | null {
     lat: p.coordinate.lat,
     lng: p.coordinate.lng,
     category: toCategory(p.kind, p.category),
-    confidence: tierConfidence[p.tier],
     reason: p.explanation?.text,
   };
 }

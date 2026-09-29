@@ -21,7 +21,7 @@ The standing context is the root `CLAUDE.md`. The interface is described in the 
     App.tsx                 fonts, providers, the navigator
     src/
       types/index.ts        the shapes agreed with the backend, plus Filter / Sort,
-                            CATEGORY_LABEL, CONFIDENT, PLAN_THRESHOLD — every shared
+                            CATEGORY_LABEL, PLAN_THRESHOLD — every shared
                             constant and type lives here
       api/types.ts          the Api interface every screen builds against
       api/client.ts         picks the adapter: mock without keys, real with them

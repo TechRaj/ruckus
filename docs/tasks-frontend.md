@@ -34,7 +34,7 @@ Nothing below is trustworthy until this works end to end.
 5. Write down every place it breaks. Backend problems go to Shruthi/Karthik with
    the `e.code` and what you did.
 
-## Task 1 — Route the confirm screen on `mode`, not on confidence
+## Task 1 — Route the confirm screen on `mode`, not on confidence  ✅ done
 
 **Bug.** `ConfirmScreen.tsx` decides "one result or three" from
 `list[0].confidence >= CONFIDENT`. That ignores the `mode` the pipeline returns —

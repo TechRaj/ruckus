@@ -86,17 +86,17 @@ export const mockCandidates: PlaceCandidate[] = [
   {
     placeId: 'p_dualcitizen', name: 'Dual Citizen Coffee Bar',
     address: '930 King St W, Toronto', lat: 43.6440, lng: -79.4025,
-    category: 'eat', confidence: 0.91, reason: 'Matched from a tagged handle',
+    category: 'eat', reason: 'Matched from a tagged handle',
   },
   {
     placeId: 'p_citizen2', name: 'Citizen Coffee',
     address: '412 Queen St W, Toronto', lat: 43.6482, lng: -79.3975,
-    category: 'eat', confidence: 0.44, reason: 'Name is close',
+    category: 'eat', reason: 'Name is close',
   },
   {
     placeId: 'p_dualcafe', name: 'Dual Café',
     address: '75 Ossington Ave, Toronto', lat: 43.6465, lng: -79.4195,
-    category: 'eat', confidence: 0.31, reason: 'Name is close',
+    category: 'eat', reason: 'Name is close',
   },
 ];
 
@@ -105,10 +105,10 @@ export const mockSearch: PlaceCandidate[] = [
   ...mockCandidates,
   {
     placeId: 'p_barraval', name: 'Bar Raval', address: '505 College St, Toronto',
-    lat: 43.6558, lng: -79.4118, category: 'drink', confidence: 1,
+    lat: 43.6558, lng: -79.4118, category: 'drink',
   },
   {
     placeId: 'p_sanagans', name: "Sanagan's Meat Locker", address: '176 Baldwin St, Toronto',
-    lat: 43.6547, lng: -79.4021, category: 'eat', confidence: 1,
+    lat: 43.6547, lng: -79.4021, category: 'eat',
   },
 ];

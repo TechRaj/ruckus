@@ -22,9 +22,6 @@ export type Critter =
   | 'raccoon' | 'possum' | 'squirrel' | 'skunk'
   | 'chipmunk' | 'pigeon' | 'fox' | 'crow';
 
-/** A candidate at or above this confidence is shown alone on the confirm screen. */
-export const CONFIDENT = 0.75;
-
 /** A ranked guess from the pipeline, shown on the confirm screen. */
 export interface PlaceCandidate {
   placeId: string;
@@ -33,8 +30,6 @@ export interface PlaceCandidate {
   lat: number;
   lng: number;
   category: Category;
-  /** From 0 to 1. Decides which confirm variant renders. */
-  confidence: number;
   /** Why the pipeline picked it. Shown under the name. */
   reason?: string;
 }

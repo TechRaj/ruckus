@@ -21,7 +21,8 @@ import { Sniffing } from '../components/Sniffing';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, radius, space, type } from '../theme/tokens';
-import { CONFIDENT, PlaceCandidate } from '../types';
+import { PlaceCandidate } from '../types';
+import type { ConfirmMode } from '../api/types';
 
 type Mode = 'resolving' | 'pick' | 'search' | 'saving';
 
@@ -39,6 +40,8 @@ export function ConfirmScreen({
   const picker = useDenPicker();
   const [mode, setMode] = useState<Mode>(startInSearch ? 'search' : 'resolving');
   const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null);
+  /** The pipeline's own call on how sure it is (CLAUDE.md §5.8). The screen follows it. */
+  const [linkMode, setLinkMode] = useState<ConfirmMode | null>(null);
   const [results, setResults] = useState<PlaceCandidate[]>([]);
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState<string | null>(null);
@@ -63,6 +66,7 @@ export function ConfirmScreen({
         /** No candidates, so go to search. */
         if (m === 'search' || c.length === 0) { setMode('search'); return; }
         setCandidates(c);
+        setLinkMode(m);
         setFromLink(c);
         setChosen(c[0]?.placeId ?? null);
         setMode('pick');
@@ -224,7 +228,10 @@ export function ConfirmScreen({
   }
 
   const list = candidates ?? [];
-  const confident = list[0] && list[0].confidence >= CONFIDENT;
+  // 'single' is the pipeline saying one place is clearly it; 'choose' means
+  // several are plausible - two cafés named in one reel - so show them all.
+  // A place picked from search is settled: they chose it.
+  const confident = Boolean(list[0]) && (pickedBySearch || linkMode === 'single');
   const shown = confident && !expanded ? list.slice(0, 1) : list.slice(0, 3);
   const hidden = list.length - shown.length;
 
