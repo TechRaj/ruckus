@@ -408,6 +408,7 @@ function toStashRow(r) {
     when: r.when_text || r.when_start || r.when_recurring
       ? { text: r.when_text, start: r.when_start, end: r.when_end, recurring: r.when_recurring }
       : null,
+    headline: r.headline ?? null,
     wantCount: r.want_count,
     iWant: r.i_want,
     wanters: (r.wanters ?? []).map(w => ({ id: w.profile_id, displayName: w.display_name, avatar: w.avatar })),

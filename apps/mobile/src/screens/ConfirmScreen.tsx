@@ -18,9 +18,10 @@ import {
 import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
+import { dotted, eventLabel, eventOver } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
-import { colors, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type } from '../theme/tokens';
 import { PlaceCandidate } from '../types';
 import type { ConfirmMode } from '../api/types';
 
@@ -265,6 +266,13 @@ export function ConfirmScreen({
               <View style={styles.resultBody}>
                 <Text style={styles.name} numberOfLines={2}>{c.name}</Text>
                 <Text style={styles.address} numberOfLines={2}>{c.address}</Text>
+                {/* what's on and when - for a pop-up that's the reason to save it, and
+                    a date that's already gone by should be seen before saving, not after */}
+                {c.headline || eventLabel(c.when) ? (
+                  <Text style={[styles.happening, eventOver(c.when) && styles.happeningOver]} numberOfLines={2}>
+                    {dotted(c.headline, eventLabel(c.when))}
+                  </Text>
+                ) : null}
                 {c.reason ? <Text style={styles.reason}>{c.reason}</Text> : null}
               </View>
               {on ? (
@@ -325,6 +333,8 @@ const styles = StyleSheet.create({
   },
   name: { ...type.rowTitle, fontSize: 19, color: colors.ink },
   address: { ...type.meta, fontSize: 14, lineHeight: 19, color: colors.inkSecondary, marginTop: 2 },
+  happening: { ...type.meta, fontSize: 14, lineHeight: 19, fontFamily: font.bold, color: colors.ink, marginTop: 6 },
+  happeningOver: { color: colors.warn },
   reason: { ...type.meta, color: colors.inkMuted, marginTop: 7 },
   tick: {
     width: 26, height: 26, borderRadius: 13, backgroundColor: colors.flare,

@@ -1,5 +1,6 @@
 /**
- * A Stash list row: name, neighbourhood and distance, then the saved note.
+ * A Stash list row: name, neighbourhood and distance, then the saved note -
+ * or, with no note, what's on there ("CHANEL cafe pop-up").
  * The leading tile shows the same glyph as the map pin. The trailing critter
  * is the member who saved the place.
  */
@@ -45,7 +46,7 @@ export function PlaceRow({
             : eventLabel(item.when) ? <Text style={styles.when}>{eventLabel(item.when)} · </Text> : null}
           {dotted(item.neighbourhood, item.distance)}
         </Text>
-        <Text style={styles.note} numberOfLines={1}>{item.note}</Text>
+        <Text style={styles.note} numberOfLines={1}>{item.note || item.headline}</Text>
       </View>
       {savedBy ? <CritterHead critter={savedBy.critter} size={44} /> : null}
     </PressableScale>

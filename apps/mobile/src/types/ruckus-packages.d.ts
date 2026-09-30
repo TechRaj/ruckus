@@ -53,6 +53,8 @@ declare module '@ruckus/api' {
     note: string | null;
     sourceUrls: string[];
     when: { text: string | null; start: string | null; end: string | null; recurring: string | null } | null;
+    /** What is on there, e.g. "CHANEL cafe pop-up". Null for a plain save. */
+    headline: string | null;
     wantCount: number;
     iWant: boolean;
     wanters: { id: string; displayName: string; avatar: string | null }[];
@@ -130,6 +132,8 @@ declare module '@ruckus/ingest' {
     kind: 'venue' | 'region' | 'event' | 'trail' | 'accommodation';
     category?: string | null;
     when: { text: string | null; start: string | null; end: string | null; recurring: string | null } | null;
+    /** What is on there, e.g. "CHANEL cafe pop-up". Null for a plain save. */
+    headline: string | null;
     sourceUrl: string;
     score: number;
     tier: 'high' | 'medium' | 'low';

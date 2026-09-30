@@ -78,6 +78,7 @@ Return ONLY a JSON object. No prose, no markdown fences.
       "address": "street address if stated, else null",
       "evidence": "the exact substring of the caption this came from — copy it verbatim, do not paraphrase",
       "geocode_query": "what to send to a places API, usually name + city",
+      "headline": "what is happening at this place, in a few words, else null",
       "when": {
         "text": "the date phrase exactly as the caption writes it, else null",
         "start": "YYYY-MM-DD, else null",
@@ -110,6 +111,17 @@ How to judge:
   VENUE that hosts them if the caption names one, and otherwise return nothing
   for that strand. The same applies to an event's own name: "Water Lantern
   Festival" is an event, and the place to save is the park it runs in.
+
+- "headline" names a happening at the place: a pop-up, a brand collab, a
+  festival, a seasonal attraction, a market, a trivia night, a giveaway.
+  "CHANEL cafe pop-up" at Dineen Coffee Co.; "Water Lantern Festival" at the
+  park; "Legends of Horror" at Casa Loma. Use the happening's own name when
+  the caption gives one. At most 6 words, a title not a sentence.
+  The test: would the headline still be true of the place a few months from
+  now? If yes, it describes the place and "headline" is null. "hidden cafe
+  with a waterfall", "newly opened", "viral desserts", "sunrise views", "boat
+  cruise", "ziplining" all fail it. Most places get null.
+  A headline never replaces a place: still return every place the reel names.
 
 - Travel reels often name several places, and some are regions rather than
   businesses (a lake, a park, a neighbourhood). Return them all, each tagged
@@ -187,6 +199,22 @@ function normaliseWhen(w) {
   return { text, start, end: end && start && end >= start ? end : null, recurring };
 }
 
+/**
+ * The line that says what is going on - "CHANEL cafe pop-up" - which the place
+ * name alone loses: the pin is Dineen Coffee Co., the reason to go is Chanel.
+ * Model-written and short, so it is a fact about the save rather than a copy
+ * of the caption (CLAUDE.md §7).
+ */
+export function normaliseHeadline(h, name) {
+  if (typeof h !== 'string') return null;
+  const s = h.replace(/\s+/g, ' ').trim();
+  // longer than a title is a sentence or a copied caption, not a headline
+  if (!s || s.length > 60 || s.split(' ').length > 8) return null;
+  // "Dineen Coffee Co." as the headline of Dineen Coffee Co. says nothing
+  if (name && s.toLowerCase() === String(name).trim().toLowerCase()) return null;
+  return s;
+}
+
 function toCandidates(result, parsed, resolvedNames) {
   return (result.places || [])
     .map(p => {
@@ -208,6 +236,7 @@ function toCandidates(result, parsed, resolvedNames) {
         explanation: explain(codes),
         geocodeQuery: p.geocode_query || p.name,
         when: normaliseWhen(p.when),
+        headline: normaliseHeadline(p.headline, p.name),
       };
     })
     .filter(c => c.name)

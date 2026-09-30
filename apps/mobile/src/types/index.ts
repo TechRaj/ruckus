@@ -32,6 +32,10 @@ export interface PlaceCandidate {
   category: Category;
   /** Why the pipeline picked it. Shown under the name. */
   reason?: string;
+  /** What is on there, e.g. "CHANEL cafe pop-up". Null for a plain place. */
+  headline?: string | null;
+  /** When it happens, if the reel said (CLAUDE.md §9). */
+  when?: EventWhen | null;
 }
 
 /**
@@ -69,6 +73,8 @@ export interface StashItem {
   distanceM?: number | null;
   /** When it happens, if the reel was an event (CLAUDE.md §9). */
   when?: EventWhen | null;
+  /** What is on there, e.g. "CHANEL cafe pop-up". The reason to go, which the name alone loses. */
+  headline?: string | null;
   address?: string;
 }
 

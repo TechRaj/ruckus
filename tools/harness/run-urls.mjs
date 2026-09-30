@@ -69,7 +69,10 @@ for (const [i, url] of urls.entries()) {
       for (const c of r.candidates) rows.push({
         ...base, name: c.name, kind: c.kind, score: c.score, tier: c.tier,
         placeId: c.googlePlaceId ?? '', address: c.address ?? '',
-        says: c.explanation?.text ?? '', 'correct?': '',
+        says: c.explanation?.text ?? '',
+        whenText: c.when?.text ?? '', whenStart: c.when?.start ?? '', whenEnd: c.when?.end ?? '',
+        whenRecurring: c.when?.recurring ?? '', headline: c.headline ?? '',
+        alsoSeenAs: (c.alsoSeenAs ?? []).join(' '), 'correct?': '',
       });
     }
   } catch (e) {
@@ -79,7 +82,8 @@ for (const [i, url] of urls.entries()) {
   await sleep(1500);
 }
 
-const cols = ['url', 'status', 'engine', 'mode', 'caption', 'name', 'kind', 'score', 'tier', 'placeId', 'address', 'says', 'correct?'];
+const cols = ['url', 'status', 'engine', 'mode', 'caption', 'name', 'kind', 'score', 'tier', 'placeId', 'address', 'says',
+  'whenText', 'whenStart', 'whenEnd', 'whenRecurring', 'headline', 'alsoSeenAs', 'correct?'];
 writeFileSync(outFile, [cols.join(','), ...rows.map(r => cols.map(c => cell(r[c])).join(','))].join('\n'));
 
 console.log('\n' + '='.repeat(52));
