@@ -4,6 +4,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { RoundButton } from './Chrome';
 import { IconMinus, IconNav, IconPlus } from './Icons';
+import { playTap } from '../theme/sound';
 import { colors, shadow, space } from '../theme/tokens';
 
 export function MapControls({
@@ -12,11 +13,11 @@ export function MapControls({
   return (
     <View style={[styles.controls, { top }]}>
       <View style={[styles.zoomStack, shadow.control]}>
-        <Pressable style={styles.zoomBtn} onPress={() => onZoom(1)} accessibilityLabel="Zoom in">
+        <Pressable style={styles.zoomBtn} onPress={() => { playTap(); onZoom(1); }} accessibilityLabel="Zoom in">
           <IconPlus size={22} color={colors.inkSecondary} />
         </Pressable>
         <View style={styles.zoomDivider} />
-        <Pressable style={styles.zoomBtn} onPress={() => onZoom(-1)} accessibilityLabel="Zoom out">
+        <Pressable style={styles.zoomBtn} onPress={() => { playTap(); onZoom(-1); }} accessibilityLabel="Zoom out">
           <IconMinus size={22} color={colors.inkSecondary} />
         </Pressable>
       </View>

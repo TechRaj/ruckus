@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { CritterHead } from './CritterHead';
 import { EASE_OUT, useReduceMotion } from '../theme/motion';
+import { playTap } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
 
@@ -41,12 +42,12 @@ export function TakeCard({
             {(member?.displayName ?? 'someone').toUpperCase()} · {meta}
           </Text>
           {onEdit ? (
-            <Pressable onPress={onEdit} hitSlop={8} accessibilityRole="button" accessibilityLabel="Edit your comment">
+            <Pressable onPress={() => { playTap(); onEdit(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Edit your comment">
               <Text style={styles.action}>Edit</Text>
             </Pressable>
           ) : null}
           {onDelete ? (
-            <Pressable onPress={onDelete} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete your comment">
+            <Pressable onPress={() => { playTap(); onDelete(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete your comment">
               <Text style={styles.action}>Delete</Text>
             </Pressable>
           ) : null}

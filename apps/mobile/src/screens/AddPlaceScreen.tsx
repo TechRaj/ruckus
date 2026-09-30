@@ -13,6 +13,7 @@ import { IconLink, IconSearch, PawPrint } from '../components/Icons';
 import { Hint, keyboardDismissMode } from '../components/Chrome';
 import { SheetModal } from '../components/SheetModal';
 import { lines } from '../theme/lines';
+import { playTap } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function AddPlaceScreen({
@@ -59,7 +60,7 @@ export function AddPlaceScreen({
             style={styles.input}
           />
           <Pressable
-            onPress={() => (url.trim() ? onResolve(url.trim()) : paste())}
+            onPress={() => { playTap(); url.trim() ? onResolve(url.trim()) : paste(); }}
             style={({ pressed }) => [styles.paste, pressed && { opacity: 0.7 }]}
           >
             <Text style={styles.pasteLabel}>{url.trim() ? 'Go' : 'Paste'}</Text>

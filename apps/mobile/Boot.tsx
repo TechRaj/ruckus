@@ -5,13 +5,15 @@
 import { useEffect, useState, type ComponentType } from 'react';
 import { View } from 'react-native';
 import { readEntered } from './src/theme/entered';
+import { prepareSounds, readSoundChoice } from './src/theme/sound';
 
 export default function Boot() {
   const [App, setApp] = useState<ComponentType | null>(null);
 
   useEffect(() => {
-    readEntered().then(() => {
+    Promise.all([readEntered(), readSoundChoice()]).then(() => {
       setApp(() => (require('./App') as { default: ComponentType }).default);
+      prepareSounds();
     });
   }, []);
 

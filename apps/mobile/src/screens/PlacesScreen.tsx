@@ -17,6 +17,7 @@ import { GlassSheetBackground } from '../components/GlassSheetBackground';
 import { Grain } from '../components/Grain';
 import { IconPlus } from '../components/Icons';
 import { MapControls } from '../components/MapControls';
+import { MusicButton } from '../components/MusicButton';
 import { PlaceRow, ROW_HEIGHT } from '../components/PlaceRow';
 import { RascalPeek } from '../components/RascalPeek';
 import { useStashMarkers } from '../hooks/useStashMarkers';
@@ -26,6 +27,7 @@ import { holdListAt, useListScrollLock } from '../hooks/useListScrollLock';
 import { useSheetGeometry } from '../hooks/useSheetGeometry';
 import { describeView } from '../state/stashCopy';
 import { rascalSleep } from '../theme/critters';
+import { playTap } from '../theme/sound';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_DRAWER, tapSelection, useReduceMotion } from '../theme/motion';
@@ -47,8 +49,9 @@ export function PlacesScreen() {
 
   /** On pin press, pan the map, raise the sheet from peek, and scroll to the row. */
   const onPinPress = useCallback((item: StashItem) => {
-    /** Markers are cached native snapshots that Reanimated cannot animate, so feedback is a haptic. */
+    /** Markers are cached native snapshots that Reanimated cannot animate, so feedback is a haptic and a sound. */
     tapSelection();
+    playTap();
     select(item.id === selectedId ? null : item.id);
     if (item.id !== selectedId) {
       camera.panTo(item);
@@ -153,6 +156,10 @@ export function PlacesScreen() {
           title="Places"
           style={{ position: 'absolute', top: geo.insets.top + 14, left: 0, right: 0 }}
         />
+        {/* Level with the day/night switch, on the other side. */}
+        <View style={[styles.music, { top: geo.insets.top + 14 - 4 }]}>
+          <MusicButton />
+        </View>
         {/* Placed beside the title so the controls stay clear of the sheet at the half detent. */}
         <MapControls top={geo.insets.top + 70} onZoom={camera.zoom} onRecentre={() => camera.recentre({ position, points: stash, bottomInset: geo.snapPoints[detentIndex] ?? 0 })} />
       </Animated.View>
@@ -270,6 +277,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.mapLand },
   handle: { backgroundColor: colors.hairline, width: 44, height: 5 },
   veil: { position: 'absolute', top: 0, left: 0, right: 0 },
+  music: { position: 'absolute', right: space.lg },
   sheetHeader: {
     flexDirection: 'row', alignItems: 'center', gap: space.md,
     paddingHorizontal: space.xl, paddingBottom: space.lg, paddingTop: 2,

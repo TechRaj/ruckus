@@ -13,7 +13,9 @@ import { Field, Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { CritterPicker } from '../components/CritterPicker';
 import { EMBLEMS, Emblem } from '../components/Emblem';
 import { IconChevronLeft, PawPrint } from '../components/Icons';
+import { PressableScale } from '../components/PressableScale';
 import { lines } from '../theme/lines';
+import { playFail, playTap } from '../theme/sound';
 import { colors, launchCritters, space, type } from '../theme/tokens';
 import { Critter as CritterName } from '../types';
 
@@ -44,6 +46,7 @@ export function OnboardingScreen() {
       return true;
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message.toLowerCase() : 'something went wrong. try again.');
+      playFail();
       return false;
     } finally {
       setBusy(false);
@@ -125,15 +128,17 @@ export function OnboardingScreen() {
         <Kicker>Pick an emblem</Kicker>
         <View style={styles.emblems}>
           {EMBLEMS.map(e => (
-            <Pressable
+            <PressableScale
               key={e}
               onPress={() => setEmblem(e)}
+              haptic="selection"
+              scaleTo={0.94}
               accessibilityRole="radio"
               accessibilityState={{ selected: emblem === e }}
               style={[styles.emblemTile, emblem === e && styles.tileOn]}
             >
               <Emblem name={e} size={32} />
-            </Pressable>
+            </PressableScale>
           ))}
         </View>
         <View style={styles.note}>
@@ -155,7 +160,7 @@ export function OnboardingScreen() {
 
 function Back({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} hitSlop={12} style={styles.back} accessibilityLabel="Back">
+    <Pressable onPress={() => { playTap(); onPress(); }} hitSlop={12} style={styles.back} accessibilityLabel="Back">
       <IconChevronLeft />
     </Pressable>
   );

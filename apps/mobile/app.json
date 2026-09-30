@@ -50,6 +50,13 @@
           "disableAndroid": true,
           "iosShareExtensionName": "Save to Ruckus"
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "enableBackgroundPlayback": false
+        }
       ]
     ],
     "scheme": "ruckus"

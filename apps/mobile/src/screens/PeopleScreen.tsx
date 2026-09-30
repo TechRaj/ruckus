@@ -3,7 +3,7 @@
  * Invites use the six-character code because the ruckus.app domain is not set up for universal links.
  */
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
@@ -17,6 +17,7 @@ import { PressableScale } from '../components/PressableScale';
 import { useStash } from '../state/StashContext';
 import { ROOM_WARNING } from '../types';
 import { lines } from '../theme/lines';
+import { chooseSound, playTap, soundOn } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
@@ -29,6 +30,7 @@ export function PeopleScreen() {
   const [code, setCode] = useState('');
   const [denName, setDenName] = useState('');
   const [emblem, setEmblem] = useState<string>(EMBLEMS[0]);
+  const [sounds, setSounds] = useState(soundOn());
   const [busy, setBusy] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
 
@@ -140,7 +142,7 @@ export function PeopleScreen() {
         <Pressable
           style={({ pressed }) => [styles.pro, pressed && { backgroundColor: colors.paperSunk }]}
           accessibilityRole="button"
-          onPress={openPro}
+          onPress={() => { playTap(); openPro(); }}
         >
           <Emblem name="moon" size={32} />
           <View style={{ flex: 1 }}>
@@ -149,6 +151,24 @@ export function PeopleScreen() {
           </View>
           <IconChevronRight />
         </Pressable>
+
+        <View style={[styles.pro, { marginTop: space.md }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.proTitle}>Sounds</Text>
+            <Text style={styles.meta}>Little bongs and chimes. The silent switch always wins.</Text>
+          </View>
+          <Switch
+            value={sounds}
+            onValueChange={next => {
+              setSounds(next);
+              chooseSound(next);
+              /** Turning them on is the first thing you hear. */
+              if (next) playTap();
+            }}
+            trackColor={{ true: colors.flareDeep, false: colors.paperSunk }}
+            accessibilityLabel="Sounds"
+          />
+        </View>
 
         {panel === 'closed' ? (
           <TextButton label={dens.length > 1 ? `Switch Den · ${dens.length}` : 'Switch or add a Den'} onPress={() => setPanel('switch')} muted />
@@ -165,7 +185,7 @@ export function PeopleScreen() {
                       key={d.id}
                       accessibilityRole="button"
                       accessibilityState={{ selected: here }}
-                      onPress={async () => { closePanel(); await switchDen(d.id); }}
+                      onPress={async () => { playTap(); closePanel(); await switchDen(d.id); }}
                       style={({ pressed }) => [styles.denRow, pressed && { backgroundColor: colors.paperSunk }]}
                     >
                       <Emblem name={d.emblem} size={32} />
@@ -201,8 +221,10 @@ export function PeopleScreen() {
                 <Kicker>Pick an emblem</Kicker>
                 <View style={styles.emblems}>
                   {EMBLEMS.map(e => (
-                    <Pressable
+                    <PressableScale
                       key={e}
+                      haptic="selection"
+                      scaleTo={0.94}
                       accessibilityRole="button"
                       accessibilityLabel={e}
                       accessibilityState={{ selected: emblem === e }}
@@ -210,7 +232,7 @@ export function PeopleScreen() {
                       style={[styles.emblemPick, emblem === e && styles.emblemPicked]}
                     >
                       <Emblem name={e} size={36} />
-                    </Pressable>
+                    </PressableScale>
                   ))}
                 </View>
                 {panelError ? <Hint style={styles.error}>{panelError}</Hint> : null}

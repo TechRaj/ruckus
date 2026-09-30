@@ -12,6 +12,7 @@ import { SheetModal } from '../components/SheetModal';
 import { rascalStand } from '../theme/critters';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapSuccess, useReduceMotion } from '../theme/motion';
+import { playConfirm } from '../theme/sound';
 import { useStash } from '../state/StashContext';
 import { colors, space, type } from '../theme/tokens';
 
@@ -39,6 +40,7 @@ export function SavedScreen({
 
   useEffect(() => {
     tapSuccess();
+    playConfirm();
     /** The image springs in and the title fades in 40ms later. Under Reduce Motion both only fade. */
     scale.value = reduce ? 1 : withSpring(1, { duration: 520, dampingRatio: 0.8 });
     fade.value = withDelay(40, withTiming(1, { duration: 220, easing: EASE_OUT }));

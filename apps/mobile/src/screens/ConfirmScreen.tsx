@@ -25,6 +25,7 @@ import { dotted, eventLabel, eventOver } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { rascalSleep } from '../theme/critters';
 import { lines } from '../theme/lines';
+import { playFail, playTap } from '../theme/sound';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { PlaceCandidate } from '../types';
 import type { ConfirmMode } from '../api/types';
@@ -92,7 +93,7 @@ export function ConfirmScreen({
         setChosen(firstTicks(c, m));
         setMode('pick');
       })
-      .catch(() => { if (live) setFailed(true); });
+      .catch(() => { if (live) { setFailed(true); playFail(); } });
     return () => { live = false; };
   }, [sharedUrl, startInSearch]);
 
@@ -187,7 +188,7 @@ export function ConfirmScreen({
       <SheetModal onClose={onClose} height={0.88}>
         <View style={styles.searchHead}>
           <Pressable
-            onPress={leaveSearch} hitSlop={12} style={styles.back}
+            onPress={() => { playTap(); leaveSearch(); }} hitSlop={12} style={styles.back}
             accessibilityRole="button"
             accessibilityLabel={fromLink?.length ? 'Back to the matches' : 'Back to Add a place'}
           >
@@ -220,6 +221,7 @@ export function ConfirmScreen({
             <Pressable
               key={r.placeId}
               onPress={() => {
+                playTap();
                 setCandidates([r]);
                 setChosen([r.placeId]);
                 setPickedBySearch(true);
@@ -289,7 +291,7 @@ export function ConfirmScreen({
               ? 'tap any other to add it too.'
               : `${chosen.length} of ${shown.length} ticked. tap to add or leave out.`}</Hint>
             <Pressable
-              onPress={() => setChosen(allTicked ? [] : shown.slice(0, MOST).map(c => c.placeId))}
+              onPress={() => { playTap(); setChosen(allTicked ? [] : shown.slice(0, MOST).map(c => c.placeId)); }}
               hitSlop={10}
               accessibilityRole="button"
             >

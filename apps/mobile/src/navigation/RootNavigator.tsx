@@ -5,7 +5,7 @@
  */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconHome, IconPeople, IconPin } from '../components/Icons';
@@ -18,6 +18,7 @@ import { PlacesScreen } from '../screens/PlacesScreen';
 import { SignedOutScreen } from '../screens/SignedOutScreen';
 import { useStash } from '../state/StashContext';
 import { USE_MOCKS } from '../api/client';
+import { setInside } from '../theme/sound';
 import { useFollowTheClock } from '../theme/clock';
 import { colors, layout, radius, space, type } from '../theme/tokens';
 
@@ -42,6 +43,9 @@ export function RootNavigator() {
     !USE_MOCKS,
   );
   const insets = useSafeAreaInsets();
+
+  /** The music plays in the tabs only. */
+  useEffect(() => { setInside(session === 'ready'); }, [session]);
 
   /** Signed out shows the welcome screen or sign in. Signed in with no Den shows onboarding. Otherwise the tabs. */
   if (session === 'loading') {

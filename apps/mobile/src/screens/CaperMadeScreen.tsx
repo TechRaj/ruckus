@@ -13,6 +13,7 @@ import { useStash } from '../state/StashContext';
 import { rascalStand } from '../theme/critters';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapSuccess, useReduceMotion } from '../theme/motion';
+import { playConfirm } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
 
@@ -23,7 +24,7 @@ export function CaperMadeScreen({ caperId, onClose }: { caperId: string; onClose
   const reduce = useReduceMotion();
   const plan = upcoming.find(u => u.caper.id === caperId);
 
-  useEffect(() => { tapSuccess(); }, []);
+  useEffect(() => { tapSuccess(); playConfirm(); }, []);
 
   if (!plan) {
     return (

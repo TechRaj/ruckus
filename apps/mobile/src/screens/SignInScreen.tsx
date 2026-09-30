@@ -17,6 +17,7 @@ import { Sprite } from '../components/Sprite';
 import { forgetEmail, rememberEmail } from '../lib/lastSignIn';
 import { useStash } from '../state/StashContext';
 import { useReduceMotion } from '../theme/motion';
+import { playFail } from '../theme/sound';
 import { jump, jumpHop, jumpHopMs, jumpIdle } from '../theme/sprites';
 import { colors, font, radius, space, type } from '../theme/tokens';
 
@@ -76,6 +77,7 @@ export function SignInScreen({
       setStep('code');
     } catch (err) {
       setError(messageOf(err));
+      playFail();
     } finally {
       setBusy(false);
     }
@@ -110,6 +112,7 @@ export function SignInScreen({
       enter.current = setTimeout(() => { refreshSession(); }, reduce ? 700 : jumpHopMs + 200);
     } catch (err) {
       setError(messageOf(err));
+      playFail();
       setRejected(true);
       setBusy(false);
     }
