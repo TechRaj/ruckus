@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
@@ -16,12 +16,13 @@ import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { DenMenu, DenPill, useDenPicker } from '../components/DenPicker';
 import { EmptyState } from '../components/EmptyState';
 import {
-  IconCheck, IconChevronLeft, IconChevronRight, IconSearch, PawPrint,
+  IconCheck, IconChevronLeft, IconChevronRight, IconSearch,
 } from '../components/Icons';
 import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
 import { useStash } from '../state/StashContext';
+import { rascalSleep } from '../theme/critters';
 import { lines } from '../theme/lines';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { PlaceCandidate } from '../types';
@@ -236,7 +237,7 @@ export function ConfirmScreen({
             </Pressable>
           ))}
           <View style={styles.searchFoot}>
-            <PawPrint size={30} />
+            <Image source={rascalSleep.source} style={styles.sleeping} accessibilityLabel="Rascal asleep" />
             <Hint style={{ textAlign: 'center' }}>{lines.hint.stillNothing}</Hint>
           </View>
         </ScrollView>
@@ -414,5 +415,6 @@ const styles = StyleSheet.create({
   /** minWidth 0 lets the text wrap inside the row instead of pushing the chevron out. */
   resultBody: { flex: 1, minWidth: 0 },
   resultName: { ...type.rowTitle, fontSize: 17, color: colors.ink },
-  searchFoot: { alignItems: 'center', gap: space.md, padding: 30 },
+  searchFoot: { alignItems: 'center', gap: space.sm, padding: 30 },
+  sleeping: { width: 150, height: 150 / rascalSleep.aspect },
 });

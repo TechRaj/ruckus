@@ -27,6 +27,11 @@ export const rascalHang = {
   aspect: 384 / 317,
   pawLine: 0.9,
 };
+/** The mascot asleep. Marks the end of a list. */
+export const rascalSleep = {
+  source: require('../../assets/critters/rascal-sleep.png'),
+  aspect: 560 / 287,
+};
 /** The mascot standing, hat on. Shown when a place is saved. */
 export const rascalStand = {
   source: require('../../assets/critters/rascal-stand.png'),

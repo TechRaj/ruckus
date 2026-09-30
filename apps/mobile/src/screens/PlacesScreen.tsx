@@ -5,7 +5,7 @@
  */
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,7 +15,7 @@ import { EmptyState } from '../components/EmptyState';
 import { FilterChips } from '../components/FilterChips';
 import { GlassSheetBackground } from '../components/GlassSheetBackground';
 import { Grain } from '../components/Grain';
-import { IconPlus, PawPrint } from '../components/Icons';
+import { IconPlus } from '../components/Icons';
 import { MapControls } from '../components/MapControls';
 import { PlaceRow, ROW_HEIGHT } from '../components/PlaceRow';
 import { RascalPeek } from '../components/RascalPeek';
@@ -25,6 +25,7 @@ import { TORONTO, useMapCamera } from '../hooks/useMapCamera';
 import { holdListAt, useListScrollLock } from '../hooks/useListScrollLock';
 import { useSheetGeometry } from '../hooks/useSheetGeometry';
 import { describeView } from '../state/stashCopy';
+import { rascalSleep } from '../theme/critters';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_DRAWER, tapSelection, useReduceMotion } from '../theme/motion';
@@ -246,7 +247,7 @@ export function PlacesScreen() {
               )}
               ListFooterComponent={
                 <View style={styles.footer}>
-                  <PawPrint size={32} />
+                  <Image source={rascalSleep.source} style={styles.sleeping} accessibilityLabel="Rascal asleep" />
                   <Hint>{lines.hint.endOfStash}</Hint>
                 </View>
               }
@@ -283,5 +284,6 @@ const styles = StyleSheet.create({
   listFlex: { flex: 1 },
   centre: { padding: space.xl, alignItems: 'center', gap: space.sm },
   error: { ...type.bodyMed, color: colors.inkSecondary, textAlign: 'center' },
-  footer: { alignItems: 'center', gap: space.md, paddingVertical: 30 },
+  footer: { alignItems: 'center', gap: space.sm, paddingVertical: 30 },
+  sleeping: { width: 150, height: 150 / rascalSleep.aspect },
 });
