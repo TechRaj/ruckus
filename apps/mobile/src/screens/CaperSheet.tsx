@@ -18,6 +18,10 @@ import { lines } from '../theme/lines';
 import { colors, edge, font, radius, space, type } from '../theme/tokens';
 
 const TIMES = ['6 pm', '7 pm', '8 pm'];
+const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+/** "7 pm", "7:30 pm": the :00 is left off, matching the quick picks. */
+const timeText = (hour: number, half: boolean, pm: boolean) => `${hour}${half ? ':30' : ''} ${pm ? 'pm' : 'am'}`;
 
 export function CaperSheet({
   id, onClose, onMade,
@@ -29,6 +33,11 @@ export function CaperSheet({
   /** The calendar, for a day beyond the quick picks. */
   const [calendar, setCalendar] = useState(false);
   const [time, setTime] = useState<string | null>(null);
+  /** The clock, for a time beyond the quick picks. */
+  const [clock, setClock] = useState(false);
+  const [hour, setHour] = useState(7);
+  const [half, setHalf] = useState(false);
+  const [pm, setPm] = useState(true);
   /** Null until someone is unticked. Until then everyone who is in is going. */
   const [picked, setPicked] = useState<string[] | null>(null);
   const going = picked ?? item?.interested ?? [];
@@ -86,9 +95,36 @@ export function CaperSheet({
         <Kicker style={styles.label}>What time? (optional)</Kicker>
         <View style={styles.chips}>
           {TIMES.map(t => (
-            <Chip key={t} on={time === t} onPress={() => setTime(time === t ? null : t)} label={t} />
+            <Chip key={t} on={time === t} onPress={() => { setTime(time === t ? null : t); setClock(false); }} label={t} />
           ))}
+          {/* a time the quick picks do not cover shows here once chosen */}
+          <Chip
+            on={clock || (time !== null && !TIMES.includes(time))}
+            onPress={() => {
+              if (clock) { setClock(false); return; }
+              setClock(true);
+              setTime(timeText(hour, half, pm));
+            }}
+            label={time && !TIMES.includes(time) ? time : 'Another time'}
+          />
         </View>
+        {clock ? (
+          <View style={styles.clock}>
+            <View style={styles.chips}>
+              {HOURS.map(h => (
+                <Chip key={h} on={hour === h} small onPress={() => { setHour(h); setTime(timeText(h, half, pm)); }} label={String(h)} />
+              ))}
+            </View>
+            <View style={[styles.chips, { marginTop: space.sm }]}>
+              <Chip on={!half} small onPress={() => { setHalf(false); setTime(timeText(hour, false, pm)); }} label=":00" />
+              <Chip on={half} small onPress={() => { setHalf(true); setTime(timeText(hour, true, pm)); }} label=":30" />
+              <View style={{ width: space.sm }} />
+              <Chip on={!pm} small onPress={() => { setPm(false); setTime(timeText(hour, half, false)); }} label="am" />
+              <Chip on={pm} small onPress={() => { setPm(true); setTime(timeText(hour, half, true)); }} label="pm" />
+            </View>
+            <TextButton label="No time after all" onPress={() => { setTime(null); setClock(false); }} muted />
+          </View>
+        ) : null}
 
         <Kicker style={styles.label}>Who's going</Kicker>
         {item.interested.map(userId => {
@@ -129,8 +165,8 @@ export function CaperSheet({
 }
 
 function Chip({
-  label, note, on, onPress,
-}: { label: string; note?: string; on: boolean; onPress: () => void }) {
+  label, note, on, onPress, small,
+}: { label: string; note?: string; on: boolean; onPress: () => void; small?: boolean }) {
   return (
     <PressableScale
       onPress={onPress}
@@ -139,7 +175,7 @@ function Chip({
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       accessibilityLabel={note ? `${label}, ${note}` : label}
-      style={[styles.chip, on && styles.chipOn]}
+      style={[styles.chip, small && styles.chipSmall, on && styles.chipOn]}
     >
       <Text style={[styles.chipLabel, on && { color: colors.onFlare }]}>{label}</Text>
       {note ? <Text style={[styles.chipNote, on && { color: colors.onFlare }]}>{note}</Text> : null}
@@ -154,6 +190,9 @@ const styles = StyleSheet.create({
   label: { marginTop: space.xl, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   calendar: { marginTop: space.md },
+  clock: { marginTop: space.md, alignItems: 'flex-start' },
+  /** Hours and halves: a tighter chip, so twelve fit in two rows. */
+  chipSmall: { height: 40, paddingHorizontal: 0, minWidth: 48, justifyContent: 'center' },
   chip: {
     height: 44, paddingHorizontal: space.lg, borderRadius: radius.pill,
     flexDirection: 'row', alignItems: 'center', gap: 6,
