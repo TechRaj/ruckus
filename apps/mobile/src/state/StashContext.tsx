@@ -7,6 +7,7 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { AppState } from 'react-native';
 import { api } from '../api/client';
 import { currentPosition, Position } from '../lib/location';
 import { markSignedOut } from '../lib/lastSignIn';
@@ -71,7 +72,7 @@ interface StashState {
   updateTake: (id: string, text: string) => void;
   deleteTake: (id: string) => void;
   /** Saves one or more places in one write. */
-  addToStash: (placeIds: string[], sourceUrl: string | null) => Promise<StashItem[]>;
+  addToStash: (placeIds: string[], sourceUrl: string | null, dates?: Record<string, string>) => Promise<StashItem[]>;
   /** Take my save out of the Stash. A friend's save of the same place keeps it there. */
   removeFromStash: (id: string) => Promise<void>;
   openOverlay: (o: Overlay) => void;
@@ -207,11 +208,22 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     return api.syncPro();
   }, [isPro]);
 
-  /** Reloads quietly when another member saves, votes or comments. */
+  /** Reloads quietly when another member saves, votes or comments. Keyed on the id: the Den object is replaced on every session refresh. */
+  const denId = den?.id ?? null;
   useEffect(() => {
-    if (!den) return;
-    return api.onStashChange(den.id, () => { loadStash(den.id, true); });
-  }, [den, loadStash]);
+    if (!denId) return;
+    return api.onStashChange(denId, () => { loadStash(denId, true); });
+  }, [denId, loadStash]);
+
+  /** A fresh look when the app comes back, and when a place or a Caper sheet opens: who is in must be current there. */
+  useEffect(() => {
+    if (!denId) return;
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') loadStash(denId, true); });
+    return () => sub.remove();
+  }, [denId, loadStash]);
+  useEffect(() => {
+    if (denId && (overlay.kind === 'detail' || overlay.kind === 'caper')) loadStash(denId, true);
+  }, [overlay.kind, denId, loadStash]);
 
   const memberById = useMemo(
     () => new Map((den?.members ?? []).map(m => [m.userId, m])),
@@ -368,9 +380,9 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addToStash = useCallback(async (placeIds: string[], sourceUrl: string | null) => {
+  const addToStash = useCallback(async (placeIds: string[], sourceUrl: string | null, dates?: Record<string, string>) => {
     if (!den) throw new Error('not_a_member');
-    const saved = await api.saveToStash({ denId: den.id, placeIds, sourceUrl });
+    const saved = await api.saveToStash({ denId: den.id, placeIds, sourceUrl, dates });
     setStash(prev => [...saved.filter(s => !prev.some(p => p.placeId === s.placeId)), ...prev]);
     api.getCapacity(den.id).then(setCapacity).catch(() => {});
     return saved;

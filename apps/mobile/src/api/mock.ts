@@ -7,6 +7,7 @@ import {
   MOCK_USER_ID, mockCandidates, mockDen, mockItinerary, mockPair, mockSearch, mockStash,
 } from './mockData';
 import { Caper, Den, StashItem } from '../types';
+import { parseDay } from '../lib/time';
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -90,20 +91,22 @@ export const mockApi: Api = {
     const q = query.trim().toLowerCase();
     return q ? mockSearch.filter(p => p.name.toLowerCase().includes(q)) : mockSearch;
   },
-  async saveToStash({ denId, placeIds, sourceUrl }) {
+  async saveToStash({ denId, placeIds, sourceUrl, dates = {} }) {
     await delay(400);
     const known = [...mockCandidates, ...mockPair, ...mockItinerary, ...mockSearch];
     const saved = placeIds.map(placeId => {
       const existing = stash.find(s => s.placeId === placeId && s.denId === denId);
       if (existing) return { ...existing };
       const c = known.find(x => x.placeId === placeId) ?? mockCandidates[0];
+      const typed = dates[placeId];
+      const when = typed ? { text: typed, start: parseDay(typed), end: null, recurring: null } : c.when;
       const item: StashItem = {
         id: c.placeId, denId, savedBy: MOCK_USER_ID,
         placeId: c.placeId, name: c.name, neighbourhood: 'Toronto',
         category: c.category, lat: c.lat, lng: c.lng,
         sourceUrl, savedAt: new Date().toISOString(),
         interested: [MOCK_USER_ID], wantCount: 1, iWant: true,
-        note: c.when?.text ?? 'Saved just now', headline: c.headline, when: c.when, distance: '', address: c.address,
+        note: when?.text ?? 'Saved just now', headline: c.headline, when, distance: '', address: c.address,
         takes: [],
       };
       stash.unshift(item);

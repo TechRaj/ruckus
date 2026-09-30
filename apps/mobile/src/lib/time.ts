@@ -21,7 +21,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 export const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-const fromIsoDay = (day: string) => {
+export const fromIsoDay = (day: string) => {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d);
 };
@@ -38,6 +38,37 @@ export function dayChoices(now = new Date()) {
     }
   }
   return choices.slice(0, 4);
+}
+
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+/**
+ * A day someone typed, as an ISO day, or null when it does not read as one.
+ * Takes "2026-10-14", "Oct 14", "14 Oct", "October 14th" and the same with a
+ * year. Without a year it means the next such day, so "Jan 3" in December is
+ * next year.
+ */
+export function parseDay(text: string, now = new Date()): string | null {
+  const t = text.trim().toLowerCase().replace(/(\d)(st|nd|rd|th)\b/g, '$1').replace(/,/g, ' ');
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) return valid(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const monthFirst = t.match(/^([a-z]+)\s+(\d{1,2})(?:\s+(\d{4}))?$/);
+  const dayFirst = t.match(/^(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?$/);
+  const m = monthFirst ? { name: monthFirst[1], day: monthFirst[2], year: monthFirst[3] }
+    : dayFirst ? { name: dayFirst[2], day: dayFirst[1], year: dayFirst[3] } : null;
+  if (!m) return null;
+  const month = MONTH_NAMES.findIndex(n => n.startsWith(m.name) && m.name.length >= 3);
+  if (month < 0) return null;
+  if (m.year) return valid(Number(m.year), month, Number(m.day));
+  const thisYear = valid(now.getFullYear(), month, Number(m.day));
+  if (!thisYear) return null;
+  return thisYear < isoDay(now) ? valid(now.getFullYear() + 1, month, Number(m.day)) : thisYear;
+}
+
+/** The ISO day for a real calendar date, or null for one like Feb 30. */
+function valid(year: number, month: number, day: number): string | null {
+  const d = new Date(year, month, day);
+  return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day ? isoDay(d) : null;
 }
 
 /** "Tonight", "Tomorrow", "Friday" within a week, otherwise "Fri, Oct 2". */

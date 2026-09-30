@@ -9,9 +9,10 @@ import { Hint, Kicker } from '../components/Chrome';
 import { CritterHead } from '../components/CritterHead';
 import { EmptyState } from '../components/EmptyState';
 import { IconCheck } from '../components/Icons';
+import { MonthCalendar } from '../components/MonthCalendar';
 import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
-import { dayChoices } from '../lib/time';
+import { dayChoices, dayLabel } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, edge, font, radius, space, type } from '../theme/tokens';
@@ -25,6 +26,8 @@ export function CaperSheet({
   const item = stash.find(s => s.id === id);
   const days = useMemo(() => dayChoices(), []);
   const [day, setDay] = useState<string | null>(null);
+  /** The calendar, for a day beyond the quick picks. */
+  const [calendar, setCalendar] = useState(false);
   const [time, setTime] = useState<string | null>(null);
   /** Null until someone is unticked. Until then everyone who is in is going. */
   const [picked, setPicked] = useState<string[] | null>(null);
@@ -65,9 +68,20 @@ export function CaperSheet({
         <Kicker style={styles.label}>Which day?</Kicker>
         <View style={styles.chips}>
           {days.map(d => (
-            <Chip key={d.date} on={day === d.date} onPress={() => setDay(d.date)} label={d.label} note={d.short} />
+            <Chip key={d.date} on={day === d.date} onPress={() => { setDay(d.date); setCalendar(false); }} label={d.label} note={d.short} />
           ))}
+          {/* a day the quick picks do not cover shows here once chosen */}
+          <Chip
+            on={calendar || (day !== null && !days.some(d => d.date === day))}
+            onPress={() => setCalendar(!calendar)}
+            label={day && !days.some(d => d.date === day) ? dayLabel(day) : 'Another day'}
+          />
         </View>
+        {calendar ? (
+          <View style={styles.calendar}>
+            <MonthCalendar value={day} onChange={setDay} />
+          </View>
+        ) : null}
 
         <Kicker style={styles.label}>What time? (optional)</Kicker>
         <View style={styles.chips}>
@@ -139,6 +153,7 @@ const styles = StyleSheet.create({
   where: { ...type.meta, fontSize: 14, color: colors.inkMuted, marginTop: 2 },
   label: { marginTop: space.xl, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  calendar: { marginTop: space.md },
   chip: {
     height: 44, paddingHorizontal: space.lg, borderRadius: radius.pill,
     flexDirection: 'row', alignItems: 'center', gap: 6,

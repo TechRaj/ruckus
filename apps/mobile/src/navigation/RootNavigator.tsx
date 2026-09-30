@@ -6,7 +6,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconHome, IconPeople, IconPin } from '../components/Icons';
 import { IncomingShares } from './IncomingShares';
@@ -36,13 +36,23 @@ function tabItem(label: string, Icon: (p: { size?: number; color?: string }) => 
 }
 
 export function RootNavigator() {
-  const { session, overlay } = useStash();
+  const { session, overlay, openPro } = useStash();
   useFollowTheClock(
     session === 'loading' ? null : session === 'ready',
     overlay.kind === 'none',
     !USE_MOCKS,
   );
   const insets = useSafeAreaInsets();
+
+  /**
+   * Development only: `xcrun simctl openurl <device> ruckus://dev/pro` opens
+   * the paywall, so billing can be checked without tapping through the app.
+   */
+  useEffect(() => {
+    if (!__DEV__ || session !== 'ready') return;
+    const sub = Linking.addEventListener('url', ({ url }) => { if (url === 'ruckus://dev/pro') openPro(); });
+    return () => sub.remove();
+  }, [session, openPro]);
 
   /** The music plays in the tabs only. */
   useEffect(() => { setInside(session === 'ready'); }, [session]);

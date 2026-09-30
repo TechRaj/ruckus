@@ -306,8 +306,11 @@ export function createRuckus({ url, anonKey, storage } = {}) {
      * Returns an unsubscribe function.
      */
     onChange(denId, cb) {
+      // A topic of its own each time. supabase-js hands back an existing channel
+      // with the same topic, and one that is still leaving never joins again,
+      // so re-subscribing to `den:<id>` right after unsubscribing went silent.
       const channel = supabase
-        .channel(`den:${denId}`)
+        .channel(`den:${denId}:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'saves', filter: `den_id=eq.${denId}` }, () => cb())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'want_to_go', filter: `den_id=eq.${denId}` }, () => cb())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'takes', filter: `den_id=eq.${denId}` }, () => cb())

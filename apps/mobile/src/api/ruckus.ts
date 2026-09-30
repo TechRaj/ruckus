@@ -9,6 +9,7 @@ import { createRuckus, DenRow, MemberRow, StashRow } from '@ruckus/api';
 import { ExtractResult, ResolvedPlace, extractFromReel, searchPlaces } from '@ruckus/ingest';
 import { Api, ResolveResult } from './types';
 import { cleanLink } from '../lib/links';
+import { parseDay } from '../lib/time';
 import { Category, Critter, Den, Member, PlaceCandidate, StashItem } from '../types';
 
 const env = {
@@ -183,10 +184,14 @@ export const ruckusApi: Api = {
     return places.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
   },
 
-  async saveToStash({ denId, placeIds, sourceUrl }) {
+  async saveToStash({ denId, placeIds, sourceUrl, dates = {} }) {
     const places = placeIds.map(id => lastResolve?.byId.get(id) ?? searched.get(id));
     if (places.some(p => !p)) throw new Error('place_missing_id');
-    const picked = places as ResolvedPlace[];
+    /** A typed day stands in for the date the link did not give. The words are kept as written; the day only when they read as one. */
+    const picked = (places as ResolvedPlace[]).map(p => {
+      const typed = p.googlePlaceId ? dates[p.googlePlaceId] : undefined;
+      return typed ? { ...p, when: { text: typed, start: parseDay(typed), end: null, recurring: null } } : p;
+    });
     await ruckus.stash.save({ denId, places: picked, sourceUrl: cleanLink(sourceUrl) ?? picked[0].sourceUrl });
     /**
      * Log a confirmation only when the save came from a link. A manual add has

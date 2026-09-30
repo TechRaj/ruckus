@@ -48,7 +48,8 @@ export interface Api {
    * Saves one or more places by id in one write, with the reel URL if there is
    * one. Up to 20. Returns the saved rows in the order asked. See CLAUDE.md §5.6.
    */
-  saveToStash(args: { denId: string; placeIds: string[]; sourceUrl: string | null }): Promise<StashItem[]>;
+  /** `dates` holds a day the user typed for a place the link gave no date for, keyed by place id. */
+  saveToStash(args: { denId: string; placeIds: string[]; sourceUrl: string | null; dates?: Record<string, string> }): Promise<StashItem[]>;
   /**
    * Take my save of a place out of the Stash. A friend's save of it stays. Resolves
    * to how many people still have it; 0 means it's gone, with its comments and plans.

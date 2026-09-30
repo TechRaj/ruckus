@@ -14,6 +14,7 @@ import { PrimaryButton, TextButton } from '../components/Buttons';
 import { CategoryGlyph } from '../components/CategoryGlyph';
 import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { DenMenu, DenPill, useDenPicker } from '../components/DenPicker';
+import { MonthCalendar } from '../components/MonthCalendar';
 import { EmptyState } from '../components/EmptyState';
 import {
   IconCheck, IconChevronLeft, IconChevronRight, IconSearch,
@@ -22,7 +23,7 @@ import { PressableScale } from '../components/PressableScale';
 import { RascalSleep } from '../components/RascalSleep';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
-import { dotted, eventLabel, eventOver } from '../lib/time';
+import { dayLabel, dotted, eventLabel, eventOver } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { playFail, playTap } from '../theme/sound';
@@ -69,6 +70,10 @@ export function ConfirmScreen({
   /** Ticked place ids, in the order they are listed. */
   const [chosen, setChosen] = useState<string[]>([]);
   const [failed, setFailed] = useState(false);
+  /** Days picked for places the link gave no date for, keyed by place id, as YYYY-MM-DD. */
+  const [dates, setDates] = useState<Record<string, string>>({});
+  /** The place whose calendar is open. One at a time keeps the list short. */
+  const [dating, setDating] = useState<string | null>(null);
   /** Message shown when a save is refused because the Den is at its free limit. */
   const [limitNote, setLimitNote] = useState<string | null>(null);
   /** The matches the link produced, kept so Back from search can return to them. */
@@ -135,7 +140,7 @@ export function ConfirmScreen({
     const back = candidates ? 'pick' : 'search';
     setMode('saving'); setLimitNote(null);
     try {
-      await addToStash(chosen, sharedUrl);
+      await addToStash(chosen, sharedUrl, dates);
       onSaved(name, chosen.length);
     } catch (err) {
       // A full Den is a limit, so keep the pick on screen and skip the
@@ -334,6 +339,23 @@ export function ConfirmScreen({
                 <View style={styles.tick}><IconCheck size={14} color={colors.onFlare} /></View>
               ) : several ? <View style={[styles.tick, styles.tickOff]} /> : null}
             </PressableScale>
+            {/* No date in the caption: the user can pick one. Outside the card, so the calendar does not tick it. */}
+            {on && !c.when ? (
+              <View style={styles.dateRow}>
+                {dates[c.placeId] ? (
+                  <View style={styles.dateLine}>
+                    <Text style={styles.dateChosen}>{dayLabel(dates[c.placeId])}</Text>
+                    <TextButton label={dating === c.placeId ? 'Done' : 'Change'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
+                    <TextButton label="Remove" onPress={() => { setDates(({ [c.placeId]: _, ...rest }) => rest); setDating(null); }} muted />
+                  </View>
+                ) : (
+                  <TextButton label={dating === c.placeId ? 'No date after all' : 'Add a date'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
+                )}
+                {dating === c.placeId ? (
+                  <MonthCalendar value={dates[c.placeId] ?? null} onChange={day => setDates(prev => ({ ...prev, [c.placeId]: day }))} />
+                ) : null}
+              </View>
+            ) : null}
             </View>
           );
         })}
@@ -386,6 +408,9 @@ const styles = StyleSheet.create({
   name: { ...type.rowTitle, fontSize: 19, color: colors.ink },
   address: { ...type.meta, fontSize: 14, lineHeight: 19, color: colors.inkSecondary, marginTop: 2 },
   happening: { ...type.meta, fontSize: 14, lineHeight: 19, fontFamily: font.bold, color: colors.ink, marginTop: 6 },
+  dateRow: { marginTop: -4, marginBottom: space.md },
+  dateLine: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingLeft: space.md },
+  dateChosen: { flex: 1, fontFamily: font.bold, fontSize: 15, color: colors.ink },
   happeningOver: { color: colors.warn },
   reason: { ...type.meta, color: colors.inkMuted, marginTop: 7 },
   tick: {
