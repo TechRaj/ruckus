@@ -10,7 +10,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.techraj.ruckus",
       "infoPlist": {
-        "CFBundleDisplayName": "Ruckus"
+        "CFBundleDisplayName": "Ruckus",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
