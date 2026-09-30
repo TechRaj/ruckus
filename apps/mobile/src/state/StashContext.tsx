@@ -24,7 +24,7 @@ export type Overlay =
   | { kind: 'sign-out' }
   | { kind: 'caper'; id: string }
   | { kind: 'caper-made'; caperId: string }
-  | { kind: 'saved'; name: string };
+  | { kind: 'saved'; name: string; count?: number };
 
 export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
 
@@ -70,7 +70,8 @@ interface StashState {
   addTake: (id: string, text: string) => void;
   updateTake: (id: string, text: string) => void;
   deleteTake: (id: string) => void;
-  addToStash: (placeId: string, sourceUrl: string | null) => Promise<StashItem>;
+  /** Saves one or more places in one write. */
+  addToStash: (placeIds: string[], sourceUrl: string | null) => Promise<StashItem[]>;
   /** Take my save out of the Stash. A friend's save of the same place keeps it there. */
   removeFromStash: (id: string) => Promise<void>;
   openOverlay: (o: Overlay) => void;
@@ -367,10 +368,10 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addToStash = useCallback(async (placeId: string, sourceUrl: string | null) => {
+  const addToStash = useCallback(async (placeIds: string[], sourceUrl: string | null) => {
     if (!den) throw new Error('not_a_member');
-    const saved = await api.saveToStash({ denId: den.id, placeId, sourceUrl });
-    setStash(prev => (prev.some(s => s.placeId === saved.placeId) ? prev : [saved, ...prev]));
+    const saved = await api.saveToStash({ denId: den.id, placeIds, sourceUrl });
+    setStash(prev => [...saved.filter(s => !prev.some(p => p.placeId === s.placeId)), ...prev]);
     api.getCapacity(den.id).then(setCapacity).catch(() => {});
     return saved;
   }, [den]);

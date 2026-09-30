@@ -22,6 +22,7 @@ import { RascalPeek } from '../components/RascalPeek';
 import { useStashMarkers } from '../hooks/useStashMarkers';
 import { StashSearch } from '../components/StashSearch';
 import { TORONTO, useMapCamera } from '../hooks/useMapCamera';
+import { holdListAt, useListScrollLock } from '../hooks/useListScrollLock';
 import { useSheetGeometry } from '../hooks/useSheetGeometry';
 import { describeView } from '../state/stashCopy';
 import { useStash } from '../state/StashContext';
@@ -61,15 +62,24 @@ export function PlacesScreen() {
     camera.panTo(item);
   }, [select, selectedId, camera, openOverlay]);
 
-  /** Scrolls the list to the selected row. */
+  /**
+   * Brings the selected row to the top of the list at every detent. Below full
+   * height the sheet holds the list in place, so the offset goes through
+   * holdListAt and the list jumps there instead of animating.
+   */
+  const [listHeight, setListHeight] = useState(0);
+  const detentRef = useRef(detentIndex);
+  detentRef.current = detentIndex;
   useEffect(() => {
     if (!selectedId) return;
     const index = visible.findIndex(s => s.id === selectedId);
-    if (index >= 0) {
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.15 });
-      });
-    }
+    if (index < 0) return;
+    const offset = ROW_HEIGHT * index;
+    const full = detentRef.current === 2;
+    holdListAt(full ? null : offset);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset, animated: full });
+    });
   }, [selectedId, visible]);
 
   /**
@@ -115,7 +125,11 @@ export function PlacesScreen() {
         showsMyLocationButton={false}
         toolbarEnabled={false}
         mapPadding={{ top: 0, right: 0, bottom: layout.sheetPeek, left: 0 }}
-        onPress={() => select(null)}
+        /**
+         * A tap on empty map clears the selection. On iOS the map also reports
+         * taps that landed on a marker, and those must not clear it.
+         */
+        onPress={e => { if (e.nativeEvent.action !== 'marker-press') select(null); }}
       >
         {markers}
       </MapView>
@@ -213,10 +227,12 @@ export function PlacesScreen() {
               data={visible}
               keyExtractor={i => i.id}
               getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: ROW_HEIGHT * index, index })}
-              onScrollToIndexFailed={() => {}}
+              scrollEventsHandlersHook={useListScrollLock}
               /** The list needs a bounded height to scroll and to pass drags back to the sheet. */
               style={styles.listFlex}
-              contentContainerStyle={{ paddingBottom: geo.listPaddingBottom }}
+              onLayout={e => setListHeight(e.nativeEvent.layout.height)}
+              /** Below full height the list gets room under the last row, so any selected row can reach the top. */
+              contentContainerStyle={{ paddingBottom: geo.listPaddingBottom + (detentIndex < 2 ? listHeight : 0) }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode={keyboardDismissMode}
               renderItem={({ item }) => (

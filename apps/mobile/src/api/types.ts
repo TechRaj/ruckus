@@ -44,8 +44,11 @@ export interface Api {
   resolveSharedUrl(url: string): Promise<ResolveResult>;
   /** Set `fromLink` when searching inside a link's confirm flow. The search is then biased to that link's city. */
   searchPlaces(query: string, opts?: { fromLink?: boolean }): Promise<PlaceCandidate[]>;
-  /** Saves a place by id, with the reel URL if there is one. See CLAUDE.md §5.6. */
-  saveToStash(args: { denId: string; placeId: string; sourceUrl: string | null }): Promise<StashItem>;
+  /**
+   * Saves one or more places by id in one write, with the reel URL if there is
+   * one. Up to 20. Returns the saved rows in the order asked. See CLAUDE.md §5.6.
+   */
+  saveToStash(args: { denId: string; placeIds: string[]; sourceUrl: string | null }): Promise<StashItem[]>;
   /**
    * Take my save of a place out of the Stash. A friend's save of it stays. Resolves
    * to how many people still have it; 0 means it's gone, with its comments and plans.

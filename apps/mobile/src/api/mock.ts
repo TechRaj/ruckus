@@ -3,7 +3,9 @@
  * State is held in this module and resets when the app reloads.
  */
 import { Api, ResolveResult } from './types';
-import { MOCK_USER_ID, mockCandidates, mockDen, mockSearch, mockStash } from './mockData';
+import {
+  MOCK_USER_ID, mockCandidates, mockDen, mockItinerary, mockPair, mockSearch, mockStash,
+} from './mockData';
 import { Caper, Den, StashItem } from '../types';
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -76,8 +78,11 @@ export const mockApi: Api = {
     return () => { listeners.get(denId)?.delete(cb); };
   },
 
-  async resolveSharedUrl(): Promise<ResolveResult> {
+  /** The link decides the example: "trip" is an itinerary, "two" is two matches, anything else is one. */
+  async resolveSharedUrl(url): Promise<ResolveResult> {
     await delay(900);
+    if (/trip/i.test(url)) return { candidates: mockItinerary, mode: 'multi' };
+    if (/two/i.test(url)) return { candidates: mockPair, mode: 'choose' };
     return { candidates: mockCandidates, mode: 'single' };
   },
   async searchPlaces(query) {
@@ -85,23 +90,27 @@ export const mockApi: Api = {
     const q = query.trim().toLowerCase();
     return q ? mockSearch.filter(p => p.name.toLowerCase().includes(q)) : mockSearch;
   },
-  async saveToStash({ denId, placeId, sourceUrl }) {
+  async saveToStash({ denId, placeIds, sourceUrl }) {
     await delay(400);
-    const existing = stash.find(s => s.placeId === placeId && s.denId === denId);
-    if (existing) return { ...existing };
-    const c = [...mockCandidates, ...mockSearch].find(x => x.placeId === placeId) ?? mockCandidates[0];
-    const item: StashItem = {
-      id: c.placeId, denId, savedBy: MOCK_USER_ID,
-      placeId: c.placeId, name: c.name, neighbourhood: 'King West',
-      category: c.category, lat: c.lat, lng: c.lng,
-      sourceUrl, savedAt: new Date().toISOString(),
-      interested: [MOCK_USER_ID], wantCount: 1, iWant: true,
-      note: 'Saved just now', distance: '1.8 km', address: c.address,
-      takes: [],
-    };
-    stash.unshift(item);
+    const known = [...mockCandidates, ...mockPair, ...mockItinerary, ...mockSearch];
+    const saved = placeIds.map(placeId => {
+      const existing = stash.find(s => s.placeId === placeId && s.denId === denId);
+      if (existing) return { ...existing };
+      const c = known.find(x => x.placeId === placeId) ?? mockCandidates[0];
+      const item: StashItem = {
+        id: c.placeId, denId, savedBy: MOCK_USER_ID,
+        placeId: c.placeId, name: c.name, neighbourhood: 'Toronto',
+        category: c.category, lat: c.lat, lng: c.lng,
+        sourceUrl, savedAt: new Date().toISOString(),
+        interested: [MOCK_USER_ID], wantCount: 1, iWant: true,
+        note: c.when ?? 'Saved just now', distance: '', address: c.address,
+        takes: [],
+      };
+      stash.unshift(item);
+      return { ...item };
+    });
     notify(denId);
-    return { ...item };
+    return saved;
   },
   async getCapers(denId) { await delay(120); return capers.filter(c => c.denId === denId).map(c => ({ ...c })); },
   async createCaper({ denId, placeId, date, time, going }) {

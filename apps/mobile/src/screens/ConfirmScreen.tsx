@@ -1,6 +1,9 @@
 /**
- * Confirmation step. Shows one match when confident, up to three otherwise, and search when there are none.
- * CLAUDE.md §5.8: nothing is saved until the user picks a place and confirms.
+ * Confirmation step. Every match the link produced is listed as a card that
+ * can be ticked, with the pipeline's best guess ticked already. When it is
+ * sure of one place, that card leads and the rest sit under "Other matches".
+ * With no matches the screen goes to search.
+ * CLAUDE.md §5.8: nothing is saved until the user picks and confirms.
  */
 import { useEffect, useState } from 'react';
 import {
@@ -13,18 +16,31 @@ import { Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { DenMenu, DenPill, useDenPicker } from '../components/DenPicker';
 import { EmptyState } from '../components/EmptyState';
 import {
-  IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconSearch, PawPrint,
+  IconCheck, IconChevronLeft, IconChevronRight, IconSearch, PawPrint,
 } from '../components/Icons';
 import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
-import { colors, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type } from '../theme/tokens';
 import { PlaceCandidate } from '../types';
 import type { ConfirmMode } from '../api/types';
 
 type Mode = 'resolving' | 'pick' | 'search' | 'saving';
+
+/** The backend takes up to 20 places in one save. */
+const MOST = 20;
+
+/**
+ * What starts ticked. An itinerary starts with every place the pipeline is
+ * sure of. Anything else starts with the first match only.
+ */
+const firstTicks = (list: PlaceCandidate[], mode: ConfirmMode | null) =>
+  (mode === 'multi'
+    ? list.filter(c => c.tier !== 'low')
+    : list.slice(0, 1)
+  ).slice(0, MOST).map(c => c.placeId);
 
 export function ConfirmScreen({
   sharedUrl, startInSearch, initialQuery, onClose, onBack, onSaved,
@@ -36,9 +52,10 @@ export function ConfirmScreen({
   onClose: () => void;
   /** Where Back goes when there are no matches to return to. */
   onBack: () => void;
-  onSaved: (name: string) => void;
+  /** `name` is the first place saved, `count` how many were saved together. */
+  onSaved: (name: string, count: number) => void;
 }) {
-  const { addToStash, isPro, openPro } = useStash();
+  const { addToStash, isPro, openPro, capacity } = useStash();
   const picker = useDenPicker();
   const [mode, setMode] = useState<Mode>(startInSearch ? 'search' : 'resolving');
   const [candidates, setCandidates] = useState<PlaceCandidate[] | null>(null);
@@ -46,8 +63,8 @@ export function ConfirmScreen({
   const [linkMode, setLinkMode] = useState<ConfirmMode | null>(null);
   const [results, setResults] = useState<PlaceCandidate[]>([]);
   const [query, setQuery] = useState(initialQuery ?? '');
-  const [chosen, setChosen] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  /** Ticked place ids, in the order they are listed. */
+  const [chosen, setChosen] = useState<string[]>([]);
   const [failed, setFailed] = useState(false);
   /** Message shown when a save is refused because the Den is at its free limit. */
   const [limitNote, setLimitNote] = useState<string | null>(null);
@@ -70,7 +87,7 @@ export function ConfirmScreen({
         setCandidates(c);
         setLinkMode(m);
         setFromLink(c);
-        setChosen(c[0]?.placeId ?? null);
+        setChosen(firstTicks(c, m));
         setMode('pick');
       })
       .catch(() => { if (live) setFailed(true); });
@@ -100,9 +117,8 @@ export function ConfirmScreen({
   const leaveSearch = () => {
     if (fromLink?.length) {
       setCandidates(fromLink);
-      setChosen(fromLink[0].placeId);
+      setChosen(firstTicks(fromLink, linkMode));
       setPickedBySearch(false);
-      setExpanded(true);
       setMode('pick');
     } else {
       onBack();
@@ -110,14 +126,14 @@ export function ConfirmScreen({
   };
 
   async function save(retried = false) {
-    if (!chosen) return;
+    if (chosen.length === 0) return;
     const all = [...(candidates ?? []), ...results];
-    const name = all.find(c => c.placeId === chosen)?.name ?? 'That place';
+    const name = all.find(c => c.placeId === chosen[0])?.name ?? 'That place';
     const back = candidates ? 'pick' : 'search';
     setMode('saving'); setLimitNote(null);
     try {
       await addToStash(chosen, sharedUrl);
-      onSaved(name);
+      onSaved(name, chosen.length);
     } catch (err) {
       // A full Den is a limit, so keep the pick on screen and skip the
       // failed state.
@@ -146,7 +162,7 @@ export function ConfirmScreen({
             action={
               <PrimaryButton
                 label="Search instead"
-                onPress={() => { setFailed(false); setChosen(null); setMode('search'); }}
+                onPress={() => { setFailed(false); setChosen([]); setMode('search'); }}
               />
             }
           />
@@ -203,9 +219,8 @@ export function ConfirmScreen({
               key={r.placeId}
               onPress={() => {
                 setCandidates([r]);
-                setChosen(r.placeId);
+                setChosen([r.placeId]);
                 setPickedBySearch(true);
-                setExpanded(false);
                 setMode('pick');
               }}
               style={({ pressed }) => [styles.result, pressed && { backgroundColor: colors.paperSunk }]}
@@ -234,29 +249,65 @@ export function ConfirmScreen({
   // several are plausible - two cafés named in one reel - so show them all.
   // A place picked from search is settled: they chose it.
   const confident = Boolean(list[0]) && (pickedBySearch || linkMode === 'single');
-  const shown = confident && !expanded ? list.slice(0, 1) : list.slice(0, 3);
-  const hidden = list.length - shown.length;
+  /** An itinerary reel names several places that all belong. Every one is listed. */
+  const itinerary = !pickedBySearch && linkMode === 'multi';
+  /** Every match is on screen from the start, so adding a second place is one tap. */
+  const shown = list.slice(0, 8);
+  /** When the pipeline is sure of one place, the others are set apart under their own label. */
+  const leads = confident && !itinerary && shown.length > 1;
+  /** With one card it is a yes or no. With several, any number can be ticked. */
+  const several = shown.length > 1;
+
+  const toggle = (placeId: string) => {
+    if (!several) { setChosen([placeId]); return; }
+    const next = chosen.includes(placeId) ? chosen.filter(id => id !== placeId) : [...chosen, placeId];
+    /** Kept in list order, so the first place named is the first one saved. */
+    setChosen(shown.map(c => c.placeId).filter(id => next.includes(id)).slice(0, MOST));
+    setLimitNote(null);
+  };
+  const allTicked = chosen.length === Math.min(shown.length, MOST);
+
+  /** Room left in the Den, or null when there is no limit. */
+  const room = capacity?.placeLimit == null ? null : Math.max(0, capacity.placeLimit - capacity.places);
+  const overRoom = room !== null && chosen.length > room;
 
   return (
     <SheetModal onClose={onClose} height={0.9} dismissable={mode !== 'saving'}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={keyboardDismissMode} alwaysBounceVertical>
         <Kicker>{sharedUrl && !pickedBySearch ? 'From the link you shared' : 'From your search'}</Kicker>
         <Text style={styles.headline}>
-          {confident && !expanded ? 'Think I found it' : 'Which one did you mean?'}
+          {itinerary ? `Found ${list.length} places`
+            : confident ? 'Think I found it'
+            : 'Which did you mean?'}
         </Text>
 
-        <View style={{ height: 20 }} />
+        {several ? (
+          <View style={styles.tally}>
+            <Hint>{leads && chosen.length === 1
+              ? 'tap any other to add it too.'
+              : `${chosen.length} of ${shown.length} ticked. tap to add or leave out.`}</Hint>
+            <Pressable
+              onPress={() => setChosen(allTicked ? [] : shown.slice(0, MOST).map(c => c.placeId))}
+              hitSlop={10}
+              accessibilityRole="button"
+            >
+              <Text style={styles.tallyAction}>{allTicked ? 'Clear' : 'Tick all'}</Text>
+            </Pressable>
+          </View>
+        ) : <View style={{ height: 20 }} />}
 
-        {shown.map(c => {
-          const on = chosen === c.placeId;
+        {shown.map((c, i) => {
+          const on = chosen.includes(c.placeId);
           return (
+            <View key={c.placeId}>
+            {leads && i === 1 ? <Kicker style={styles.others}>Other matches</Kicker> : null}
             <PressableScale
-              key={c.placeId}
-              onPress={() => setChosen(c.placeId)}
+              onPress={() => toggle(c.placeId)}
               scaleTo={0.985}
               haptic="selection"
-              accessibilityRole="radio"
-              accessibilityState={{ selected: on }}
+              accessibilityRole={several ? 'checkbox' : 'radio'}
+              accessibilityState={several ? { checked: on } : { selected: on }}
+              accessibilityLabel={[c.name, c.when, c.address].filter(Boolean).join(', ')}
               style={[styles.card, on && styles.cardOn]}
             >
               <View style={styles.cardTile}>
@@ -264,25 +315,18 @@ export function ConfirmScreen({
               </View>
               <View style={styles.resultBody}>
                 <Text style={styles.name} numberOfLines={2}>{c.name}</Text>
+                {c.when ? <Text style={styles.when} numberOfLines={1}>{c.when}</Text> : null}
                 <Text style={styles.address} numberOfLines={2}>{c.address}</Text>
                 {c.reason ? <Text style={styles.reason}>{c.reason}</Text> : null}
               </View>
+              {/* With several cards the empty circle stays, so an unticked card still reads as tickable. */}
               {on ? (
                 <View style={styles.tick}><IconCheck size={14} color={colors.onFlare} /></View>
-              ) : null}
+              ) : several ? <View style={[styles.tick, styles.tickOff]} /> : null}
             </PressableScale>
+            </View>
           );
         })}
-
-        {hidden > 0 ? (
-          <Pressable
-            onPress={() => setExpanded(true)}
-            style={({ pressed }) => [styles.more, pressed && { backgroundColor: colors.paperSunk }]}
-          >
-            <Text style={styles.moreLabel}>Not right? See {hidden} other match{hidden === 1 ? '' : 'es'}</Text>
-            <IconChevronDown />
-          </Pressable>
-        ) : null}
 
         <TextButton label="None of these? Search for it" onPress={() => setMode('search')} muted />
       </ScrollView>
@@ -293,12 +337,13 @@ export function ConfirmScreen({
           <Kicker>Saving to</Kicker>
           <DenPill {...picker} />
         </View>
-        {limitNote ? <Hint style={styles.limitNote}>{limitNote}</Hint> : null}
+        {limitNote ? <Hint style={styles.limitNote}>{limitNote}</Hint>
+          : overRoom ? <Hint style={styles.limitNote}>{lines.room.tooMany(room ?? 0)}</Hint> : null}
         <PrimaryButton
-          label="Add to Stash"
+          label={chosen.length > 1 ? `Add ${chosen.length} to Stash` : 'Add to Stash'}
           onPress={() => save()}
           loading={mode === 'saving'}
-          disabled={!chosen}
+          disabled={chosen.length === 0}
         />
       </View>
     </SheetModal>
@@ -323,19 +368,21 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: radius.lg,
     backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center',
   },
+  tally: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: space.md, paddingTop: space.sm, paddingBottom: space.md,
+  },
+  tallyAction: { ...type.chip, fontSize: 14, color: colors.ink },
   name: { ...type.rowTitle, fontSize: 19, color: colors.ink },
+  when: { ...type.meta, fontSize: 14, fontFamily: font.bold, color: colors.ink, marginTop: 2 },
   address: { ...type.meta, fontSize: 14, lineHeight: 19, color: colors.inkSecondary, marginTop: 2 },
   reason: { ...type.meta, color: colors.inkMuted, marginTop: 7 },
   tick: {
     width: 26, height: 26, borderRadius: 13, backgroundColor: colors.flare,
     alignItems: 'center', justifyContent: 'center',
   },
-  more: {
-    height: 54, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.hairline,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18,
-  },
-  moreLabel: { ...type.chip, color: colors.inkSecondary },
+  tickOff: { backgroundColor: colors.paper, borderWidth: 1.5, borderColor: colors.hairline },
+  others: { marginTop: space.sm, marginBottom: space.md },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline,
     paddingHorizontal: space.xl, paddingTop: 14, paddingBottom: space.md,

@@ -32,6 +32,10 @@ export interface PlaceCandidate {
   category: Category;
   /** Why the pipeline picked it. Shown under the name. */
   reason?: string;
+  /** The date as the caption wrote it, such as "October 3 to 4". Set for events. */
+  when?: string | null;
+  /** How sure the pipeline is. When a link names several places, the low ones start unticked. */
+  tier?: 'high' | 'medium' | 'low';
 }
 
 /**

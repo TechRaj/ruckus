@@ -57,13 +57,14 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
           onClose={close}
           /** Back from search returns to Add a place. */
           onBack={() => openOverlay({ kind: 'add' })}
-          onSaved={name => openOverlay({ kind: 'saved', name })}
+          onSaved={(name, count) => openOverlay({ kind: 'saved', name, count })}
         />
       );
     case 'saved':
       return (
         <SavedScreen
           name={overlay.name}
+          count={overlay.count}
           onClose={close}
           onAddAnother={() => openOverlay({ kind: 'add' })}
         />

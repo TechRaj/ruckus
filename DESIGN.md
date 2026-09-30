@@ -244,6 +244,21 @@ Signing out always returns to the sign-in screen, with the email filled in.
 "I already have an account" on the welcome screen and "New here? Get started"
 on the sign-in screen switch between the two paths.
 
+### Confirming places from a link
+
+The pipeline says how sure it is, and the confirm screen follows it.
+
+| The link gave | The screen shows | Starts ticked |
+| --- | --- | --- |
+| One clear place | That card first, then the rest under "Other matches" | The first card |
+| Several plausible places | Every card | The first |
+| An itinerary | Every place, up to 8 | All but the ones the pipeline is unsure of |
+| Nothing | Search | |
+
+Every match is on screen from the start and every card can be ticked, so
+saving a second place is one tap. The button counts them: "Add 4 to Stash".
+An event shows its date in bold under its name.
+
 ### Capers
 
 A Caper is one saved place on one day, with the people going. Only someone who

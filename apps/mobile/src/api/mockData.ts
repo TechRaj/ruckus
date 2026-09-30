@@ -100,6 +100,43 @@ export const mockCandidates: PlaceCandidate[] = [
   },
 ];
 
+/** Two plausible matches for one reel. Returned for a link with "two" in it. */
+export const mockPair: PlaceCandidate[] = [
+  {
+    placeId: 'p_pilot', name: 'Pilot Coffee Roasters', address: '50 Wagstaff Dr, Toronto',
+    lat: 43.6688, lng: -79.3297, category: 'eat', reason: 'Named in the caption', tier: 'high',
+  },
+  {
+    placeId: 'p_sam', name: 'Sam James Coffee Bar', address: '297 Harbord St, Toronto',
+    lat: 43.6612, lng: -79.4147, category: 'eat', reason: 'Named in the caption', tier: 'high',
+  },
+];
+
+/** An itinerary reel. Returned for a link with "trip" in it. */
+export const mockItinerary: PlaceCandidate[] = [
+  {
+    placeId: 'p_stlawrence', name: 'St. Lawrence Market', address: '93 Front St E, Toronto',
+    lat: 43.6487, lng: -79.3715, category: 'eat', reason: 'Named in the caption', tier: 'high',
+  },
+  {
+    placeId: 'p_distillery', name: 'The Distillery District', address: '55 Mill St, Toronto',
+    lat: 43.6503, lng: -79.3596, category: 'do', reason: 'Named in the caption', tier: 'high',
+  },
+  {
+    placeId: 'p_nuitblanche', name: 'Nuit Blanche at Nathan Phillips Square', address: '100 Queen St W, Toronto',
+    lat: 43.6525, lng: -79.3835, category: 'do', reason: 'Named in the caption', tier: 'high',
+    when: 'October 3, sunset to sunrise',
+  },
+  {
+    placeId: 'p_islands', name: 'Toronto Islands', address: 'Jack Layton Ferry Terminal, Toronto',
+    lat: 43.6205, lng: -79.3780, category: 'do', reason: 'Matched from a tagged handle', tier: 'medium',
+  },
+  {
+    placeId: 'p_themarket', name: 'The Market', address: '2305 Yonge St, Toronto',
+    lat: 43.7075, lng: -79.3984, category: 'eat', reason: 'Several places share this name', tier: 'low',
+  },
+];
+
 /** Results for the manual search. */
 export const mockSearch: PlaceCandidate[] = [
   ...mockCandidates,

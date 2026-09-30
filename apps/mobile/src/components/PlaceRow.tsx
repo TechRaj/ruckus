@@ -34,8 +34,9 @@ export function PlaceRow({
       accessibilityLabel={[item.name, item.neighbourhood, item.distance].filter(Boolean).join(', ')}
       style={[styles.row, selected && styles.rowOn]}
     >
-      <View style={styles.tile}>
-        <CategoryGlyph category={item.category} size={25} color={colors.ink} />
+      {/* the selected tile takes the colours of the selected pin */}
+      <View style={[styles.tile, selected && styles.tileOn]}>
+        <CategoryGlyph category={item.category} size={25} color={selected ? colors.onFlare : colors.ink} />
       </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
@@ -59,13 +60,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.hairline,
   },
-  /** The margin and padding swap equal amounts, so the content does not move when the row is selected. */
+  /** The margin, border and padding add up to the resting padding, so the content does not move when the row is selected. */
   rowOn: {
     backgroundColor: colors.flareWash,
-    borderBottomColor: 'transparent',
+    borderWidth: 2, borderBottomWidth: 2, borderColor: colors.flareDeep,
+    borderBottomColor: colors.flareDeep,
     borderRadius: radius.xl,
-    marginHorizontal: space.md, paddingHorizontal: space.md,
+    marginHorizontal: space.md, paddingHorizontal: space.md - 2,
   },
+  tileOn: { backgroundColor: colors.flareDeep },
   tile: {
     width: 56, height: 56, borderRadius: radius.lg,
     backgroundColor: colors.paperSunk,

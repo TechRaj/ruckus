@@ -19,11 +19,11 @@
     "test:db": "bash supabase/tests/run.sh",
     "e2e:db": "node --env-file=.env tools/e2e-supabase.mjs",
     "db:push": "bash supabase/push.sh",
-    "mobile": "npm run start -w @ruckus/mobile",
+    "mobile": "npm run start -w @ruckus/mobile -- --ios",
     "typecheck:mobile": "npm run typecheck -w @ruckus/mobile",
     "seed:demo": "node --env-file=.env tools/seed-demo.mjs",
     "mobile:build": "npm run ios -w @ruckus/mobile",
-    "mobile:first-run": "EXPO_PUBLIC_FIRST_RUN=1 npm run start -w @ruckus/mobile -- --clear"
+    "mobile:first-run": "EXPO_PUBLIC_FIRST_RUN=1 npm run start -w @ruckus/mobile -- --clear --ios"
   },
   "license": "MIT",
   "description": "Collect places you find on Instagram Reels and turn them into plans with friends."

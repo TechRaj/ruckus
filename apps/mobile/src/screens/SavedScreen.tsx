@@ -22,8 +22,14 @@ const BUBBLES = [
 ];
 
 export function SavedScreen({
-  name, onClose, onAddAnother,
-}: { name: string; onClose: () => void; onAddAnother: () => void }) {
+  name, count = 1, onClose, onAddAnother,
+}: {
+  name: string;
+  /** How many places were saved together. `name` is the first of them. */
+  count?: number;
+  onClose: () => void;
+  onAddAnother: () => void;
+}) {
   const { den } = useStash();
   const reduce = useReduceMotion();
 
@@ -73,10 +79,12 @@ export function SavedScreen({
             <RascalBubble tail="left" delay={200} maxWidth={186}>{lines.saved}</RascalBubble>
           </View>
           <Text style={styles.sub}>
-            {name} is on the map for {den?.name ?? 'your Den'}.
+            {count > 1
+              ? `${name} and ${count - 1} more are on the map for ${den?.name ?? 'your Den'}.`
+              : `${name} is on the map for ${den?.name ?? 'your Den'}.`}
           </Text>
         </View>
-        <PrimaryButton label="See it on the map" onPress={onClose} />
+        <PrimaryButton label={count > 1 ? 'See them on the map' : 'See it on the map'} onPress={onClose} />
         <TextButton label="Add another" onPress={onAddAnother} />
       </View>
     </SheetModal>

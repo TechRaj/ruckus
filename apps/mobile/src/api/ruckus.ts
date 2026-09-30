@@ -110,6 +110,8 @@ function toCandidate(p: ResolvedPlace): PlaceCandidate | null {
     lng: p.coordinate.lng,
     category: toCategory(p.kind, p.category),
     reason: p.explanation?.text,
+    when: p.when?.text ?? null,
+    tier: p.tier,
   };
 }
 
@@ -166,9 +168,7 @@ export const ruckusApi: Api = {
     for (const p of result.candidates) if (p.googlePlaceId) byId.set(p.googlePlaceId, p);
     lastResolve = { result, byId };
     const candidates = result.candidates.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
-    /** The app has no multi-select confirm screen, so `multi` is shown as `choose`. */
-    const mode = result.confirmMode === 'multi' ? 'choose' : result.confirmMode;
-    return { candidates, mode: candidates.length ? mode : 'search' };
+    return { candidates, mode: candidates.length ? result.confirmMode : 'search' };
   },
 
   async searchPlaces(query, { fromLink = false } = {}) {
@@ -181,10 +181,11 @@ export const ruckusApi: Api = {
     return places.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
   },
 
-  async saveToStash({ denId, placeId, sourceUrl }) {
-    const place = lastResolve?.byId.get(placeId) ?? searched.get(placeId);
-    if (!place) throw new Error('place_missing_id');
-    await ruckus.stash.save({ denId, places: [place], sourceUrl: cleanLink(sourceUrl) ?? place.sourceUrl });
+  async saveToStash({ denId, placeIds, sourceUrl }) {
+    const places = placeIds.map(id => lastResolve?.byId.get(id) ?? searched.get(id));
+    if (places.some(p => !p)) throw new Error('place_missing_id');
+    const picked = places as ResolvedPlace[];
+    await ruckus.stash.save({ denId, places: picked, sourceUrl: cleanLink(sourceUrl) ?? picked[0].sourceUrl });
     /**
      * Log a confirmation only when the save came from a link. A manual add has
      * no offered list, and logging it against the last resolve would record a
@@ -192,41 +193,47 @@ export const ruckusApi: Api = {
      */
     if (lastResolve && sourceUrl) {
       const offered = lastResolve.result.candidates;
-      const chosen = offered.findIndex(p => p.googlePlaceId === placeId);
+      const chosen = placeIds
+        .map(id => offered.findIndex(p => p.googlePlaceId === id))
+        .filter(index => index >= 0);
       ruckus.confirmations.log({
-        mode: lastResolve.result.confirmMode, offered,
-        chosen: chosen >= 0 ? [chosen] : [], engine: lastResolve.result.engine,
+        mode: lastResolve.result.confirmMode, offered, chosen, engine: lastResolve.result.engine,
       }).catch(() => {});   // A failed log must not fail the save.
     }
     /**
-     * Read the saved row back by `googlePlaceId`. `placeId` here is Google's
-     * id, and the Stash row's own `placeId` is the database id. Retries once
-     * after 700 ms.
+     * Read the saved rows back by `googlePlaceId`. The ids here are Google's,
+     * and a Stash row's own `placeId` is the database id. Retries once after
+     * 700 ms if any row is missing.
      */
+    const found = new Map<string, StashItem>();
     for (const wait of [0, 700]) {
       if (wait) await new Promise(r => setTimeout(r, wait));
       try {
-        const row = (await ruckus.stash.list(denId)).find(r => r.googlePlaceId === placeId);
-        const saved = row ? toStashItem(row, denId) : null;
-        if (saved) return saved;
+        for (const row of await ruckus.stash.list(denId)) {
+          if (!row.googlePlaceId || !placeIds.includes(row.googlePlaceId)) continue;
+          const item = toStashItem(row, denId);
+          if (item) found.set(row.googlePlaceId, item);
+        }
+        if (found.size === placeIds.length) break;
       } catch { /* The save already succeeded, so a failed read is ignored. */ }
     }
 
     /**
      * The save is already in the database, so this function must not throw
-     * from here on. If the read-back finds nothing, return an item built from
-     * the cached place. The next Stash reload replaces it with the real row.
+     * from here on. A row the read-back missed is built from the cached
+     * place. The next Stash reload replaces it with the real row.
      */
-    return {
-      id: placeId, denId, savedBy: (await ruckus.auth.userId()) ?? '', savers: [(await ruckus.auth.userId()) ?? ''], placeId,
-      name: place.name,
-      neighbourhood: place.neighbourhood ?? place.city ?? '',
-      category: toCategory(place.kind, place.category),
-      lat: place.coordinate?.lat ?? 0, lng: place.coordinate?.lng ?? 0,
+    const me = (await ruckus.auth.userId()) ?? '';
+    return placeIds.map((placeId, i) => found.get(placeId) ?? {
+      id: placeId, denId, savedBy: me, savers: [me], placeId,
+      name: picked[i].name,
+      neighbourhood: picked[i].neighbourhood ?? picked[i].city ?? '',
+      category: toCategory(picked[i].kind, picked[i].category),
+      lat: picked[i].coordinate?.lat ?? 0, lng: picked[i].coordinate?.lng ?? 0,
       sourceUrl: sourceUrl ?? null, savedAt: new Date().toISOString(),
       wantCount: 0, iWant: false, interested: [],
-      note: '', takes: [], distance: '', address: place.address ?? undefined,
-    };
+      note: '', takes: [], distance: '', address: picked[i].address ?? undefined,
+    });
   },
 
   async setWant(denId, placeId, want) {

@@ -23,6 +23,8 @@ export const lines = {
   room: {
     nearlyFullOwner: 'almost out of room. ruckus pro makes this den unlimited.',
     fullOwner: "this den's full. ruckus pro makes it unlimited.",
+    tooMany: (left: number) =>
+      (left === 0 ? "this den's full." : `this den has room for ${left} more. untick some to fit.`),
     nearlyFull: (owner: string) => `almost out of room. only ${owner.toLowerCase()} can make more, with ruckus pro.`,
     full: (owner: string) => `this den's full. only ${owner.toLowerCase()} can make room, with ruckus pro.`,
   },

@@ -33,7 +33,8 @@ export function Pin({
   const selected = state === 'selected';
   const w = selected ? pinTokens.selected : pinTokens.rest;
   const h = w * (52 / 40);
-  const fill = selected ? colors.flare : colors.pin;
+  /** The deep flare, because the pale one reads as cream against the map. */
+  const fill = selected ? colors.flareDeep : colors.pin;
   const glyph = selected ? colors.onFlare : colors.pinInk;
   const g = w * 0.55;
 
