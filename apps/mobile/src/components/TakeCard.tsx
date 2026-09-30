@@ -12,11 +12,13 @@ import { colors, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
 
 export function TakeCard({
-  member, text, meta, index = 0, onEdit, onDelete,
+  member, text, meta, index = 0, onEdit, onDelete, onReport,
 }: {
   member: Member | undefined; text: string; meta: string; index?: number;
   /** Present only on the current user's own comment. */
   onEdit?: () => void; onDelete?: () => void;
+  /** Present only on someone else's: opens report and block. */
+  onReport?: () => void;
 }) {
   const reduce = useReduceMotion();
   const opacity = useSharedValue(0);
@@ -49,6 +51,11 @@ export function TakeCard({
           {onDelete ? (
             <Pressable onPress={() => { playTap(); onDelete(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Delete your comment">
               <Text style={styles.action}>Delete</Text>
+            </Pressable>
+          ) : null}
+          {onReport ? (
+            <Pressable onPress={() => { playTap(); onReport(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Report or block ${member?.displayName ?? 'someone'}`}>
+              <Text style={styles.action}>Report</Text>
             </Pressable>
           ) : null}
         </View>

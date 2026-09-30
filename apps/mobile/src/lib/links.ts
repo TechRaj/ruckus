@@ -1,3 +1,4 @@
+import { Linking } from 'react-native';
 /**
  * Links that arrive from other apps: finding them, and cleaning them before
  * they're saved.
@@ -51,3 +52,16 @@ export function cleanLink(url: string | null | undefined): string | null {
     return url;   // not a URL we can parse - leave it rather than lose it
   }
 }
+
+/**
+ * The terms and privacy policy, served by the proxy so they need no domain.
+ * App Review wants both reachable from inside the app.
+ */
+const PROXY = process.env.EXPO_PUBLIC_PROXY_URL || 'https://ruckus-production-1747.up.railway.app';
+export const legalLinks = {
+  terms: `${PROXY}/terms`,
+  privacy: `${PROXY}/privacy`,
+};
+
+/** Opens a web page. A failure is swallowed: there is nothing useful to show. */
+export const openLink = (url: string) => { Linking.openURL(url).catch(() => {}); };

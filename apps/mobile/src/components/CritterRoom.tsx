@@ -24,14 +24,20 @@ export interface RoomHead {
   label: string;
   sub?: string;
   selected?: boolean;
+  /** false leaves this head inert when the room is pickable, e.g. your own. */
+  pickable?: boolean;
 }
 
 const HEAD = 72;
 const HEAD_COMPACT = 56;
 
 export function CritterRoom({
-  heads, onPick, compact = false,
-}: { heads: RoomHead[]; onPick?: (key: string) => void; compact?: boolean }) {
+  heads, onPick, compact = false, pickRole = 'radio', pickHint,
+}: {
+  heads: RoomHead[]; onPick?: (key: string) => void; compact?: boolean;
+  /** 'radio' for choosing one (onboarding), 'button' when a tap opens something. */
+  pickRole?: 'radio' | 'button'; pickHint?: string;
+}) {
   return (
     <View style={styles.room}>
       <LinearGradient
@@ -42,7 +48,7 @@ export function CritterRoom({
       <Grain opacity={0.04} />
       <View style={styles.grid}>
         {heads.map((h, i) => (
-          <Head key={h.key} head={h} index={i} onPick={onPick} compact={compact} />
+          <Head key={h.key} head={h} index={i} onPick={h.pickable === false ? undefined : onPick} compact={compact} role={pickRole} hint={pickHint} />
         ))}
       </View>
     </View>
@@ -50,8 +56,8 @@ export function CritterRoom({
 }
 
 function Head({
-  head, index, onPick, compact,
-}: { head: RoomHead; index: number; onPick?: (key: string) => void; compact: boolean }) {
+  head, index, onPick, compact, role, hint,
+}: { head: RoomHead; index: number; onPick?: (key: string) => void; compact: boolean; role: 'radio' | 'button'; hint?: string }) {
   const reduce = useReduceMotion();
   const size = compact ? HEAD_COMPACT : HEAD;
   const bob = useSharedValue(0);
@@ -100,9 +106,10 @@ function Head({
           onPress={() => onPick(head.key)}
           scaleTo={0.94}
           haptic="selection"
-          accessibilityRole="radio"
+          accessibilityRole={role}
           accessibilityLabel={head.label}
-          accessibilityState={{ selected: !!head.selected }}
+          accessibilityHint={hint}
+          accessibilityState={role === 'radio' ? { selected: !!head.selected } : undefined}
           style={styles.pick}
         >
           {inner}

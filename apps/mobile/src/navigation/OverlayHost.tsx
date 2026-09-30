@@ -12,6 +12,7 @@ import { ConfirmScreen } from '../screens/ConfirmScreen';
 import { PlaceDetailScreen } from '../screens/PlaceDetailScreen';
 import { SavedScreen } from '../screens/SavedScreen';
 import { SignOutSheet } from '../screens/SignOutSheet';
+import { DeleteAccountSheet } from '../screens/DeleteAccountSheet';
 import { Overlay, useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 
@@ -88,6 +89,8 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
       return <CaperMadeScreen caperId={overlay.caperId} onClose={close} />;
     case 'sign-out':
       return <SignOutSheet onClose={close} />;
+    case 'delete-account':
+      return <DeleteAccountSheet onClose={close} />;
     case 'missing-event':
       return (
         <SheetModal onClose={close} height={0.42}>

@@ -39,6 +39,19 @@ export const lines = {
   missingEvent: "that event isn't in your den anymore.",
   saved: 'one step closer to making plans!',
 
+  /** Report, block and delete. Alert titles are sentence case, like the other confirms. */
+  safety: {
+    reported: "thanks. we read every report within a day.",
+    blockBody: "you won't see their comments. they aren't told, and you both stay in the den.",
+    unblockBody: 'their comments will show again.',
+    failed: "that didn't go through. try again.",
+  },
+  deleteAccount: {
+    body: 'your saves, comments and votes go, in every den. places a friend saved too stay with them. dens you own pass to the next person in.',
+    pro: 'this doesn\'t cancel ruckus pro. do that in settings, under your name, then subscriptions.',
+    failed: "couldn't delete it just now. try again.",
+  },
+
   /** Hints. Rendered in the mono font, muted. */
   hint: {
     pullUp: 'pull up for the list',

@@ -10,7 +10,7 @@ import React, {
 import { AppState } from 'react-native';
 import { api } from '../api/client';
 import { currentPosition, Position } from '../lib/location';
-import { markSignedOut } from '../lib/lastSignIn';
+import { forgetEmail, markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
 import { eventDay, isoDay } from '../lib/time';
@@ -23,6 +23,7 @@ export type Overlay =
   | { kind: 'detail'; id: string }
   | { kind: 'missing-event' }
   | { kind: 'sign-out' }
+  | { kind: 'delete-account' }
   | { kind: 'caper'; id: string }
   | { kind: 'caper-made'; caperId: string }
   | { kind: 'saved'; name: string; count?: number };
@@ -97,6 +98,15 @@ interface StashState {
    */
   refreshSession: (preferDenId?: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Deletes the account for good, then returns to the welcome screen. Throws if the server refused. */
+  deleteAccount: () => Promise<void>;
+  /** People I've blocked, for People → Blocked. */
+  blocked: Member[];
+  /** Report a Den-mate, or their comment on a place when `placeId` (a Stash item id) is given. */
+  report: (userId: string, placeId?: string) => Promise<void>;
+  /** Hide a Den-mate's comments from me. Reloads the Stash so they go at once. */
+  block: (userId: string) => Promise<void>;
+  unblock: (userId: string) => Promise<void>;
 }
 
 /**
@@ -437,6 +447,42 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     await refreshSession();
   }, [refreshSession]);
 
+  const [blocked, setBlocked] = useState<Member[]>([]);
+  const loadBlocked = useCallback(() => {
+    api.safety.blocked().then(setBlocked).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (currentUserId) loadBlocked(); else setBlocked([]);
+  }, [currentUserId, loadBlocked]);
+
+  const deleteAccount = useCallback(async () => {
+    await api.auth.deleteAccount();
+    // The server took the push token and everything else with the account.
+    // Forgetting the email means the next launch is a first visit.
+    await forgetEmail();
+    setOverlay({ kind: 'none' });
+    await refreshSession();
+  }, [refreshSession]);
+
+  const report = useCallback(async (userId: string, id?: string) => {
+    // Throw rather than return: the menu thanks the user on success.
+    if (!den) throw new Error('not_a_member');
+    const placeId = id ? stash.find(s => s.id === id)?.placeId : undefined;
+    await api.safety.report({ denId: den.id, userId, placeId });
+  }, [den, stash]);
+
+  const block = useCallback(async (userId: string) => {
+    await api.safety.block(userId);
+    loadBlocked();
+    if (den) await loadStash(den.id, true);
+  }, [den, loadStash, loadBlocked]);
+
+  const unblock = useCallback(async (userId: string) => {
+    await api.safety.unblock(userId);
+    loadBlocked();
+    if (den) await loadStash(den.id, true);
+  }, [den, loadStash, loadBlocked]);
+
   useEventReminders(session === 'ready', useCallback(target => {
     openReminder(target.denId, target.placeId);
   }, [openReminder]));
@@ -456,6 +502,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     dens, switchDen,
     refreshSession,
     signOut,
+    deleteAccount, report, block, unblock, blocked,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -77,6 +77,7 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
     iWant: r.iWant,
     interested: (r.wanters ?? []).map(w => w.id),
     note: r.note ?? '',
+    noteBy: r.noteBy ?? null,
     distance: formatDistance(r.distanceM),
     distanceM: r.distanceM ?? null,
     when: r.when ?? null,
@@ -123,6 +124,21 @@ async function accessToken() {
   return data.session?.access_token;
 }
 
+/** A token hash for the review account, or null for everyone else. */
+async function reviewTokenHash(email: string, code: string): Promise<{ tokenHash: string; type: string } | null> {
+  if (!env.proxy) return null;
+  try {
+    const r = await fetch(`${env.proxy}/auth/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code }),
+    });
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 const ingestOpts = async () => ({
   endpoint: `${env.proxy}/extract`,
   geocodeEndpoint: `${env.proxy}/geocode`,
@@ -134,12 +150,37 @@ const ingestOpts = async () => ({
 export const ruckusApi: Api = {
   auth: {
     sendCode: (email, displayName) => ruckus.auth.sendCode(email, { displayName }),
-    verifyCode: (email, code) => ruckus.auth.verifyCode(email, code),
+    async verifyCode(email, code) {
+      try {
+        return await ruckus.auth.verifyCode(email, code);
+      } catch (err) {
+        if ((err as { code?: string }).code !== 'code_invalid') throw err;
+        /** The App Review demo account: a fixed code the proxy checks. Anyone else gets the original error. */
+        const hash = await reviewTokenHash(email, code);
+        if (!hash) throw err;
+        return ruckus.auth.verifyTokenHash(hash.tokenHash, hash.type);
+      }
+    },
     userId: () => ruckus.auth.userId(),
     async signOut() {
       lastResolve = null;
       searched.clear();
       await ruckus.auth.signOut();
+    },
+    async deleteAccount() {
+      lastResolve = null;
+      searched.clear();
+      await ruckus.auth.deleteAccount();
+    },
+  },
+
+  safety: {
+    report: ({ denId, userId, placeId }) => ruckus.safety.report({ denId, profileId: userId, placeId: placeId ?? null }),
+    block: userId => ruckus.safety.block(userId),
+    unblock: userId => ruckus.safety.unblock(userId),
+    async blocked() {
+      const rows = await ruckus.safety.blocked();
+      return rows.map(r => ({ userId: r.id, displayName: r.displayName || 'Someone', critter: toCritter(r.avatar) }));
     },
   },
 

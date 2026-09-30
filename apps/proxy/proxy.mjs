@@ -19,6 +19,7 @@
 
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { SYSTEM } from '@ruckus/ingest';
 import { UUID, usersInEvent, entitlementActive, decideFromEvent, fetchSubscriber } from './revenuecat.mjs';
 import {
@@ -26,6 +27,9 @@ import {
 } from '@ruckus/reminders';
 
 const app = express();
+// Railway's edge is one hop in front of us. Without this, req.ip is the edge's
+// address and every caller shares one rate-limit bucket.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '64kb' }));
 
 const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
@@ -536,6 +540,89 @@ app.post('/internal/reminders/dispatch', async (req, res) => {
   }
 });
 
+/* ------------------------------------------------------------------ *
+ * /auth/review - the App Review demo account.
+ *
+ * Sign-in is by emailed code, and the reviewer can't read our inbox. So one
+ * email (REVIEW_EMAIL) also accepts one fixed code (REVIEW_CODE). The app
+ * only asks here after Supabase has rejected a code, and gets back a token
+ * hash it trades for a session with verifyOtp - the same thing an emailed
+ * code does. Every other email gets 404, whatever the code.
+ *
+ * The account must exist first: sign in with REVIEW_EMAIL once for real,
+ * then `npm run seed:demo -- <REVIEW_EMAIL>` to give it a full Den.
+ * Unset either variable to switch this off after review.
+ * ------------------------------------------------------------------ */
+
+// Six digits falls to guessing eventually, so wrong codes are capped per IP
+// and in total. Past the total the route shuts until the next deploy - better
+// a reviewer asking for a new code than an open demo account.
+const REVIEW_PER_IP = new Map();          // ip -> [timestamps of wrong codes]
+let reviewFailures = 0;
+const REVIEW_MAX_PER_IP_HOUR = 10;
+const REVIEW_MAX_TOTAL = 200;
+
+app.post('/auth/review', async (req, res) => {
+  const { email, code } = req.body ?? {};
+  const wanted = process.env.REVIEW_EMAIL?.trim().toLowerCase();
+  const fixed = process.env.REVIEW_CODE;
+  if (!wanted || !fixed || typeof email !== 'string' || email.trim().toLowerCase() !== wanted) {
+    return res.status(404).json({ error: 'not found' });
+  }
+  if (reviewFailures >= REVIEW_MAX_TOTAL) return res.status(429).json({ error: 'review login locked' });
+  const now = Date.now();
+  const recent = (REVIEW_PER_IP.get(req.ip) ?? []).filter(t => now - t < 3_600_000);
+  if (recent.length >= REVIEW_MAX_PER_IP_HOUR) return res.status(429).json({ error: 'slow down' });
+  if (!safeEqual(String(code ?? '').trim(), fixed)) {
+    recent.push(now);
+    REVIEW_PER_IP.set(req.ip, recent);
+    if (REVIEW_PER_IP.size > 10_000) REVIEW_PER_IP.clear();
+    if (++reviewFailures === REVIEW_MAX_TOTAL) console.error('[review] too many wrong codes - review login locked until redeploy');
+    return res.status(401).json({ error: 'bad code' });
+  }
+  if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: 'review login not configured' });
+  }
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+      method: 'POST',
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type: 'magiclink', email: wanted }),
+    });
+    if (!r.ok) throw new Error(`supabase ${r.status} ${(await r.text()).slice(0, 120)}`);
+    const link = await r.json();
+    const tokenHash = link.hashed_token ?? link.properties?.hashed_token;
+    if (!tokenHash) throw new Error('no hashed_token in generate_link response');
+    console.log('[review] demo account signed in');
+    res.json({ tokenHash, type: link.verification_type ?? link.properties?.verification_type ?? 'magiclink' });
+  } catch (err) {
+    console.error('[review]', err.message);
+    res.status(502).json({ error: 'review login failed' });
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * /terms, /privacy and /support - served here so they need no domain of their own.
+ * App Store Connect and the app both link to them. SUPPORT_EMAIL fills in
+ * the contact address.
+ * ------------------------------------------------------------------ */
+
+const legal = name => {
+  const html = readFileSync(new URL(`./legal/${name}.html`, import.meta.url), 'utf8');
+  return (_, res) => {
+    const email = process.env.SUPPORT_EMAIL || 'support.ruckus@gmail.com';
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.type('html').send(html.replaceAll('{{SUPPORT_EMAIL}}', email));
+  };
+};
+app.get('/terms', legal('terms'));
+app.get('/privacy', legal('privacy'));
+app.get('/support', legal('support'));
+
 app.get('/health', (_, res) => {
   const total = alarms.wrapperFail + alarms.wrapperOk;
   res.json({
@@ -543,6 +630,7 @@ app.get('/health', (_, res) => {
     model: MODEL,
     geocode: Boolean(process.env.GOOGLE_PLACES_API_KEY),
     reminders: Boolean(SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.PROXY_SECRET),
+    reviewLogin: Boolean(process.env.REVIEW_EMAIL && process.env.REVIEW_CODE),
     auth: AUTH_ENFORCED ? 'enforced' : 'OPEN',
     // 'verified' = Pro is read from RevenueCat; 'events-only' = no secret key yet
     pro: process.env.REVENUECAT_SECRET_KEY ? 'verified' : 'events-only',

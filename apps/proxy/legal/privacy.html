@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruckus privacy policy</title>
+<style>
+  :root { --paper: #FFF9E8; --sunk: #F7EED2; --ink: #5B4636; --ink2: #7A6450; --line: #EBDDB8; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #2B2F55; --sunk: #222547; --ink: #FFF3D1; --ink2: #D3CFEC; --line: #444A7D; } }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.55 -apple-system, system-ui, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 32px; line-height: 1.15; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 36px 0 8px; }
+  p, li { color: var(--ink2); }
+  strong { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink); background: var(--sunk); }
+  td { color: var(--ink2); }
+  a { color: inherit; }
+  .meta { font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Privacy policy</h1>
+<p class="meta">Last updated 30 September 2026</p>
+
+<p>Ruckus is an app for saving places with a small group of friends, called a Den. This page says what
+Ruckus collects, why, who else handles it, and how to delete it.</p>
+
+<h2>Who we are</h2>
+<p>Ruckus is made by Karthikraj Sivakumar, Shruthi Murali, Amelia Lon and Quan Teng Wai, a team based in
+Toronto, Ontario, Canada ("we"). Karthikraj Sivakumar publishes Ruckus on the App Store and is responsible for
+your personal information. He is our privacy officer (also called the data protection officer). You can reach him at
+<a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a>.</p>
+
+<p><strong>The short version:</strong> we keep what you need to use the app with your friends: your
+email, the places you save and what you write about them. We don't sell data, show ads based on
+it, or track you across other apps. You can delete everything from inside the app.</p>
+
+<h2>What we collect</h2>
+<table>
+  <tr><th>What</th><th>Why</th></tr>
+  <tr><td>Your email address</td><td>To sign you in with a one-time code. Nobody else in a Den sees it.</td></tr>
+  <tr><td>Your display name and critter avatar</td><td>So people in your Dens know who saved what.</td></tr>
+  <tr><td>Your Dens and who is in them</td><td>To show each Den to its members only.</td></tr>
+  <tr><td>Places you save, with the link you saved them from, any note, and any event date</td><td>That is the Stash your Den shares. A place is stored as a Google place ID, a name and a map position.</td></tr>
+  <tr><td>Votes ("I'm in"), comments and plans (Capers)</td><td>To show them to your Den.</td></tr>
+  <tr><td>Which suggested place you picked when saving a link</td><td>To make suggestions better. We keep the suggestions and your pick, not the post's caption.</td></tr>
+  <tr><td>A push notification token for your device</td><td>To remind you before an event your Den saved.</td></tr>
+  <tr><td>Whether you have Ruckus Pro</td><td>To lift the free limits. Apple handles payment. We never see your card.</td></tr>
+  <tr><td>Reports you make, and reports about you</td><td>To deal with abuse.</td></tr>
+</table>
+
+<h2>What we use but don't keep</h2>
+<ul>
+  <li><strong>Your location</strong>, if you allow it. The app sends it with a request to sort places by
+    distance. It is used for that answer and not stored, and your Den never sees it.</li>
+  <li><strong>The text of a post you share.</strong> When you share a link, your phone reads the
+    post's public preview (the same title, caption and image a messaging app shows). The caption is sent to our
+    server and on to an AI model to find the places it names, then thrown away. We don't log it or keep it.
+    We never download or store the video or image.</li>
+  <li><strong>Place names you search for</strong>, which are looked up with Google Maps.</li>
+  <li><strong>A sign-in code that didn't work.</strong> The email and code are checked once more by our server
+    (in case it's the App Review demo account), then discarded. They are not logged.</li>
+</ul>
+
+<h2>Who else handles it</h2>
+<table>
+  <tr><th>Service</th><th>What for</th></tr>
+  <tr><td>Supabase</td><td>Our database and sign-in. Holds everything in "What we collect".</td></tr>
+  <tr><td>Railway</td><td>Runs our server, which passes captions to the AI model and searches to Google, and checks the review sign-in.</td></tr>
+  <tr><td>OpenRouter, and the AI model provider it routes to (currently Anthropic)</td><td>Reads a shared post's caption and names the places in it.</td></tr>
+  <tr><td>Google Maps Platform</td><td>Turns a place name into a place on the map.</td></tr>
+  <tr><td>RevenueCat and Apple</td><td>Ruckus Pro purchases. RevenueCat gets your Ruckus account ID and your purchase history.</td></tr>
+  <tr><td>Expo and Apple Push Notification service</td><td>Deliver event reminders.</td></tr>
+</table>
+<p>The site a link comes from (for example Instagram or TikTok) sees your phone's request for the
+preview, the same as when any app previews a link. Ruckus never signs in to those sites.</p>
+<p>These services may store and process data outside Canada and Singapore, including in the United States,
+where the law may give it different protection. We only use services that are contractually bound to protect it
+and to use it only to provide their service to us.</p>
+
+<h2>Who can see what</h2>
+<p>Places, notes, comments, votes and plans in a Den are visible to that Den's members and no one else.
+Your name and avatar are visible to people who share a Den with you. Your email is not visible to anyone.</p>
+
+<h2>How long we keep it</h2>
+<p>Until you delete it or your account. A report is kept for as long as it takes to deal with, and no
+more than a year after that.</p>
+
+<h2>Deleting your account</h2>
+<p>In the app: <strong>People → Delete account</strong>. It happens straight away, and it cannot be undone. It removes
+your email, profile, saves, comments, votes and memberships from every Den. A place a friend also saved
+stays in the Den under their name. A Den you own passes to the next member. Records of which
+suggestion you picked, and reports, stay with your account ID removed. Deleting your account doesn't cancel a
+Ruckus Pro subscription. Cancel that in iPhone Settings → your name → Subscriptions.</p>
+
+<h2>Consent</h2>
+<p>By creating an account you consent to the uses on this page. Location and notifications are optional and only
+used if you allow them in iOS. You can withdraw consent at any time by turning those off or by deleting your account.
+If you do, the parts of the app that need them stop working.</p>
+
+<h2>Your rights</h2>
+<p>You can ask us for a copy of your data, to correct it, or to delete it, by writing to
+<a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a>. We reply within 30 days. You can also complain to your
+privacy regulator: in Canada, the Office of the Privacy Commissioner of Canada (or, in Quebec, the Commission d'accès
+à l'information); in Singapore, the Personal Data Protection Commission; in the EU or UK, your local data
+protection authority.</p>
+
+<h2>Keeping it safe</h2>
+<p>Data is encrypted in transit, and each Den's data is only readable by its members. This is enforced by the
+database, not just the app. If a breach puts your information at real risk, we'll tell you and the relevant
+regulators as the law requires.</p>
+
+<h2>Children</h2>
+<p>Ruckus is not for anyone under 13, and we don't knowingly collect data from them. If you think a child has
+an account, tell us and we'll delete it.</p>
+
+<h2>Changes</h2>
+<p>If this policy changes in a way that matters, we'll say so in the app before it takes effect.</p>
+
+<h2>Contact</h2>
+<p><a href="mailto:{{SUPPORT_EMAIL}}">{{SUPPORT_EMAIL}}</a></p>
+</main>
+</body>
+</html>

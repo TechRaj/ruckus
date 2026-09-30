@@ -27,6 +27,8 @@ through `@ruckus/api` — screens never name a table or write SQL.
 | `device_push_tokens` | Expo push tokens, one row per device | only you |
 | `event_reminder_sends` | one row per reminder attempt, no token | only you, for your own alerts |
 | `confirmations` | what the confirm screen offered and what was picked (§5.8) | only you |
+| `blocks` | who you've blocked; their comments are hidden from you | only you |
+| `reports` | a reported person or comment, with the comment as it read | nobody in the app — the dashboard only |
 
 Writes go through functions, so the rules that RLS can't express are enforced in one place:
 
@@ -45,6 +47,10 @@ Writes go through functions, so the rules that RLS can't express are enforced in
 | `register_push_token` | `notifications.registerPushToken` | the signed-in user; a token moves to the account that registers it |
 | `unregister_push_token` | `notifications.unregisterPushToken` | your own token |
 | `log_confirmation` | `confirmations.log` | strips captions and `evidence` before storing |
+| `block_user` / `unblock_user` | `safety.block` / `unblock` | only someone you share a Den with; not yourself |
+| `blocked_people` | `safety.blocked` | your list, with names, even after you stop sharing a Den |
+| `report` | `safety.report` | you and they are in the Den; a comment report keeps the text |
+| `delete_my_account` | `auth.deleteAccount` | your saves go like `remove_from_stash`; you leave every Den; then the login and everything keyed to it |
 
 ## Errors the app should handle
 
@@ -61,6 +67,7 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
 | `place_missing_id` | route to search: the pipeline couldn't pin it |
 | `not_signed_in` | the sign-in screen |
 | `take_empty` / `take_too_long` | inline under the comment box |
+| `cannot_block_self` / `cannot_report_self` / `take_missing` | the message; the menus don't offer these, so seeing one is a bug |
 
 ## Rules worth knowing
 
@@ -76,6 +83,23 @@ Raised with a stable key. `@ruckus/api` turns each into a `RuckusError` with
   Apple Developer Program.
 - **The service role key never goes in the app.** It bypasses every rule here.
   `createRuckus()` refuses it.
+
+## Reports (App Store guideline 1.2)
+
+Apple expects reports acted on within 24 hours, and the terms promise it.
+Check open ones daily in the SQL editor:
+
+```sql
+select r.created_at, r.kind, r.body, r.reason, p.display_name as reported, d.name as den
+from reports r left join profiles p on p.id = r.reported_id left join dens d on d.id = r.den_id
+where resolved_at is null order by created_at;
+```
+
+To remove a comment: `delete from takes where den_id = … and place_id = … and profile_id = …`.
+To remove a person: `select delete_account('<profile id>');`, the same thing
+the app's Delete account does. Don't delete them in Authentication → Users, which
+leaves their saves in the Stash with no name. Then
+`update reports set resolved_at = now(), resolution = '…' where id = …`.
 
 ## Event reminders
 

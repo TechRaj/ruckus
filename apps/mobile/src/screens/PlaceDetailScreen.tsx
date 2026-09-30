@@ -14,6 +14,7 @@ import { EmptyState } from '../components/EmptyState';
 import { IconCheck, IconExternal, IconNav } from '../components/Icons';
 import { SheetModal } from '../components/SheetModal';
 import { TakeCard } from '../components/TakeCard';
+import { useSafetyMenu } from '../hooks/useSafetyMenu';
 import { ago, dotted, eventLabel, stashedWhen } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
@@ -26,6 +27,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
     stash, memberById, currentUserId, toggleInterest, startCaper, addTake, updateTake, deleteTake, removeFromStash, caperByPlace,
   } = useStash();
   const reduce = useReduceMotion();
+  const safetyMenu = useSafetyMenu();
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(false);
   const item = stash.find(s => s.id === id);
@@ -38,6 +40,8 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
   }
 
   const savedBy = memberById.get(item.savedBy);
+  /** The note's author, which isn't always the first saver. */
+  const noteBy = item.noteBy ?? item.savedBy;
   const going = item.interested.map(u => memberById.get(u)).filter(Boolean) as Member[];
   const isIn = item.iWant;
   const mine = item.takes.find(t => t.userId === currentUserId);
@@ -94,7 +98,22 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
             <Text style={styles.saverLine}>
               <Text style={styles.saverName}>{savedBy?.displayName ?? 'Someone'}</Text> stashed this {stashedWhen(item.savedAt)}
             </Text>
-            {item.note ? <Text style={styles.saverNote}>{item.note}</Text> : null}
+            {item.note ? (
+              <Text style={styles.saverNote}>
+                {/* The newest note can be a later saver's, so it's credited when it isn't the first saver's. */}
+                {noteBy !== item.savedBy ? <Text style={styles.saverName}>{`${memberById.get(noteBy)?.displayName ?? 'Someone'}: `}</Text> : null}
+                {item.note}
+              </Text>
+            ) : null}
+            {item.note && noteBy !== currentUserId ? (
+              <Text
+                style={styles.saverReport}
+                accessibilityRole="button"
+                onPress={() => safetyMenu({ userId: noteBy, displayName: memberById.get(noteBy)?.displayName })}
+              >
+                Report
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -157,6 +176,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
                   index={i + 1}
                   onEdit={own ? startEdit : undefined}
                   onDelete={own ? remove : undefined}
+                  onReport={own ? undefined : () => safetyMenu({ userId: t.userId, displayName: memberById.get(t.userId)?.displayName }, { commentOn: item.id })}
                 />
               );
             })}
@@ -206,6 +226,7 @@ const styles = StyleSheet.create({
   saverLine: { ...type.bodyMed, fontSize: 16, color: colors.inkSecondary },
   saverName: { fontFamily: font.bold, color: colors.ink },
   saverNote: { ...type.take, color: colors.ink, marginTop: 4 },
+  saverReport: { ...type.meta, color: colors.inkSecondary, marginTop: 6, alignSelf: 'flex-start' },
   happening: { ...type.bodyMed, color: colors.ink, marginTop: 4 },
   lineWrap: { marginTop: space.sm },
   lineField: {

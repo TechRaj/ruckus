@@ -3,7 +3,7 @@
  * Invites use the six-character code because the ruckus.app domain is not set up for universal links.
  */
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../api/client';
@@ -14,6 +14,8 @@ import { CritterRoom } from '../components/CritterRoom';
 import { IconChevronRight } from '../components/Icons';
 import { EMBLEMS, Emblem } from '../components/Emblem';
 import { PressableScale } from '../components/PressableScale';
+import { useSafetyMenu } from '../hooks/useSafetyMenu';
+import { legalLinks, openLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
 import { ROOM_WARNING } from '../types';
 import { lines } from '../theme/lines';
@@ -21,7 +23,9 @@ import { chooseSound, playTap, soundOn } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
-  const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession, capacity, denAllowance } = useStash();
+  const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession, capacity, denAllowance, currentUserId, unblock, blocked } = useStash();
+  const safetyMenu = useSafetyMenu();
+
   const insets = useSafeAreaInsets();
   const [invite, setInvite] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -37,6 +41,17 @@ export function PeopleScreen() {
   useEffect(() => {
     if (den) api.getInviteLink(den.id).then(r => setInvite(r.code)).catch(() => {});
   }, [den]);
+
+  const manageBlocked = () => Alert.alert('Blocked', 'Tap someone to unblock them.', [
+    ...blocked.map(m => ({
+      text: m.displayName,
+      onPress: () => Alert.alert(`Unblock ${m.displayName}?`, lines.safety.unblockBody, [
+        { text: 'Cancel', style: 'cancel' as const },
+        { text: 'Unblock', onPress: () => { unblock(m.userId).catch(() => Alert.alert(lines.safety.failed)); } },
+      ]),
+    })),
+    { text: 'Done', style: 'cancel' as const },
+  ]);
 
   const closePanel = () => { setPanel('closed'); setCode(''); setDenName(''); setPanelError(null); };
 
@@ -111,8 +126,12 @@ export function PeopleScreen() {
         <View style={{ height: 18 }} />
         <CritterRoom
           compact={den.members.length <= 4}
+          onPick={id => { const m = den.members.find(x => x.userId === id); if (m) safetyMenu(m); }}
+          pickRole="button"
+          pickHint="Report or block"
+
           heads={den.members.map(m => ({
-            key: m.userId, critter: m.critter, label: m.displayName,
+            key: m.userId, critter: m.critter, label: m.displayName, pickable: m.userId !== currentUserId,
             sub: `${savedCountBy.get(m.userId) ?? 0} saved`,
           }))}
         />
@@ -242,7 +261,16 @@ export function PeopleScreen() {
             <TextButton label={panel === 'switch' ? 'Close' : 'Back'} onPress={() => (panel === 'switch' ? closePanel() : (setPanel('switch'), setPanelError(null)))} muted />
           </View>
         )}
+        {blocked.length > 0 ? (
+          <TextButton label={`Blocked · ${blocked.length}`} onPress={manageBlocked} muted />
+        ) : null}
         <TextButton label="Sign out" onPress={() => openOverlay({ kind: 'sign-out' })} muted />
+        <TextButton label="Delete account" onPress={() => openOverlay({ kind: 'delete-account' })} muted />
+        <View style={styles.legal}>
+          <Text style={styles.legalLink} accessibilityRole="link" onPress={() => openLink(legalLinks.privacy)}>Privacy</Text>
+          <Text style={styles.meta}>·</Text>
+          <Text style={styles.legalLink} accessibilityRole="link" onPress={() => openLink(legalLinks.terms)}>Terms</Text>
+        </View>
       </View>
     </ScrollView>
     </View>
@@ -288,4 +316,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.hairline,
   },
   proTitle: { ...type.chip, fontSize: 16, color: colors.ink },
+  legal: { flexDirection: 'row', justifyContent: 'center', gap: space.sm, marginTop: space.md },
+  legalLink: { ...type.meta, color: colors.inkMuted, marginTop: 6, textDecorationLine: 'underline' },
 });

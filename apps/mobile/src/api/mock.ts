@@ -15,6 +15,7 @@ let userId: string | null = null;
 let dens: Den[] = [];
 const stash: StashItem[] = mockStash.map(s => ({ ...s, takes: [...s.takes] }));
 const capers: Caper[] = [];
+const blocked = new Set<string>();
 const listeners = new Map<string, Set<() => void>>();
 
 const notify = (denId: string) => listeners.get(denId)?.forEach(cb => cb());
@@ -36,6 +37,11 @@ export const mockApi: Api = {
     async userId() { await delay(60); return userId; },
     /** The account keeps its Dens, so signing back in returns to them. */
     async signOut() { userId = null; },
+    /** Starts over as a brand-new person. */
+    async deleteAccount() {
+      await delay(400);
+      userId = null; dens = []; blocked.clear();
+    },
   },
 
   profile: {
@@ -72,7 +78,11 @@ export const mockApi: Api = {
     if (i >= 0) stash.splice(i, 1);
     return 0;
   },
-  async getStash(denId) { await delay(320); return stash.filter(s => s.denId === denId).map(s => ({ ...s })); },
+  async getStash(denId) {
+    await delay(320);
+    return stash.filter(s => s.denId === denId)
+      .map(s => ({ ...s, takes: s.takes.filter(t => !blocked.has(t.userId)) }));
+  },
   onStashChange(denId, cb) {
     if (!listeners.has(denId)) listeners.set(denId, new Set());
     listeners.get(denId)!.add(cb);
@@ -127,6 +137,14 @@ export const mockApi: Api = {
   },
 
   async syncPro() { return false; },
+  safety: {
+    async report() { await delay(300); },
+    async block(id) { await delay(200); blocked.add(id); dens.forEach(d => notify(d.id)); },
+    async unblock(id) { await delay(200); blocked.delete(id); dens.forEach(d => notify(d.id)); },
+    async blocked() {
+      return mockDen.members.filter(m => blocked.has(m.userId));
+    },
+  },
   notifications: {
     async registerPushToken() {},
     async unregisterPushToken() {},

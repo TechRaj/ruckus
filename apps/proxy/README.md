@@ -16,6 +16,8 @@ Stateless — no database, no sessions. Scale it or restart it freely.
 | `POST /alarm` | Counts `wrapperOk:false`. Logs loudly past a 25% sustained failure rate. |
 | `POST /webhooks/revenuecat` | RevenueCat purchase events. Re-reads the user's Pro status from RevenueCat and writes `profiles.is_pro`. |
 | `POST /pro/sync` | The signed-in app asking for the same re-read, right after a purchase and at launch. |
+| `POST /auth/review` | The App Review demo login: `REVIEW_EMAIL` + `REVIEW_CODE` → a one-time sign-in. 404 for every other email. |
+| `GET /terms`, `/privacy`, `/support` | The terms, privacy policy and support page from `legal/`, with `SUPPORT_EMAIL` filled in. Linked from the app and App Store Connect. |
 | `GET /health` | Liveness, which model, whether geocoding is configured, wrapper failure rate. |
 
 ## Deploying to Railway
@@ -42,6 +44,9 @@ Then set variables in the Railway dashboard:
 | `REVENUECAT_SECRET_KEY` | for Pro | RevenueCat **secret** key (`sk_…`). Pro is then read from RevenueCat, not guessed from events, and `/pro/sync` works. Server only — never in the app. |
 | `REVENUECAT_WEBHOOK_AUTH` | for Pro | The exact Authorization value set in RevenueCat's webhook settings. |
 | `PRO_ENTITLEMENT` | no | Defaults to `ruckus_pro`. Must match the app and RevenueCat. |
+| `SUPPORT_EMAIL` | no | Contact address on the legal pages. Defaults to `support.ruckus@gmail.com`. |
+| `REVIEW_EMAIL` | for review | The demo account's email. Sign in with it once for real, then `npm run seed:demo -- <email>`. |
+| `REVIEW_CODE` | for review | The fixed six-digit code for it. Goes in App Store Connect's review notes, nowhere else. Unset both after approval. |
 | `WRAPPER_RE` | no | Emergency override for the caption regex. |
 | `PROFILE_NAME_RE` | no | Emergency override for the profile-name regex. |
 

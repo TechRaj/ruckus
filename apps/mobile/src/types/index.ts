@@ -67,6 +67,8 @@ export interface StashItem {
   interested: string[];
   /** The saver's one-line note about the place. */
   note: string;
+  /** Who wrote `note`, when it isn't obvious. Falls back to `savedBy`. */
+  noteBy?: string | null;
   /** Other members' comments. The saver's `note` is shown before them. */
   takes: Take[];
   /** Straight-line distance from the user, already formatted for display. */

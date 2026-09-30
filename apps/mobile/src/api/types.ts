@@ -2,7 +2,7 @@
  * The backend interface the screens use. `mock.ts` and `ruckus.ts` implement
  * it and `client.ts` picks one. Screens import `api` from `client.ts` only.
  */
-import { Caper, Critter, Den, DenAllowance, DenCapacity, PlaceCandidate, StashItem } from '../types';
+import { Caper, Critter, Den, DenAllowance, DenCapacity, Member, PlaceCandidate, StashItem } from '../types';
 
 export type ConfirmMode = 'single' | 'choose' | 'multi' | 'search';
 
@@ -19,6 +19,12 @@ export interface Api {
     verifyCode(email: string, code: string): Promise<string>;
     userId(): Promise<string | null>;
     signOut(): Promise<void>;
+    /**
+     * Deletes the account and everything that is theirs, then signs out.
+     * Saves a friend also made stay; Dens they own pass on. Does not cancel
+     * an App Store subscription.
+     */
+    deleteAccount(): Promise<void>;
   };
 
   profile: {
@@ -73,6 +79,16 @@ export interface Api {
     registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
     /** Removes one device. Call before sign-out, while the session still exists. */
     unregisterPushToken(token: string): Promise<void>;
+  };
+
+  /** Report and block (App Store guideline 1.2). */
+  safety: {
+    /** Pass `placeId` to report that person's comment on the place; leave it out to report the person. */
+    report(args: { denId: string; userId: string; placeId?: string }): Promise<void>;
+    /** Hides their comments from you. They aren't told. */
+    block(userId: string): Promise<void>;
+    unblock(userId: string): Promise<void>;
+    blocked(): Promise<Member[]>;
   };
 
   /** Comments, one per person per place, stored in the `takes` table. Add and update are the same write. */

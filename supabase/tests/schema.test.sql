@@ -44,6 +44,7 @@ create function t.id(who text) returns uuid language sql immutable as $$
     when 'alice' then '11111111-1111-1111-1111-111111111111'
     when 'bob'   then '22222222-2222-2222-2222-222222222222'
     when 'carol' then '33333333-3333-3333-3333-333333333333'
+    when 'dave'  then '44444444-4444-4444-4444-444444444444'
     when 'erin'  then '55555555-5555-5555-5555-555555555555'
   end::uuid
 $$;
@@ -667,6 +668,118 @@ reset role;
 select t.ok((select count(*) from public.dens where id = t.get('den')::uuid) = 0, 'the last one out deletes the Den');
 select t.ok((select count(*) from public.places where google_place_id = 'ChIJ_dual') = 1,
             '...but the shared place survives for every other Den');
+
+-- ----------------------------------------------------------------- blocks
+-- erin owns Big Den, carol is in it
+set role authenticated;
+select t.login('erin');
+select null from public.set_take(t.get('big')::uuid, (select id from public.places where google_place_id = 'cap_a_1'), 'go early');
+select t.login('carol');
+select t.put('cap_a_1', (select id::text from public.places where google_place_id = 'cap_a_1'));
+select t.ok((select count(*) from public.takes where profile_id = t.id('erin')) = 1, 'carol sees erin''s comment');
+select public.block_user(t.id('erin'));
+select t.ok((select count(*) from public.takes where profile_id = t.id('erin')) = 0, 'once blocked, erin''s comments are hidden from carol');
+select t.login('erin');
+select null from public.save_places(t.get('big')::uuid, t.places(1, 'note_'), p_note => 'erin''s note');
+select t.ok((select note_by from public.den_stash(t.get('big')::uuid) where google_place_id = 'note_1') = t.id('erin'),
+            'the Stash says who wrote a note');
+select t.login('carol');
+select t.ok((select note from public.den_stash(t.get('big')::uuid) where google_place_id = 'note_1') is null,
+            '...and a blocked person''s note is hidden too');
+select t.ok((select count(*) from public.blocked_people() where profile_id = t.id('erin')) = 1, 'carol''s blocked list shows erin');
+select public.block_user(t.id('erin'));
+select t.ok(true, 'blocking twice is not an error');
+select t.throws(format('select public.block_user(%L)', t.id('carol')), 'cannot_block_self', 'nobody can block themselves');
+select t.throws(format('select public.block_user(%L)', t.id('alice')), 'not_a_member', 'you can only block someone you share a Den with');
+select t.throws(format('insert into public.blocks values (%L, %L)', t.id('carol'), t.id('alice')),
+                'permission denied', 'blocks are only written through block_user');
+select t.login('erin');
+select t.ok((select count(*) from public.takes where profile_id = t.id('erin')) = 1, 'erin still sees her own comment');
+select t.ok((select count(*) from public.blocks) = 0, 'erin can''t see that carol blocked her');
+select t.login('carol');
+select public.unblock_user(t.id('erin'));
+select t.ok((select note from public.den_stash(t.get('big')::uuid) where google_place_id = 'note_1') = 'erin''s note',
+            'unblocking brings the note back');
+select t.ok((select count(*) from public.takes where profile_id = t.id('erin')) = 1, 'unblocking brings the comments back');
+
+-- ---------------------------------------------------------------- reports
+select public.report(t.get('big')::uuid, t.id('erin'), t.get('cap_a_1')::uuid, 'rude');
+select public.report(t.get('big')::uuid, t.id('erin'));
+select t.throws('select count(*) from public.reports', 'permission denied', 'nobody can read reports from the app, not even their own');
+select t.throws(format('select public.report(%L, %L)', t.get('big'), t.id('carol')), 'cannot_report_self', 'nobody can report themselves');
+select t.throws(format('select public.report(%L, %L)', t.get('big'), t.id('alice')), 'not_a_member', 'you can only report someone in the Den');
+select t.throws(format('select public.report(%L, %L, %L)', t.get('big'), t.id('erin'), gen_random_uuid()), 'take_missing',
+                'reporting a comment that isn''t there is refused');
+select t.login('bob');
+select t.throws(format('select public.report(%L, %L)', t.get('big'), t.id('erin')), 'not_a_member', 'an outsider can''t report into a Den');
+reset role;
+select t.ok((select body from public.reports where kind = 'comment') = 'go early', 'a reported comment is kept as it read');
+select t.ok((select count(*) from public.reports where reporter_id = t.id('carol')) = 2, 'both reports are filed');
+set role authenticated;
+
+-- ------------------------------------------------ someone who has left
+reset role;
+insert into auth.users (id, email) values ('66666666-6666-6666-6666-666666666666', 'fay@example.com');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"66666666-6666-6666-6666-666666666666"}', false);
+select null from public.join_den(t.get('big_code'));
+select null from public.set_take(t.get('big')::uuid, t.get('cap_a_1')::uuid, 'parting shot');
+select public.leave_den(t.get('big')::uuid);
+select t.login('carol');
+select public.report(t.get('big')::uuid, '66666666-6666-6666-6666-666666666666', t.get('cap_a_1')::uuid);
+select t.ok(true, 'a comment from someone who has left can still be reported');
+select public.block_user('66666666-6666-6666-6666-666666666666');
+select t.ok((select count(*) from public.takes where body = 'parting shot') = 0, '...and they can still be blocked');
+select public.unblock_user('66666666-6666-6666-6666-666666666666');
+
+-- ------------------------------------------------------- deleting an account
+reset role;
+insert into auth.users (id, email) values (t.id('dave'), 'dave@example.com');
+set role authenticated;
+select t.login('dave');
+do $$
+declare solo public.dens; shared public.dens;
+begin
+  perform public.join_den(t.get('big_code'));
+  perform public.save_places(t.get('big')::uuid, t.places(1, 'dave_only_'));
+  perform public.save_places(t.get('big')::uuid, t.places(1, 'cap_a_'));     -- erin saved this one too
+  perform public.set_want_to_go(t.get('big')::uuid, t.get('cap_a_1')::uuid, true);
+  perform public.set_take(t.get('big')::uuid, t.get('cap_a_1')::uuid, 'dave was here');
+  perform public.set_take(t.get('big')::uuid, (select id from public.places where google_place_id = 'dave_only_1'), 'mine');
+  solo := public.create_den('Dave Alone');
+  shared := public.create_den('Dave and Carol');
+  perform t.put('dave_solo', solo.id::text);
+  perform t.put('dave_shared', shared.id::text);
+  perform t.put('dave_code', public.create_invite(shared.id));
+end $$;
+select t.login('carol');
+select null from public.join_den(t.get('dave_code'));
+select public.block_user(t.id('dave'));
+select t.login('dave');
+select public.block_user(t.id('carol'));
+select t.throws(format('select public.delete_account(%L)', t.id('erin')), 'permission denied',
+                'nobody can delete someone else''s account from the app');
+select public.delete_my_account();
+
+reset role;
+select t.ok((select count(*) from auth.users where id = t.id('dave')) = 0, 'deleting an account removes the login');
+select t.ok((select count(*) from public.profiles where id = t.id('dave')) = 0, '...and the profile');
+select t.ok((select count(*) from public.saves where profile_id = t.id('dave') or profile_id is null) = 0, '...and every save, none left orphaned');
+select t.ok((select count(*) from public.want_to_go where profile_id = t.id('dave')) = 0, '...and every vote');
+select t.ok((select count(*) from public.takes where profile_id = t.id('dave')) = 0, '...and every comment');
+select t.ok((select count(*) from public.den_members where profile_id = t.id('dave')) = 0, '...and every membership');
+select t.ok((select count(*) from public.blocks where t.id('dave') in (blocker_id, blocked_id)) = 0, '...and blocks either way');
+select t.ok((select count(*) from public.dens where id = t.get('dave_solo')::uuid) = 0, 'a Den only they were in is deleted');
+select t.ok((select role from public.den_members where den_id = t.get('dave_shared')::uuid and profile_id = t.id('carol')) = 'owner',
+            'a Den they owned passes to the next member');
+set role authenticated;
+select t.login('erin');
+select t.ok((select count(*) from public.den_stash(t.get('big')::uuid) where google_place_id = 'dave_only_1') = 0,
+            'a place only they saved leaves the Stash');
+select t.ok((select jsonb_array_length(savers) from public.den_stash(t.get('big')::uuid) where google_place_id = 'cap_a_1') = 1,
+            'a place a friend also saved stays, under the friend''s name');
+select null from (select set_config('request.jwt.claims', '{}', false)) _;
+select t.throws('select public.delete_my_account()', 'not_signed_in', 'deleting needs a signed-in user');
 
 -- ------------------------------------------------------------- signed out
 set role anon;

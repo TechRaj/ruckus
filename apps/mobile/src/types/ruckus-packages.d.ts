@@ -51,6 +51,8 @@ declare module '@ruckus/api' {
     firstSavedAt: string;
     savers: { id: string; displayName: string; avatar: string | null }[];
     note: string | null;
+    /** Who wrote `note`. */
+    noteBy: string | null;
     sourceUrls: string[];
     when: { text: string | null; start: string | null; end: string | null; recurring: string | null } | null;
     /** What is on there, e.g. "CHANEL cafe pop-up". Null for a plain save. */
@@ -69,7 +71,9 @@ declare module '@ruckus/api' {
     auth: {
       sendCode(email: string, opts?: { displayName?: string }): Promise<void>;
       verifyCode(email: string, token: string): Promise<string>;
+      verifyTokenHash(tokenHash: string, type?: string): Promise<string>;
       signOut(): Promise<void>;
+      deleteAccount(): Promise<void>;
       userId(): Promise<string | null>;
       onChange(cb: (userId: string | null) => void): () => void;
     };
@@ -114,6 +118,12 @@ declare module '@ruckus/api' {
     notifications: {
       registerPushToken(token: string, platform: 'ios' | 'android'): Promise<void>;
       unregisterPushToken(token: string): Promise<void>;
+    };
+    safety: {
+      report(args: { denId: string; profileId: string; placeId?: string | null; reason?: string | null }): Promise<void>;
+      block(profileId: string): Promise<void>;
+      unblock(profileId: string): Promise<void>;
+      blocked(): Promise<{ id: string; displayName: string; avatar: string | null }[]>;
     };
   }
 

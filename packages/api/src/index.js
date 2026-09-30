@@ -44,6 +44,9 @@ export const ERRORS = {
   too_many_codes:     "That's a lot of codes. Wait a minute, then try again.",
   email_invalid:      "That doesn't look like an email address.",
   take_too_long:      'Keep it under 280 characters.',
+  take_missing:       'That comment is gone already.',
+  cannot_block_self:  "You can't block yourself.",
+  cannot_report_self: "You can't report yourself.",
   no_places:          'Pick at least one place to save.',
   too_many_places:    'That is a lot of places. Save fewer at once.',
   bad_push_token:     "That device couldn't be registered for reminders.",
@@ -145,6 +148,26 @@ export function createRuckus({ url, anonKey, storage } = {}) {
     },
 
     async signOut() { await run(supabase.auth.signOut()); },
+
+    /**
+     * Sign in from a token hash minted server-side - the App Review demo
+     * account, whose inbox the reviewer can't read. See /auth/review on the proxy.
+     */
+    async verifyTokenHash(tokenHash, type = 'magiclink') {
+      const data = await run(supabase.auth.verifyOtp({ token_hash: tokenHash, type }));
+      return data.user.id;
+    },
+
+    /**
+     * Delete the account and everything that is yours (App Store 5.1.1(v)).
+     * Saves a friend also made stay under their name; Dens you own pass on.
+     * Signs out locally afterwards - the server session died with the user.
+     * Does not cancel an App Store subscription; only Apple can.
+     */
+    async deleteAccount() {
+      await rpc('delete_my_account', {});
+      await supabase.auth.signOut({ scope: 'local' });
+    },
 
     /** @returns {Promise<string|null>} current user id, or null if signed out */
     async userId() {
@@ -373,6 +396,28 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       rpc('log_confirmation', { p_mode: mode, p_offered: offered, p_chosen: chosen, p_engine: engine ?? null }),
   };
 
+  /* -------------------------------------------------------------- safety -- */
+
+  const safety = {
+    /**
+     * Report someone in a Den to us. Pass `placeId` to report their comment on
+     * that place (kept as it read, even if they edit it); leave it out to
+     * report the person. Nobody can read reports from the app.
+     */
+    report: ({ denId, profileId, placeId = null, reason = null }) =>
+      rpc('report', { p_den: denId, p_profile: profileId, p_place: placeId, p_reason: reason }),
+
+    /** Hide someone's comments from you, everywhere. They aren't told. */
+    block: profileId => rpc('block_user', { p_profile: profileId }),
+    unblock: profileId => rpc('unblock_user', { p_profile: profileId }),
+
+    /** `[{ id, displayName, avatar }]`, oldest block first. */
+    async blocked() {
+      const rows = await rpc('blocked_people', {});
+      return rows.map(r => ({ id: r.profile_id, displayName: r.display_name, avatar: r.avatar }));
+    },
+  };
+
   /* ------------------------------------------------------- notifications -- */
 
   const notifications = {
@@ -388,7 +433,7 @@ export function createRuckus({ url, anonKey, storage } = {}) {
       rpc('unregister_push_token', { p_token: token }),
   };
 
-  return { supabase, auth, profile, dens, stash, takes, capers, confirmations, notifications };
+  return { supabase, auth, profile, dens, stash, takes, capers, confirmations, notifications, safety };
 }
 
 /** snake_case row from den_stash() -> the camelCase shape screens use */
@@ -407,6 +452,7 @@ function toStashRow(r) {
     firstSavedAt: r.first_saved_at,
     savers: (r.savers ?? []).map(s => ({ id: s.profile_id, displayName: s.display_name, avatar: s.avatar })),
     note: r.note,
+    noteBy: r.note_by ?? null,   // who wrote `note`; not always savers[0]
     sourceUrls: r.source_urls ?? [],
     when: r.when_text || r.when_start || r.when_recurring
       ? { text: r.when_text, start: r.when_start, end: r.when_end, recurring: r.when_recurring }

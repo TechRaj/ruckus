@@ -15,6 +15,7 @@ import { Field, Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { Grain } from '../components/Grain';
 import { Sprite } from '../components/Sprite';
 import { forgetEmail, rememberEmail } from '../lib/lastSignIn';
+import { legalLinks, openLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
 import { useReduceMotion } from '../theme/motion';
 import { playFail } from '../theme/sound';
@@ -209,6 +210,16 @@ export function SignInScreen({
           {error ? <Hint style={styles.error}>{error}</Hint> : null}
           {step === 'code' && !error && wait > 0
             ? <Hint style={styles.note}>{`send again in 0:${String(wait).padStart(2, '0')}`}</Hint> : null}
+          {step === 'email' ? (
+            /** App Review wants the terms agreed to before anyone can post (guideline 1.2). */
+            <Text style={styles.terms}>
+              by continuing you agree to the{' '}
+              <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.terms)}>terms</Text>
+              {' '}and{' '}
+              <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.privacy)}>privacy policy</Text>.
+              {' '}no bullying or hateful posts.
+            </Text>
+          ) : null}
           {USE_MOCKS ? <Hint style={styles.note}>mock mode: any email, any six digits</Hint> : null}
       </ScrollView>
       {step === 'email' ? (
@@ -265,6 +276,8 @@ const styles = StyleSheet.create({
   },
   error: { color: colors.warn, marginTop: space.md },
   note: { marginTop: space.md },
+  terms: { ...type.hint, color: colors.inkMuted, marginTop: space.md },
+  link: { textDecorationLine: 'underline' },
   welcome: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xl, gap: space.xs },
   welcomeTitle: { ...type.display, color: colors.ink, textAlign: 'center', marginTop: space.sm },
 });
