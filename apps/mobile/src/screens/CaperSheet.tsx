@@ -12,16 +12,13 @@ import { IconCheck } from '../components/Icons';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { PressableScale } from '../components/PressableScale';
 import { SheetModal } from '../components/SheetModal';
+import { TimeWheel, WheelTime, wheelText } from '../components/TimeWheel';
 import { dayChoices, dayLabel } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { colors, edge, font, radius, space, type } from '../theme/tokens';
 
 const TIMES = ['6 pm', '7 pm', '8 pm'];
-const HOURS = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-
-/** "7 pm", "7:30 pm": the :00 is left off, matching the quick picks. */
-const timeText = (hour: number, half: boolean, pm: boolean) => `${hour}${half ? ':30' : ''} ${pm ? 'pm' : 'am'}`;
 
 export function CaperSheet({
   id, onClose, onMade,
@@ -33,11 +30,11 @@ export function CaperSheet({
   /** The calendar, for a day beyond the quick picks. */
   const [calendar, setCalendar] = useState(false);
   const [time, setTime] = useState<string | null>(null);
-  /** The clock, for a time beyond the quick picks. */
+  /** The wheel, for a time beyond the quick picks. */
   const [clock, setClock] = useState(false);
-  const [hour, setHour] = useState(7);
-  const [half, setHalf] = useState(false);
-  const [pm, setPm] = useState(true);
+  const [wheel, setWheel] = useState<WheelTime>({ hour: 7, minute: 0, pm: true });
+  /** A time has to be chosen, or put off on purpose. The Caper then carries no time. */
+  const [later, setLater] = useState(false);
   /** Null until someone is unticked. Until then everyone who is in is going. */
   const [picked, setPicked] = useState<string[] | null>(null);
   const going = picked ?? item?.interested ?? [];
@@ -55,8 +52,10 @@ export function CaperSheet({
   const toggle = (userId: string) =>
     setPicked(going.includes(userId) ? going.filter(u => u !== userId) : [...going, userId]);
 
+  const timeSettled = time !== null || later;
+
   const lock = async () => {
-    if (!day) return;
+    if (!day || !timeSettled) return;
     setBusy(true); setError(null);
     try {
       const caper = await createCaper({ id: item.id, date: day, time, going });
@@ -92,10 +91,10 @@ export function CaperSheet({
           </View>
         ) : null}
 
-        <Kicker style={styles.label}>What time? (optional)</Kicker>
+        <Kicker style={styles.label}>What time?</Kicker>
         <View style={styles.chips}>
           {TIMES.map(t => (
-            <Chip key={t} on={time === t} onPress={() => { setTime(time === t ? null : t); setClock(false); }} label={t} />
+            <Chip key={t} on={time === t} onPress={() => { setTime(t); setLater(false); setClock(false); }} label={t} />
           ))}
           {/* a time the quick picks do not cover shows here once chosen */}
           <Chip
@@ -103,26 +102,16 @@ export function CaperSheet({
             onPress={() => {
               if (clock) { setClock(false); return; }
               setClock(true);
-              setTime(timeText(hour, half, pm));
+              setLater(false);
+              setTime(wheelText(wheel));
             }}
             label={time && !TIMES.includes(time) ? time : 'Another time'}
           />
+          <Chip on={later} onPress={() => { setLater(true); setTime(null); setClock(false); }} label="Set time later" />
         </View>
         {clock ? (
           <View style={styles.clock}>
-            <View style={styles.chips}>
-              {HOURS.map(h => (
-                <Chip key={h} on={hour === h} small onPress={() => { setHour(h); setTime(timeText(h, half, pm)); }} label={String(h)} />
-              ))}
-            </View>
-            <View style={[styles.chips, { marginTop: space.sm }]}>
-              <Chip on={!half} small onPress={() => { setHalf(false); setTime(timeText(hour, false, pm)); }} label=":00" />
-              <Chip on={half} small onPress={() => { setHalf(true); setTime(timeText(hour, true, pm)); }} label=":30" />
-              <View style={{ width: space.sm }} />
-              <Chip on={!pm} small onPress={() => { setPm(false); setTime(timeText(hour, half, false)); }} label="am" />
-              <Chip on={pm} small onPress={() => { setPm(true); setTime(timeText(hour, half, true)); }} label="pm" />
-            </View>
-            <TextButton label="No time after all" onPress={() => { setTime(null); setClock(false); }} muted />
+            <TimeWheel value={wheel} onChange={t => { setWheel(t); setTime(wheelText(t)); }} />
           </View>
         ) : null}
 
@@ -157,7 +146,7 @@ export function CaperSheet({
         {error ? <Hint style={styles.error}>{error}</Hint> : null}
       </ScrollView>
       <View style={styles.footer}>
-        <PrimaryButton label="Lock it in" onPress={lock} loading={busy} disabled={busy || !day} />
+        <PrimaryButton label="Lock it in" onPress={lock} loading={busy} disabled={busy || !day || !timeSettled} />
         <TextButton label="Not yet" onPress={onClose} muted />
       </View>
     </SheetModal>
@@ -165,8 +154,8 @@ export function CaperSheet({
 }
 
 function Chip({
-  label, note, on, onPress, small,
-}: { label: string; note?: string; on: boolean; onPress: () => void; small?: boolean }) {
+  label, note, on, onPress,
+}: { label: string; note?: string; on: boolean; onPress: () => void }) {
   return (
     <PressableScale
       onPress={onPress}
@@ -175,7 +164,7 @@ function Chip({
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       accessibilityLabel={note ? `${label}, ${note}` : label}
-      style={[styles.chip, small && styles.chipSmall, on && styles.chipOn]}
+      style={[styles.chip, on && styles.chipOn]}
     >
       <Text style={[styles.chipLabel, on && { color: colors.onFlare }]}>{label}</Text>
       {note ? <Text style={[styles.chipNote, on && { color: colors.onFlare }]}>{note}</Text> : null}
@@ -190,9 +179,7 @@ const styles = StyleSheet.create({
   label: { marginTop: space.xl, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   calendar: { marginTop: space.md },
-  clock: { marginTop: space.md, alignItems: 'flex-start' },
-  /** Hours and halves: a tighter chip, so twelve fit in two rows. */
-  chipSmall: { height: 40, paddingHorizontal: 0, minWidth: 48, justifyContent: 'center' },
+  clock: { marginTop: space.md, alignItems: 'stretch' },
   chip: {
     height: 44, paddingHorizontal: space.lg, borderRadius: radius.pill,
     flexDirection: 'row', alignItems: 'center', gap: 6,

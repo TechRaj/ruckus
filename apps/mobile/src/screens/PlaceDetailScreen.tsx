@@ -9,16 +9,16 @@ import {
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { PrimaryButton, SecondaryButton, TextButton } from '../components/Buttons';
 import { keyboardDismissMode, Kicker } from '../components/Chrome';
-import { CritterStack } from '../components/CritterHead';
+import { CritterHead, CritterStack } from '../components/CritterHead';
 import { EmptyState } from '../components/EmptyState';
 import { IconCheck, IconExternal, IconNav } from '../components/Icons';
 import { SheetModal } from '../components/SheetModal';
 import { TakeCard } from '../components/TakeCard';
-import { ago, dotted, eventLabel } from '../lib/time';
+import { ago, dotted, eventLabel, stashedWhen } from '../lib/time';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapImpact, useReduceMotion } from '../theme/motion';
-import { colors, radius, space, type } from '../theme/tokens';
+import { colors, font, radius, space, type } from '../theme/tokens';
 import { CATEGORY_LABEL, Member } from '../types';
 
 export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => void }) {
@@ -87,7 +87,16 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
         ) : null}
 
         <View style={{ height: space.lg }} />
-        <TakeCard member={savedBy} text={item.note} meta={`stashed it · ${ago(item.savedAt)}`} />
+        {/* Who saved it and when, as a sentence. Their note, if they left one, goes underneath. */}
+        <View style={styles.saver}>
+          {savedBy ? <CritterHead critter={savedBy.critter} size={40} /> : <View style={{ width: 40 }} />}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.saverLine}>
+              <Text style={styles.saverName}>{savedBy?.displayName ?? 'Someone'}</Text> stashed this {stashedWhen(item.savedAt)}
+            </Text>
+            {item.note ? <Text style={styles.saverNote}>{item.note}</Text> : null}
+          </View>
+        </View>
 
         <View style={{ height: 18 }} />
         <PrimaryButton
@@ -189,6 +198,14 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: space.xl, paddingTop: 6, paddingBottom: space.lg },
   title: { ...type.display, color: colors.ink, marginTop: 8 },
   where: { ...type.meta, fontSize: 14, color: colors.inkMuted, marginTop: 6 },
+  saver: {
+    flexDirection: 'row', gap: space.md, alignItems: 'center',
+    backgroundColor: colors.paperSunk, borderRadius: radius.xl - 2,
+    paddingVertical: 14, paddingLeft: 14, paddingRight: space.lg,
+  },
+  saverLine: { ...type.bodyMed, fontSize: 16, color: colors.inkSecondary },
+  saverName: { fontFamily: font.bold, color: colors.ink },
+  saverNote: { ...type.take, color: colors.ink, marginTop: 4 },
   happening: { ...type.bodyMed, color: colors.ink, marginTop: 4 },
   lineWrap: { marginTop: space.sm },
   lineField: {
