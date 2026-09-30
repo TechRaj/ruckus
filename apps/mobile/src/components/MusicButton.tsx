@@ -3,20 +3,19 @@
  * sits on the map like a doodle rather than a control. Off, the waves are
  * replaced by a small cross.
  */
-import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { PressableScale } from './PressableScale';
-import { chooseMusic, musicOn } from '../theme/sound';
+import { chooseMusic, useMusicOn } from '../theme/sound';
 import { colors } from '../theme/tokens';
 
 export function MusicButton({ size = 30 }: { size?: number }) {
-  const [on, setOn] = useState(musicOn());
+  const on = useMusicOn();
   const ink = colors.ink;
 
   return (
     <PressableScale
-      onPress={() => { setOn(!on); chooseMusic(!on); }}
+      onPress={() => chooseMusic(!on)}
       haptic="selection"
       scaleTo={0.9}
       accessibilityRole="switch"

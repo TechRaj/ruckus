@@ -19,7 +19,7 @@ import { legalLinks, openLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
 import { ROOM_WARNING } from '../types';
 import { lines } from '../theme/lines';
-import { chooseSound, playTap, soundOn } from '../theme/sound';
+import { chooseMusic, chooseSound, playTap, soundOn, useMusicOn } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
@@ -35,6 +35,7 @@ export function PeopleScreen() {
   const [denName, setDenName] = useState('');
   const [emblem, setEmblem] = useState<string>(EMBLEMS[0]);
   const [sounds, setSounds] = useState(soundOn());
+  const music = useMusicOn();
   const [busy, setBusy] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
 
@@ -173,7 +174,19 @@ export function PeopleScreen() {
 
         <View style={[styles.pro, { marginTop: space.md }]}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.proTitle}>Sounds</Text>
+            <Text style={styles.proTitle}>Music</Text>
+          </View>
+          <Switch
+            value={music}
+            onValueChange={chooseMusic}
+            trackColor={{ true: colors.flareDeep, false: colors.paperSunk }}
+            accessibilityLabel="Music"
+          />
+        </View>
+
+        <View style={[styles.pro, { marginTop: space.sm }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.proTitle}>Sound effects</Text>
           </View>
           <Switch
             value={sounds}
@@ -184,7 +197,7 @@ export function PeopleScreen() {
               if (next) playTap();
             }}
             trackColor={{ true: colors.flareDeep, false: colors.paperSunk }}
-            accessibilityLabel="Sounds"
+            accessibilityLabel="Sound effects"
           />
         </View>
 

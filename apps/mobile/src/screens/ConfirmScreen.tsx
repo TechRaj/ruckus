@@ -319,43 +319,47 @@ export function ConfirmScreen({
               accessibilityLabel={[c.name, c.headline, eventLabel(c.when), c.address].filter(Boolean).join(', ')}
               style={[styles.card, on && styles.cardOn]}
             >
-              <View style={styles.cardTile}>
-                <CategoryGlyph category={c.category} size={24} color={colors.ink} />
+              <View style={styles.cardRow}>
+                <View style={styles.cardTile}>
+                  <CategoryGlyph category={c.category} size={24} color={colors.ink} />
+                </View>
+                <View style={styles.resultBody}>
+                  <Text style={styles.name} numberOfLines={2}>{c.name}</Text>
+                  <Text style={styles.address} numberOfLines={2}>{c.address}</Text>
+                  {/* what's on and when - for a pop-up that's the reason to save it, and
+                      a date that's already gone by should be seen before saving, not after */}
+                  {c.headline || eventLabel(c.when) ? (
+                    <Text style={[styles.happening, eventOver(c.when) && styles.happeningOver]} numberOfLines={2}>
+                      {dotted(c.headline, eventLabel(c.when))}
+                    </Text>
+                  ) : null}
+                  {c.reason ? <Text style={styles.reason}>{c.reason}</Text> : null}
+                  {/* No date in the caption: the user can pick one. The links sit on the card; a tap on them does not tick it. */}
+                  {on && !c.when ? (
+                    dates[c.placeId] ? (
+                      <View style={styles.dateLine}>
+                        <Text style={styles.dateChosen}>{dayLabel(dates[c.placeId])}</Text>
+                        <TextButton label={dating === c.placeId ? 'Done' : 'Change'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
+                        <TextButton label="Remove" onPress={() => { setDates(({ [c.placeId]: _, ...rest }) => rest); setDating(null); }} muted />
+                      </View>
+                    ) : (
+                      <View style={styles.dateLine}>
+                        <TextButton label={dating === c.placeId ? 'No date after all' : 'Add a date'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
+                      </View>
+                    )
+                  ) : null}
+                </View>
+                {/* With several cards the empty circle stays, so an unticked card still reads as tickable. */}
+                {on ? (
+                  <View style={styles.tick}><IconCheck size={14} color={colors.onFlare} /></View>
+                ) : several ? <View style={[styles.tick, styles.tickOff]} /> : null}
               </View>
-              <View style={styles.resultBody}>
-                <Text style={styles.name} numberOfLines={2}>{c.name}</Text>
-                <Text style={styles.address} numberOfLines={2}>{c.address}</Text>
-                {/* what's on and when - for a pop-up that's the reason to save it, and
-                    a date that's already gone by should be seen before saving, not after */}
-                {c.headline || eventLabel(c.when) ? (
-                  <Text style={[styles.happening, eventOver(c.when) && styles.happeningOver]} numberOfLines={2}>
-                    {dotted(c.headline, eventLabel(c.when))}
-                  </Text>
-                ) : null}
-                {c.reason ? <Text style={styles.reason}>{c.reason}</Text> : null}
-              </View>
-              {/* With several cards the empty circle stays, so an unticked card still reads as tickable. */}
-              {on ? (
-                <View style={styles.tick}><IconCheck size={14} color={colors.onFlare} /></View>
-              ) : several ? <View style={[styles.tick, styles.tickOff]} /> : null}
-            </PressableScale>
-            {/* No date in the caption: the user can pick one. Outside the card, so the calendar does not tick it. */}
-            {on && !c.when ? (
-              <View style={styles.dateRow}>
-                {dates[c.placeId] ? (
-                  <View style={styles.dateLine}>
-                    <Text style={styles.dateChosen}>{dayLabel(dates[c.placeId])}</Text>
-                    <TextButton label={dating === c.placeId ? 'Done' : 'Change'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
-                    <TextButton label="Remove" onPress={() => { setDates(({ [c.placeId]: _, ...rest }) => rest); setDating(null); }} muted />
-                  </View>
-                ) : (
-                  <TextButton label={dating === c.placeId ? 'No date after all' : 'Add a date'} onPress={() => setDating(dating === c.placeId ? null : c.placeId)} muted />
-                )}
-                {dating === c.placeId ? (
+              {on && !c.when && dating === c.placeId ? (
+                <View style={styles.dateCalendar}>
                   <MonthCalendar value={dates[c.placeId] ?? null} onChange={day => setDates(prev => ({ ...prev, [c.placeId]: day }))} />
-                ) : null}
-              </View>
-            ) : null}
+                </View>
+              ) : null}
+            </PressableScale>
             </View>
           );
         })}
@@ -391,10 +395,10 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: space.xl, paddingTop: 6, paddingBottom: space.lg },
   headline: { ...type.displaySm, fontSize: 30, lineHeight: 35, color: colors.ink, marginTop: 8 },
   card: {
-    flexDirection: 'row', gap: 14, alignItems: 'flex-start',
     padding: 17, borderRadius: radius.xl, marginBottom: 11,
     borderWidth: 1.5, borderColor: colors.hairline, backgroundColor: colors.paper,
   },
+  cardRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
   cardOn: { borderColor: colors.flareDeep, borderWidth: 2, backgroundColor: colors.flareWash },
   cardTile: {
     width: 52, height: 52, borderRadius: radius.lg,
@@ -408,9 +412,9 @@ const styles = StyleSheet.create({
   name: { ...type.rowTitle, fontSize: 19, color: colors.ink },
   address: { ...type.meta, fontSize: 14, lineHeight: 19, color: colors.inkSecondary, marginTop: 2 },
   happening: { ...type.meta, fontSize: 14, lineHeight: 19, fontFamily: font.bold, color: colors.ink, marginTop: 6 },
-  dateRow: { marginTop: -4, marginBottom: space.md },
-  dateLine: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingLeft: space.md },
-  dateChosen: { flex: 1, fontFamily: font.bold, fontSize: 15, color: colors.ink },
+  dateLine: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: 2, marginBottom: -8 },
+  dateChosen: { fontFamily: font.bold, fontSize: 15, color: colors.ink },
+  dateCalendar: { marginTop: space.md },
   happeningOver: { color: colors.warn },
   reason: { ...type.meta, color: colors.inkMuted, marginTop: 7 },
   tick: {

@@ -55,7 +55,7 @@ export function HomeScreen() {
                 style={styles.caper}
               >
                 <View style={styles.date}>
-                  <Text style={styles.dateDay}>{day.weekday.toUpperCase()}</Text>
+                  <Text style={styles.dateMonth}>{day.month.toUpperCase()}</Text>
                   <Text style={styles.dateNumber}>{day.date}</Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -145,11 +145,15 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.flare,
   },
   date: {
-    width: 52, paddingVertical: 5, borderRadius: radius.lg - 4, alignItems: 'center',
+    width: 52, height: 54, borderRadius: radius.lg - 4, alignItems: 'center', justifyContent: 'center',
+    /** Baloo sets its digits high in the line box, so the centre is pushed down by half of this. */
+    paddingTop: 8,
     backgroundColor: colors.paper, borderWidth: 1.5, borderColor: colors.flareDeep,
   },
-  dateDay: { fontFamily: font.mono, fontSize: 10, letterSpacing: 1, color: colors.inkMuted },
-  dateNumber: { fontFamily: font.display, fontSize: 22, lineHeight: 26, color: colors.ink },
+  /** Letter spacing trails the last letter too, so the label is nudged right by the same amount to sit centred. */
+  dateMonth: { fontFamily: font.mono, fontSize: 10, lineHeight: 12, letterSpacing: 1, marginLeft: 1, textAlign: 'center', color: colors.inkMuted },
+  /** Baloo clips glyph tops below about 1.3x the size, so the line box stays at 28. */
+  dateNumber: { fontFamily: font.display, fontSize: 22, lineHeight: 28, textAlign: 'center', color: colors.ink },
   sectionLabel: { paddingHorizontal: space.xl, paddingTop: 28, paddingBottom: space.md },
   activity: {
     flexDirection: 'row', gap: 14, alignItems: 'center',

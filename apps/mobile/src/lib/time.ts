@@ -92,10 +92,10 @@ export function dayLabel(day: string, now = new Date()) {
   return `${WEEKDAYS[d.getDay()].slice(0, 3)}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
-/** The pieces of a date tile: "FRI" over "2". */
+/** The pieces of a date tile: "OCT" over "2". */
 export const dayParts = (day: string) => {
   const d = fromIsoDay(day);
-  return { weekday: WEEKDAYS[d.getDay()].slice(0, 3), date: d.getDate() };
+  return { month: MONTHS[d.getMonth()], weekday: WEEKDAYS[d.getDay()].slice(0, 3), date: d.getDate() };
 };
 
 /**

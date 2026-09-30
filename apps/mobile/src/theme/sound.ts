@@ -19,6 +19,7 @@
  * over. Its position is saved every few seconds and right before a reload,
  * and the next run picks up from there.
  */
+import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
@@ -62,6 +63,19 @@ let musicAt = 0;
 export const soundOn = () => sounds;
 export const musicOn = () => musicChoice;
 
+/** The speaker on the map and the switch on People both show the music choice, so each hears the other's change. */
+const musicListeners = new Set<(on: boolean) => void>();
+const announceMusic = () => { for (const cb of musicListeners) cb(musicChoice); };
+
+export function useMusicOn() {
+  const [on, setOn] = useState(musicChoice);
+  useEffect(() => {
+    musicListeners.add(setOn);
+    return () => { musicListeners.delete(setOn); };
+  }, []);
+  return on;
+}
+
 export async function readSoundChoice() {
   try {
     const [[, s], [, at]] = await AsyncStorage.multiGet([SOUND, MUSIC_AT]);
@@ -86,6 +100,7 @@ export async function chooseSound(next: boolean) {
 
 export function chooseMusic(next: boolean) {
   musicChoice = next;
+  announceMusic();
   playMusicIfWanted();
 }
 
@@ -137,7 +152,7 @@ export const playFail = () => play('fail');
 
 /** The tabs call this with true, sign-in and onboarding with false. Coming in turns the music back on. */
 export function setInside(next: boolean) {
-  if (next && !inside) musicChoice = true;
+  if (next && !inside) { musicChoice = true; announceMusic(); }
   inside = next;
   playMusicIfWanted();
 }
