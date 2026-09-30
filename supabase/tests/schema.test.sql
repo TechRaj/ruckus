@@ -534,6 +534,36 @@ select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 12:59
 select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 13:00+00')) = 2,
             'the 1-day reminder fires at 09:00 EDT');
 
+-- A Caper at 6:45 pm fires at 6:45, three days before, not at 09:00.
+-- 2026-09-30 22:45 UTC is 18:45 EDT. 09:00 that morning has already passed.
+select t.login('alice');
+select null from public.save_places(t.get('den')::uuid,
+  '[{"googlePlaceId":"ChIJ_timed","name":"Timed Plan","kind":"event",
+     "coordinate":{"lat":43.65,"lng":-79.38},
+     "when":{"text":"October 3","start":"2026-10-03","end":null,"recurring":null}}]'::jsonb,
+  null, 'manual', null, 'manual');
+reset role;
+update public.places set time_zone = 'America/Toronto' where google_place_id = 'ChIJ_timed';
+select t.ok(public.event_clock('6:45 pm') = time '18:45', '6:45 pm is 18:45');
+select t.ok(public.event_clock('7 pm') = time '19:00', '7 pm is 19:00');
+select t.ok(public.event_clock('nope') is null, 'a time the app did not write is not a clock');
+select t.login('alice');
+select public.make_caper(
+  t.get('den')::uuid,
+  (select id from public.places where google_place_id = 'ChIJ_timed'),
+  '2026-10-03', '6:45 pm', array[t.id('alice')]);
+reset role;
+select t.ok((select count(*) from public.claim_event_reminders('2026-09-30 22:44+00') c
+             join public.event_reminder_sends s on s.id = c.send_id
+             join public.places p on p.id = s.place_id
+             where p.google_place_id = 'ChIJ_timed' and s.offset_days = 3) = 0,
+            'a timed plan does not remind at 09:00');
+select t.ok((select count(*) from public.claim_event_reminders('2026-09-30 22:45+00') c
+             join public.event_reminder_sends s on s.id = c.send_id
+             join public.places p on p.id = s.place_id
+             where p.google_place_id = 'ChIJ_timed' and s.offset_days = 3) = 2,
+            'three days before, the reminder fires at 6:45 pm');
+
 select public.finish_event_reminder(
   (select id from public.event_reminder_sends where recipient_id = t.id('alice') and offset_days = 7),
   'failed', 'DeviceNotRegistered ExponentPushToken[alicealicealicealice]');

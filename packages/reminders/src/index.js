@@ -5,10 +5,11 @@ export {
   dueOffsets,
   eventStartInstant,
   fireInstant,
+  parseEventClock,
   timeZoneFromCoordinate,
   zonedLocalToUtc,
 } from './time.js';
-export { reminderCopy } from './copy.js';
+export { reminderCopy, pickReminderEvent } from './copy.js';
 export { EXPO_PUSH_URL, publicPushError, sendExpoPush } from './expo.js';
 export { dispatchEventReminders, reminderData } from './dispatch.js';
 export { createSupabaseReminderDb } from './supabase.js';

@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "main": "./src/index.js",
-  "exports": { ".": "./src/index.js" },
+  "exports": {
+    ".": "./src/index.js",
+    "./copy": "./src/copy.js",
+    "./clock": "./src/clock.js"
+  },
   "sideEffects": false,
   "dependencies": {
     "geo-tz": "^8.1.4"

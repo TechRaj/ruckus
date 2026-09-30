@@ -508,37 +508,67 @@ app.post('/pro/sync', requireCaller, async (req, res) => {
 /* ------------------------------------------------------------------ *
  * /internal/reminders/dispatch - send Den event reminders that are due.
  *
- * A cron hits this every few minutes with the proxy secret. Members are
- * notified at 09:00 in the place's time zone, 7, 3, and 1 days before the
- * event, even if the app is closed. The service role key stays here.
+ * The proxy also runs this itself, every 10 minutes, so a plan's alert
+ * goes out while this process is up. The route is the same job, for a
+ * cron. Members are notified in the place's time zone, 7, 3, and 1 days
+ * before the event: 09:00 when the save has no clock time, or the Caper's
+ * own time when it has one. The alert still goes out if the app is closed.
  * Nothing in the response or the log is a push token.
  * ------------------------------------------------------------------ */
+
+const REMINDER_EVERY_MS = 10 * 60 * 1000;
+let reminderRun = null;
+
+async function runReminderDispatch() {
+  if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('reminders not configured');
+  }
+  if (reminderRun) return reminderRun;
+  reminderRun = (async () => {
+    try {
+      const db = createSupabaseReminderDb({
+        url: SUPABASE_URL,
+        serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      });
+      const result = await dispatchEventReminders({
+        db,
+        resolveTimeZone: timeZoneFromCoordinate,
+        push: messages => sendExpoPush(messages, { accessToken: process.env.EXPO_ACCESS_TOKEN }),
+      });
+      console.log(`[reminders] claimed=${result.claimed} sent=${result.sent} failed=${result.failed} skipped=${result.skipped}`);
+      return result;
+    } finally {
+      reminderRun = null;
+    }
+  })();
+  return reminderRun;
+}
 
 app.post('/internal/reminders/dispatch', async (req, res) => {
   const key = req.headers['x-ruckus-key'];
   if (!process.env.PROXY_SECRET || !safeEqual(key ?? '', process.env.PROXY_SECRET)) {
     return res.status(401).json({ error: 'sign in required' });
   }
-  if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(503).json({ error: 'reminders not configured' });
-  }
   try {
-    const db = createSupabaseReminderDb({
-      url: SUPABASE_URL,
-      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    });
-    const result = await dispatchEventReminders({
-      db,
-      resolveTimeZone: timeZoneFromCoordinate,
-      push: messages => sendExpoPush(messages, { accessToken: process.env.EXPO_ACCESS_TOKEN }),
-    });
-    console.log(`[reminders] claimed=${result.claimed} sent=${result.sent} failed=${result.failed} skipped=${result.skipped}`);
+    const result = await runReminderDispatch();
     res.json({ ok: true, ...result });
   } catch (err) {
-    console.error('[reminders]', err.message);
-    res.status(500).json({ error: 'reminders failed' });
+    const missing = err.message === 'reminders not configured';
+    if (!missing) console.error('[reminders]', err.message);
+    res.status(missing ? 503 : 500).json({ error: missing ? err.message : 'reminders failed' });
   }
 });
+
+function startReminderTimer() {
+  if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('[reminders] timer off, database not configured');
+    return;
+  }
+  console.log('[reminders] timer on, every 10 minutes');
+  const tick = () => { runReminderDispatch().catch(() => {}); };
+  setTimeout(tick, 5_000);
+  setInterval(tick, REMINDER_EVERY_MS);
+}
 
 /* ------------------------------------------------------------------ *
  * /auth/review - the App Review demo account.
@@ -648,6 +678,7 @@ app.get('/health', (_, res) => {
   });
 });
 
-app.listen(process.env.PORT || 3000, () =>
-  console.log(`proxy listening on ${process.env.PORT || 3000}, model=${MODEL}`)
-);
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`proxy listening on ${process.env.PORT || 3000}, model=${MODEL}`);
+  startReminderTimer();
+});

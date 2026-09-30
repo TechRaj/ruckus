@@ -485,7 +485,28 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
 
   useEventReminders(session === 'ready', useCallback(target => {
     openReminder(target.denId, target.placeId);
-  }, [openReminder]));
+  }, [openReminder]), den && currentUserId ? {
+    denId: den.id,
+    userId: currentUserId,
+    members: den.members.map(member => ({ userId: member.userId, displayName: member.displayName })),
+    events: [...new Map([
+      ...stash.flatMap(item => item.when?.start ? [[item.id, {
+        id: item.id,
+        name: item.name,
+        start: item.when.start,
+        iWant: item.iWant,
+        interested: item.interested,
+      }] as const] : []),
+      ...upcoming.map(({ caper, place }) => [place.id, {
+        id: place.id,
+        name: place.name,
+        start: caper.date,
+        time: caper.time,
+        iWant: caper.going.includes(currentUserId),
+        interested: caper.going,
+      }] as const),
+    ]).values()],
+  } : null);
 
   const value: StashState = {
     session, loading, error, den, stash, filter, category, query, sort, selectedId,

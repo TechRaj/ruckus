@@ -5,7 +5,9 @@ import {
   addCalendarDays,
   dueOffsets,
   fireInstant,
+  parseEventClock,
   reminderCopy,
+  pickReminderEvent,
   reminderTarget,
   timeZoneFromCoordinate,
   zonedLocalToUtc,
@@ -53,6 +55,23 @@ test('7, 3, and 1 day reminders become due at 09:00 local and stop at the event'
   assert.deepEqual(dueOffsets('not-a-date', TORONTO, at('2026-03-09T13:00:00.000Z')), []);
 });
 
+test('a plan with a clock time fires at that time, the same number of days before', () => {
+  const clock = parseEventClock('6:45 pm');
+  assert.deepEqual(clock, { hour: 18, minute: 45 });
+  assert.equal(parseEventClock('7 pm')?.hour, 19);
+  assert.equal(parseEventClock('12 am')?.hour, 0);
+  assert.equal(parseEventClock('12:30 pm')?.hour, 12);
+  assert.equal(parseEventClock('sometime'), null);
+  const event = '2026-10-03';
+  // 3 days before is 2026-09-30. 18:45 EDT is 22:45 UTC.
+  assert.equal(fireInstant(event, 3, TORONTO, clock).toISOString(), '2026-09-30T22:45:00.000Z');
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:44:00.000Z'), clock), [7]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:45:00.000Z'), clock), [7, 3]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-10-03T22:45:00.000Z'), clock), []);
+  // No clock still means 09:00, which on that September morning is 13:00 UTC.
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T13:00:00.000Z')), [7, 3]);
+});
+
 test('copy follows the vote, and does not invent names', () => {
   const base = { eventName: 'Toronto Night Market', otherVoterNames: ['Quan', 'Mia'] };
   assert.equal(
@@ -90,6 +109,20 @@ test('copy follows the vote, and does not invent names', () => {
     }),
     'Toronto Night Market is in 3 days. Lee, Mia and 2 others want to go. Interested?',
   );
+});
+
+test('a reminder is chosen from dated events 7, 3, or 1 days out', () => {
+  const events = [
+    { id: 'a', name: 'Later', start: '2026-10-08' },
+    { id: 'b', name: 'Tomorrow', start: '2026-10-02' },
+    { id: 'c', name: 'Undated', start: null },
+    { id: 'd', name: 'Too soon', start: '2026-10-03' },
+  ];
+  assert.deepEqual(pickReminderEvent(events, '2026-10-01'), {
+    id: 'b', name: 'Tomorrow', start: '2026-10-02', offsetDays: 1,
+  });
+  assert.equal(pickReminderEvent([{ id: 'a', name: 'Later', start: '2026-10-08' }], '2026-10-01').offsetDays, 7);
+  assert.equal(pickReminderEvent(events, '2026-09-01'), null);
 });
 
 test('a coordinate becomes one time zone, or none', () => {

@@ -43,3 +43,27 @@ export function reminderCopy({ eventName, offsetDays, recipientVoted, otherVoter
   if (names.length === 0) return `${lead} Interested?`;
   return `${lead} ${formatOthers(names)} Interested?`;
 }
+
+const OFFSETS = [1, 3, 7];
+
+function calendarDaysBetween(today, start) {
+  const utc = iso => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
+  return Math.round((utc(start) - utc(today)) / 86400000);
+}
+
+/**
+ * The soonest stash event whose date is 7, 3, or 1 calendar days after `today`.
+ * `today` and each `start` are YYYY-MM-DD. No match means nothing is due.
+ */
+export function pickReminderEvent(events, today) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(today ?? '')) return null;
+  const due = [];
+  for (const event of events ?? []) {
+    if (!event?.start || !/^\d{4}-\d{2}-\d{2}$/.test(event.start) || !event.name || !event.id) continue;
+    const days = calendarDaysBetween(today, event.start);
+    if (!OFFSETS.includes(days)) continue;
+    due.push({ id: event.id, name: event.name, start: event.start, offsetDays: days });
+  }
+  due.sort((a, b) => a.offsetDays - b.offsetDays || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  return due[0] ?? null;
+}
