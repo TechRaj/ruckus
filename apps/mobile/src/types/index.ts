@@ -32,8 +32,10 @@ export interface PlaceCandidate {
   category: Category;
   /** Why the pipeline picked it. Shown under the name. */
   reason?: string;
-  /** The date as the caption wrote it, such as "October 3 to 4". Set for events. */
-  when?: string | null;
+  /** What is on there, e.g. "CHANEL cafe pop-up". Null for a plain place. */
+  headline?: string | null;
+  /** When it happens, if the reel said (CLAUDE.md §9). */
+  when?: EventWhen | null;
   /** How sure the pipeline is. When a link names several places, the low ones start unticked. */
   tier?: 'high' | 'medium' | 'low';
 }
@@ -73,6 +75,8 @@ export interface StashItem {
   distanceM?: number | null;
   /** When it happens, if the reel was an event (CLAUDE.md §9). */
   when?: EventWhen | null;
+  /** What is on there, e.g. "CHANEL cafe pop-up". The reason to go, which the name alone loses. */
+  headline?: string | null;
   address?: string;
 }
 

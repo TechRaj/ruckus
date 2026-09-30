@@ -97,6 +97,7 @@ export async function geocodeCandidates(candidates, ctx = {}, opts = {}) {
         kind: c.kind,
         category: c.category ?? null,
         when: c.when ?? null,     // an event is a place plus a when
+        headline: c.headline ?? null,
         sourceUrl: ctx.sourceUrl ?? null,
         score: refined.score,
         tier: tierOf(refined.score),
@@ -143,6 +144,7 @@ export async function searchPlaces(query, ctx = {}, opts = {}) {
       // Google's first specific type, such as "cafe". The app maps it to eat, drink or do.
       category: (r.types ?? []).find(t => t !== 'point_of_interest' && t !== 'establishment')?.replace(/_/g, ' ') ?? null,
       when: null,
+      headline: null,
       sourceUrl: null,
       score: 0,
       tier: 'high',
@@ -183,6 +185,10 @@ function dedupeByPlace(places) {
     // the venue row usually outscores the event row, and the event row is the
     // one carrying the date - losing it here would undo the whole point
     keep.when = keep.when ?? drop.when;
+    // and the event row's name is the reason to go: "CHANEL cafe pop-up" at
+    // Dineen Coffee Co. Dropping it left a plain coffee shop on the map.
+    keep.headline = keep.headline ?? drop.headline ??
+      (drop.kind === 'event' && drop.modelName !== keep.modelName ? drop.modelName : null);
     byId.set(p.googlePlaceId, keep);
   }
 

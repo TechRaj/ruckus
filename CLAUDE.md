@@ -345,6 +345,7 @@ type ResolvedPlace = {
     end: string | null;
     recurring: string | null;     //   "First Wednesday of each month"
   } | null;
+  headline: string | null;        // what's on there: "CHANEL cafe pop-up"; null for most
   alsoSeenAs?: string[];          // other kinds this place was returned as
   sourceUrl: string;              // the reel
   score: number;                  // confidence.js, post-geocode
@@ -368,7 +369,19 @@ name the model found.
 The model resolves the year against `POSTED` from the og tags, so "August 11"
 on a post from 6 Aug 2026 becomes `2026-08-11`. `text` is always safe to show;
 `start`/`end` only populate when genuinely resolvable, because a wrong date on
-a calendar is worse than no date. Open: what a past-dated save does.
+a calendar is worse than no date. A past date shows as "Ended Sep 26" on the
+confirm card, in the warn colour, before the user saves; whether to block or
+hide those saves is still open.
+
+**`headline` exists because the pin is not the reason to go.** "@chanelofficial
+cafe pop up at @dineencoffeeco" pinned Dineen correctly and saved it as a plain
+coffee shop. The model now writes a short title for a *happening* — pop-up,
+festival, trivia night, seasonal attraction — and leaves it null for anything
+still true of the place in a few months. It is model-written, never a caption
+quote, so it is a fact rather than a copy (§7). When the model returns the event
+and its venue as two rows, the merge in `geocode.js` keeps the event's name as
+the headline. Measured 29 Sept over the 44-reel corpus + holdout: 25 headlines,
+3 of them descriptions that slipped through ("newly opened", "boat cruise").
 
 **Setup notes:**
 - Expo dev build, not Expo Go — share extensions need native code. `npx expo run:ios`.

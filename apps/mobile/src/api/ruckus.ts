@@ -79,6 +79,7 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
     distance: formatDistance(r.distanceM),
     distanceM: r.distanceM ?? null,
     when: r.when ?? null,
+    headline: r.headline ?? null,
     address: r.address ?? undefined,
     takes: r.takes,
   };
@@ -110,7 +111,8 @@ function toCandidate(p: ResolvedPlace): PlaceCandidate | null {
     lng: p.coordinate.lng,
     category: toCategory(p.kind, p.category),
     reason: p.explanation?.text,
-    when: p.when?.text ?? null,
+    headline: p.headline ?? null,
+    when: p.when ?? null,
     tier: p.tier,
   };
 }

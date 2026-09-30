@@ -21,6 +21,7 @@ import {
   decodeEntities, parseReelPage, shortcodeOf,
   scoreCandidate, refineWithGeocode, tierOf, explain,
   normaliseCity, geocodeCandidates, searchPlaces,
+  extractPlaces, normaliseHeadline,
 } from '@ruckus/ingest';
 
 /** Build an og-tag page the way Instagram actually serves one. */
@@ -239,6 +240,48 @@ describe('geocode stage', () => {
     assert.deepEqual(out[0].alsoSeenAs, ['event'], 'the other reading is remembered, not discarded');
   });
 
+  test('a venue does not become its own headline', async () => {
+    // College Park came back as venue and event under the same name; the
+    // merge must not hang "College Park" on College Park as what's on
+    const candidates = [
+      { name: 'College Park', kind: 'venue', score: 9, reasons: [], codes: [], geocodeQuery: 'College Park' },
+      { name: 'College Park', kind: 'event', score: 8, reasons: [], codes: [], geocodeQuery: 'College Park' },
+    ];
+    const out = await withStubProxy(
+      () => [place('College Park', 'ChIJ_same')],
+      ep => geocodeCandidates(candidates, { city: 'Toronto' }, { geocodeEndpoint: ep }));
+    assert.equal(out[0].headline, null);
+  });
+
+  test("the pop-up survives the merge into its host venue", async () => {
+    // reel DduaeqXppDq: "@chanelofficial cafe pop up at @dineencoffeeco".
+    // Both rows geocode to Dineen; the saved place read "Dineen Coffee Co.,
+    // coffee" and Chanel - the reason to go - was gone.
+    const when = { text: 'Saturday, September 26', start: '2026-09-26', end: null, recurring: null };
+    const candidates = [
+      { name: 'Dineen Coffee Co.', kind: 'venue', score: 12, reasons: [], codes: [], geocodeQuery: 'Dineen Coffee Co.', headline: null, when: null },
+      { name: 'CHANEL cafe pop-up', kind: 'event', score: 9, reasons: [], codes: [], geocodeQuery: 'Dineen Coffee Co.', headline: null, when },
+    ];
+    const out = await withStubProxy(
+      () => [place('Dineen Coffee Co.', 'ChIJ_dineen')],
+      ep => geocodeCandidates(candidates, { city: 'Toronto' }, { geocodeEndpoint: ep }));
+    assert.equal(out.length, 1);
+    assert.equal(out[0].name, 'Dineen Coffee Co.', 'the pin is still the venue');
+    assert.equal(out[0].headline, 'CHANEL cafe pop-up');
+    assert.deepEqual(out[0].when, when);
+  });
+
+  test("a headline the model gave wins over the event row's name", async () => {
+    const candidates = [
+      { name: 'Dineen Coffee Co.', kind: 'venue', score: 12, reasons: [], codes: [], geocodeQuery: 'Dineen', headline: 'CHANEL cafe pop-up' },
+      { name: 'Chanel event', kind: 'event', score: 9, reasons: [], codes: [], geocodeQuery: 'Dineen', headline: null },
+    ];
+    const out = await withStubProxy(
+      () => [place('Dineen Coffee Co.', 'ChIJ_dineen')],
+      ep => geocodeCandidates(candidates, {}, { geocodeEndpoint: ep }));
+    assert.equal(out[0].headline, 'CHANEL cafe pop-up');
+  });
+
   test('search returns every match, not the single best one', async () => {
     // The stub returns id_1 twice. Search must return all three places, deduped.
     const out = await withStubProxy(
@@ -307,5 +350,48 @@ describe('geocode stage', () => {
     assert.equal(out[0].googlePlaceId, null);
     assert.equal(out[0].name, 'Somewhere');
     assert.ok(out[0].geocodeError);
+  });
+});
+
+describe('headline (what is on at the place)', () => {
+  test('normaliseHeadline keeps short lines and drops noise', () => {
+    assert.equal(normaliseHeadline('  CHANEL   cafe pop-up ', 'Dineen Coffee Co.'), 'CHANEL cafe pop-up');
+    assert.equal(normaliseHeadline('Dineen Coffee Co.', 'Dineen Coffee Co.'), null, 'the name is not a headline');
+    assert.equal(normaliseHeadline('', 'X'), null);
+    assert.equal(normaliseHeadline(null, 'X'), null);
+    assert.equal(normaliseHeadline(42, 'X'), null);
+    assert.equal(normaliseHeadline('x'.repeat(61), 'X'), null, 'a paragraph is a copied caption, not a headline');
+    assert.equal(normaliseHeadline('After Hours: free monthly outdoor movies, live music, community activities', 'College Park'), null,
+      'a sentence is not a title');
+    assert.equal(normaliseHeadline('Water Lantern Festival', 'Downsview Park'), 'Water Lantern Festival');
+  });
+
+  test('extractPlaces carries the headline from the model to the candidate', async () => {
+    const reply = {
+      city: 'Toronto',
+      places: [{
+        name: 'Dineen Coffee Co.', kind: 'venue', instagram_handle: 'dineencoffeeco',
+        category: 'coffee', address: '140 Yonge St', evidence: '@dineencoffeeco',
+        geocode_query: 'Dineen Coffee Co. 140 Yonge St Toronto',
+        headline: 'CHANEL cafe pop-up',
+        when: { text: 'Saturday, September 26', start: '2026-09-26', end: null, recurring: null },
+      }],
+      notes: null,
+    };
+    const server = createServer((req, res) => {
+      req.resume();
+      req.on('end', () => {
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ text: JSON.stringify(reply), model: 'stub' }));
+      });
+    });
+    await new Promise(r => server.listen(0, r));
+    try {
+      const parsed = parseReelPage(page('12 likes, 0 comments - torontopopups on September 25, 2026: &quot;Have you been to the &#064;chanelofficial cafe pop up at &#064;dineencoffeeco yet? 📍140 Yonge St&quot;'));
+      const out = await extractPlaces(parsed, {}, { endpoint: `http://127.0.0.1:${server.address().port}/extract` });
+      assert.equal(out.engine, 'model');
+      assert.equal(out.candidates[0].headline, 'CHANEL cafe pop-up');
+      assert.equal(out.candidates[0].when.start, '2026-09-26');
+    } finally { server.close(); }
   });
 });

@@ -87,6 +87,12 @@ export function eventLabel(when: EventWhen | null | undefined, now = new Date())
   return dayLabel(when.start, now);
 }
 
+/** True once the last day of a dated event has gone by. */
+export function eventOver(when: EventWhen | null | undefined, now = new Date()) {
+  const last = when?.end ?? when?.start;
+  return Boolean(last && last < isoDay(now));
+}
+
 /**
  * Where a place sits in the Date sort: the day it next happens, or null for
  * no date. Something under way counts as today; something over counts as past.

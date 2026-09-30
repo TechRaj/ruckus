@@ -127,6 +127,7 @@ begin
        "coordinate":{"lat":43.6509,"lng":-79.3843},"score":14,"tier":"high","when":null},
       {"googlePlaceId":"ChIJ_downsview","name":"Downsview Park","kind":"region",
        "coordinate":{"lat":43.7417,"lng":-79.4789},"score":16,"tier":"high",
+       "headline":"Water Lantern Festival",
        "when":{"text":"September 18–20","start":"2026-09-18","end":"2026-09-20","recurring":null}}]'::jsonb,
     'https://www.instagram.com/reel/AAA/', 'instagram', 'best latte', 'model');
   perform t.ok(n = 2, 'alice saves two places from one reel');
@@ -175,6 +176,24 @@ begin
   select * into r from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_downsview';
   perform t.ok(r.when_start = '2026-09-18' and r.when_end = '2026-09-20', 'an event keeps its dates');
   perform t.ok(r.distance_m is null, 'no position given, no distance - not a fake zero');
+  perform t.ok(r.headline = 'Water Lantern Festival', 'an event keeps what is on, not just where');
+
+  select * into r from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_dual';
+  perform t.ok(r.headline is null, 'a plain save has no headline');
+
+  -- re-saving from a reel that says nothing about what is on keeps the headline
+  perform public.save_places(t.get('den')::uuid,
+    '[{"googlePlaceId":"ChIJ_downsview","name":"Downsview Park","kind":"region","coordinate":{"lat":43.7417,"lng":-79.4789}}]');
+  select * into r from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_downsview';
+  perform t.ok(r.headline = 'Water Lantern Festival', 're-saving without a headline keeps the old one');
+
+  -- the model is asked for a few words; a paragraph is capped, never fatal
+  perform public.save_places(t.get('den')::uuid, jsonb_build_array(jsonb_build_object(
+    'googlePlaceId', 'ChIJ_downsview', 'name', 'Downsview Park', 'kind', 'region',
+    'coordinate', jsonb_build_object('lat', 43.7417, 'lng', -79.4789),
+    'headline', repeat('x', 200))));
+  select * into r from public.den_stash(t.get('den')::uuid) where google_place_id = 'ChIJ_downsview';
+  perform t.ok(char_length(r.headline) = 80, 'an over-long headline is cut to 80, the save still lands');
 end $$;
 
 -- ------------------------------------------------------------- want to go

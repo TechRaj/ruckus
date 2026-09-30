@@ -123,9 +123,10 @@ export const mockItinerary: PlaceCandidate[] = [
     lat: 43.6503, lng: -79.3596, category: 'do', reason: 'Named in the caption', tier: 'high',
   },
   {
-    placeId: 'p_nuitblanche', name: 'Nuit Blanche at Nathan Phillips Square', address: '100 Queen St W, Toronto',
+    placeId: 'p_nuitblanche', name: 'Nathan Phillips Square', address: '100 Queen St W, Toronto',
     lat: 43.6525, lng: -79.3835, category: 'do', reason: 'Named in the caption', tier: 'high',
-    when: 'October 3, sunset to sunrise',
+    headline: 'Nuit Blanche',
+    when: { text: 'October 3, sunset to sunrise', start: '2026-10-03', end: null, recurring: null },
   },
   {
     placeId: 'p_islands', name: 'Toronto Islands', address: 'Jack Layton Ferry Terminal, Toronto',

@@ -103,7 +103,7 @@ export const mockApi: Api = {
         category: c.category, lat: c.lat, lng: c.lng,
         sourceUrl, savedAt: new Date().toISOString(),
         interested: [MOCK_USER_ID], wantCount: 1, iWant: true,
-        note: c.when ?? 'Saved just now', distance: '', address: c.address,
+        note: c.when?.text ?? 'Saved just now', headline: c.headline, when: c.when, distance: '', address: c.address,
         takes: [],
       };
       stash.unshift(item);

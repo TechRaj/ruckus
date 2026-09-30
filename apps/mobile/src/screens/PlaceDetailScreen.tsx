@@ -80,6 +80,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
       >
         <Kicker>{dotted(item.neighbourhood, CATEGORY_LABEL[item.category])}</Kicker>
         <Text style={styles.title}>{item.name}</Text>
+        {item.headline ? <Text style={styles.happening}>{item.headline}</Text> : null}
         <Text style={styles.where}>{dotted(item.address ?? item.neighbourhood, item.distance)}</Text>
         {item.when && eventLabel(item.when) ? (
           <Text style={styles.where}>{dotted(eventLabel(item.when), item.when.text !== eventLabel(item.when) ? item.when.text : null)}</Text>
@@ -182,6 +183,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: space.xl, paddingTop: 6, paddingBottom: space.lg },
   title: { ...type.display, color: colors.ink, marginTop: 8 },
   where: { ...type.meta, fontSize: 14, color: colors.inkMuted, marginTop: 6 },
+  happening: { ...type.bodyMed, color: colors.ink, marginTop: 4 },
   lineWrap: { marginTop: space.sm },
   lineField: {
     height: 52, borderRadius: radius.lg, marginTop: space.sm,
