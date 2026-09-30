@@ -5,7 +5,7 @@
  */
 import BottomSheet, { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import MapView, { PROVIDER_DEFAULT } from 'react-native-maps';
 import Animated, { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,6 +18,7 @@ import { Grain } from '../components/Grain';
 import { IconPlus } from '../components/Icons';
 import { MapControls } from '../components/MapControls';
 import { MusicButton } from '../components/MusicButton';
+import { RascalSleep } from '../components/RascalSleep';
 import { PlaceRow, ROW_HEIGHT } from '../components/PlaceRow';
 import { RascalPeek } from '../components/RascalPeek';
 import { useStashMarkers } from '../hooks/useStashMarkers';
@@ -26,7 +27,6 @@ import { TORONTO, useMapCamera } from '../hooks/useMapCamera';
 import { holdListAt, useListScrollLock } from '../hooks/useListScrollLock';
 import { useSheetGeometry } from '../hooks/useSheetGeometry';
 import { describeView } from '../state/stashCopy';
-import { rascalSleep } from '../theme/critters';
 import { playTap } from '../theme/sound';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
@@ -254,7 +254,7 @@ export function PlacesScreen() {
               )}
               ListFooterComponent={
                 <View style={styles.footer}>
-                  <Image source={rascalSleep.source} style={styles.sleeping} accessibilityLabel="Rascal asleep" />
+                  <RascalSleep />
                   <Hint>{lines.hint.endOfStash}</Hint>
                 </View>
               }
@@ -293,5 +293,4 @@ const styles = StyleSheet.create({
   centre: { padding: space.xl, alignItems: 'center', gap: space.sm },
   error: { ...type.bodyMed, color: colors.inkSecondary, textAlign: 'center' },
   footer: { alignItems: 'center', gap: space.sm, paddingVertical: 30 },
-  sleeping: { width: 150, height: 150 / rascalSleep.aspect },
 });

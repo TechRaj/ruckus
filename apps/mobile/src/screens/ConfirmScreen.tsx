@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { api } from '../api/client';
 import { PrimaryButton, TextButton } from '../components/Buttons';
@@ -19,11 +19,11 @@ import {
   IconCheck, IconChevronLeft, IconChevronRight, IconSearch,
 } from '../components/Icons';
 import { PressableScale } from '../components/PressableScale';
+import { RascalSleep } from '../components/RascalSleep';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
 import { dotted, eventLabel, eventOver } from '../lib/time';
 import { useStash } from '../state/StashContext';
-import { rascalSleep } from '../theme/critters';
 import { lines } from '../theme/lines';
 import { playFail, playTap } from '../theme/sound';
 import { colors, font, radius, space, type } from '../theme/tokens';
@@ -240,7 +240,7 @@ export function ConfirmScreen({
             </Pressable>
           ))}
           <View style={styles.searchFoot}>
-            <Image source={rascalSleep.source} style={styles.sleeping} accessibilityLabel="Rascal asleep" />
+            <RascalSleep />
             <Hint style={{ textAlign: 'center' }}>{lines.hint.stillNothing}</Hint>
           </View>
         </ScrollView>
@@ -426,5 +426,4 @@ const styles = StyleSheet.create({
   resultBody: { flex: 1, minWidth: 0 },
   resultName: { ...type.rowTitle, fontSize: 17, color: colors.ink },
   searchFoot: { alignItems: 'center', gap: space.sm, padding: 30 },
-  sleeping: { width: 150, height: 150 / rascalSleep.aspect },
 });

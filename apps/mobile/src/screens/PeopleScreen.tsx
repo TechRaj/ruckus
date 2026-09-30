@@ -155,7 +155,6 @@ export function PeopleScreen() {
         <View style={[styles.pro, { marginTop: space.md }]}>
           <View style={{ flex: 1 }}>
             <Text style={styles.proTitle}>Sounds</Text>
-            <Text style={styles.meta}>Little bongs and chimes. The silent switch always wins.</Text>
           </View>
           <Switch
             value={sounds}

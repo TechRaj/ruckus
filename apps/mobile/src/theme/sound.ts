@@ -14,6 +14,10 @@
  * mixes with other apps' audio and respects the silent switch. The sounds
  * choice on the People screen is read at boot. The music is on every time
  * the user comes into the app; the speaker on the map mutes it until then.
+ *
+ * The day/night switch reloads the whole app, which would start the music
+ * over. Its position is saved every few seconds and right before a reload,
+ * and the next run picks up from there.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
@@ -21,7 +25,7 @@ import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 const clips = {
   tap: { file: require('../../assets/sounds/tap.wav'), volume: 0.4 },
-  confirm: { file: require('../../assets/sounds/confirm.wav'), volume: 0.5 },
+  confirm: { file: require('../../assets/sounds/confirm.wav'), volume: 0.25 },
   fail: { file: require('../../assets/sounds/fail.wav'), volume: 0.4 },
 };
 type Clip = keyof typeof clips;
@@ -30,6 +34,9 @@ const music = { file: require('../../assets/sounds/ruckus_bgm.mp3'), volume: 0.1
 /** Three per clip: enough for quick repeated taps while the first winds back. */
 const VOICES = 3;
 const SOUND = 'ruckus.sound';
+const MUSIC_AT = 'ruckus.musicAt';
+/** How often the music position is saved, for the reloads nothing announces. */
+const SAVE_EVERY_MS = 4000;
 
 let sounds = true;
 let musicChoice = true;
@@ -49,12 +56,27 @@ const hold = (p: AudioPlayer) => { held.__ruckusPlayers?.push(p); return p; };
 /** True while the user is inside the app, where the music belongs. */
 let inside = false;
 let session = false;
+/** Where the music was when the app last ran, in seconds. */
+let musicAt = 0;
 
 export const soundOn = () => sounds;
 export const musicOn = () => musicChoice;
 
 export async function readSoundChoice() {
-  try { sounds = (await AsyncStorage.getItem(SOUND)) !== 'off'; } catch { sounds = true; }
+  try {
+    const [[, s], [, at]] = await AsyncStorage.multiGet([SOUND, MUSIC_AT]);
+    sounds = s !== 'off';
+    musicAt = Number(at) || 0;
+  } catch {
+    sounds = true;
+    musicAt = 0;
+  }
+}
+
+/** Saves where the music is. Call before a reload; it also runs on a timer while playing. */
+export async function saveMusicPosition() {
+  if (!band?.playing) return;
+  try { await AsyncStorage.setItem(MUSIC_AT, String(band.currentTime)); } catch { /* it starts over next time */ }
 }
 
 export async function chooseSound(next: boolean) {
@@ -81,8 +103,9 @@ export async function prepareSounds() {
   } catch { /* no sound on this device */ }
   AppState.addEventListener('change', state => {
     if (state === 'active') playMusicIfWanted();
-    else band?.pause();
+    else { saveMusicPosition(); band?.pause(); }
   });
+  setInterval(saveMusicPosition, SAVE_EVERY_MS);
 }
 
 function wind(name: Clip): Voice {
@@ -126,6 +149,11 @@ function playMusicIfWanted() {
       band = hold(createAudioPlayer(music.file, { keepAudioSessionActive: true }));
       band.loop = true;
       band.volume = music.volume;
+      if (musicAt > 0) {
+        const b = band;
+        b.seekTo(musicAt).then(() => { if (inside && musicChoice && !b.playing) b.play(); }).catch(() => b.play());
+        return;
+      }
     }
     if (!band.playing) band.play();
   } catch { /* no music on this device */ }

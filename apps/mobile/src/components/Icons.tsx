@@ -108,7 +108,7 @@ export const IconSparkle = ({ size = 19, color = colors.inkMuted }: P) => (
   </Svg>
 );
 
-/** Paw print, used where the full mascot is not shown. */
+/** Paw print, used beside a quiet note. */
 export const PawPrint = ({ size = 30, color = colors.hairline }: P) => (
   <Svg width={size} height={size * 0.93} viewBox="0 0 30 28" fill={color}>
     <Path d="M6.2 4.8a3.2 4.2 0 1 0 0 8.4 3.2 4.2 0 1 0 0-8.4Z" />

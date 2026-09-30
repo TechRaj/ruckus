@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { PawPrint } from './Icons';
+import { RascalSleep } from './RascalSleep';
 import { colors, space, type } from '../theme/tokens';
 
 export function EmptyState({
@@ -12,7 +12,7 @@ export function EmptyState({
 }: { line: string; action?: React.ReactNode }) {
   return (
     <View style={styles.wrap}>
-      <PawPrint size={34} />
+      <RascalSleep width={150} />
       <Text style={styles.line}>{line}</Text>
       {action ? <View style={styles.action}>{action}</View> : null}
     </View>
