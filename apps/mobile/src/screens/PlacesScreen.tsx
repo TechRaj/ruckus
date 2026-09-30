@@ -186,7 +186,8 @@ export function PlacesScreen() {
         <View style={styles.sheetHeader}>
           <View style={{ flex: 1 }}>
             <Kicker>{kicker}</Kicker>
-            <Text style={styles.headline}>{headline}</Text>
+            {/* One line always: the size gives way before the words wrap. */}
+            <Text style={styles.headline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{headline}</Text>
           </View>
           <Animated.View style={geo.sortStyle} pointerEvents={open ? 'auto' : 'none'}>
             <SortToggle value={sort} onChange={setSort} />

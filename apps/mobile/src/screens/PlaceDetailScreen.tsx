@@ -23,7 +23,7 @@ import { CATEGORY_LABEL, Member } from '../types';
 
 export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => void }) {
   const {
-    stash, memberById, currentUserId, toggleInterest, addTake, updateTake, deleteTake, removeFromStash,
+    stash, memberById, currentUserId, toggleInterest, startCaper, addTake, updateTake, deleteTake, removeFromStash, caperByPlace,
   } = useStash();
   const reduce = useReduceMotion();
   const [draft, setDraft] = useState('');
@@ -97,6 +97,12 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
           style={isIn ? { backgroundColor: colors.flareWash, shadowColor: colors.hairline } : undefined}
           labelColor={isIn ? colors.ink : undefined}
         />
+        {/* Once anyone is in, everyone in the Den can make the plan from here. Making it counts as being in. */}
+        {item.wantCount > 0 && !caperByPlace.has(item.placeId) ? (
+          <View style={{ marginTop: space.sm }}>
+            <PrimaryButton label="Make it a Caper" onPress={() => startCaper(item.id)} />
+          </View>
+        ) : null}
         {showField ? (
           <Animated.View entering={reduce ? undefined : FadeIn.duration(180).easing(EASE_OUT)} style={styles.lineWrap}>
             <TextInput

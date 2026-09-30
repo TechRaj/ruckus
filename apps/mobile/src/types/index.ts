@@ -122,12 +122,17 @@ export interface Den {
   members: Member[];
 }
 
-/** Minimum `wantCount` for a place to appear under Today, show the Caper dot and appear on Home. */
-export const PLAN_THRESHOLD = 3;
+/**
+ * How many people in make a place nearly a plan. One: as soon as anyone is
+ * in, the whole Den is offered the Caper. The member count is kept so this
+ * can climb again later without touching the callers.
+ */
+export const PLAN_THRESHOLD = 1;
+export const planThreshold = (memberCount: number) => Math.max(1, Math.min(PLAN_THRESHOLD, memberCount));
 
 /** Show the Den's room meter once this share of its free places is used. */
 export const ROOM_WARNING = 0.8;
-export const isNearlyAPlan = (item: StashItem) => item.wantCount >= PLAN_THRESHOLD;
+export const isNearlyAPlan = (item: StashItem, memberCount = PLAN_THRESHOLD) => item.wantCount >= planThreshold(memberCount);
 
 /**
  * The people filter on the Stash (CLAUDE.md §4): everyone, today, or one

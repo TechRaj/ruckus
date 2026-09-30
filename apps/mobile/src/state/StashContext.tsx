@@ -14,7 +14,7 @@ import { markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
 import { unregisterCurrentPushToken, useEventReminders } from '../notifications/push';
 import { eventDay, isoDay } from '../lib/time';
-import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan, DenAllowance, DenCapacity } from '../types';
+import { Caper, Category, Den, Filter, Member, Sort, StashItem, isNearlyAPlan, PLAN_THRESHOLD, DenAllowance, DenCapacity } from '../types';
 
 export type Overlay =
   | { kind: 'none' }
@@ -68,6 +68,8 @@ interface StashState {
   setSort: (s: Sort) => void;
   select: (id: string | null) => void;
   toggleInterest: (id: string) => void;
+  /** Opens the Caper sheet for a place. Someone not yet in is marked in first, since they are making the plan. */
+  startCaper: (id: string) => void;
   addTake: (id: string, text: string) => void;
   updateTake: (id: string, text: string) => void;
   deleteTake: (id: string) => void;
@@ -244,16 +246,17 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   }, [capers, stash]);
   const caperByPlace = useMemo(() => new Map(upcoming.map(u => [u.caper.placeId, u.caper])), [upcoming]);
   /** A place with a Caper is a plan already, so it leaves this list. */
+  const members = den?.members.length ?? PLAN_THRESHOLD;
   const nearlyPlans = useMemo(
-    () => stash.filter(s => isNearlyAPlan(s) && !caperByPlace.has(s.placeId)),
-    [stash, caperByPlace],
+    () => stash.filter(s => isNearlyAPlan(s, members) && !caperByPlace.has(s.placeId)),
+    [stash, caperByPlace, members],
   );
 
   /** Filters the list rows only. The map keeps every pin and draws the filtered-out ones as dots. */
   const visible = useMemo(() => {
     let list = stash;
     if (filter.kind === 'person') list = list.filter(s => s.savedBy === filter.userId);
-    if (filter.kind === 'today') list = list.filter(isNearlyAPlan);
+    if (filter.kind === 'today') list = list.filter(s => isNearlyAPlan(s, members));
     if (category) list = list.filter(s => s.category === category);
     const q = query.trim().toLowerCase();
     if (q) {
@@ -288,7 +291,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       if (da && db) return da.past ? db.day.localeCompare(da.day) : da.day.localeCompare(db.day);
       return b.savedAt.localeCompare(a.savedAt);
     });
-  }, [stash, filter, category, query, sort, caperByPlace]);
+  }, [stash, filter, category, query, sort, caperByPlace, members]);
 
   /**
    * Ask for location once the user is in a Den - the moment Nearby and the map
@@ -328,6 +331,13 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     }));
     orReload(api.setWant(den.id, item.placeId, want));
   }, [stash, den, currentUserId, patch, orReload]);
+
+  const startCaper = useCallback((id: string) => {
+    const item = stash.find(s => s.id === id);
+    if (!item) return;
+    if (!item.iWant) toggleInterest(id);
+    setOverlay({ kind: 'caper', id });
+  }, [stash, toggleInterest]);
 
   /**
    * Screens pass the item's `id`. The write uses its `placeId`. The two are
@@ -414,7 +424,6 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const item = stash.find(s => s.id === id);
     if (!item || !den) throw new Error('place_not_in_stash');
-    if (!item.iWant) throw new Error('not_going');
     const caper = await api.createCaper({ denId: den.id, placeId: item.placeId, date, time, going });
     setCapers(prev => [...prev.filter(c => c.id !== caper.id), caper]);
     return caper;
@@ -439,7 +448,7 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
     isPro, openPro, capacity, denAllowance, position,
     setFilter, setCategory, setQuery, setSort,
     select: setSelectedId,
-    toggleInterest,
+    toggleInterest, startCaper,
     addTake, updateTake, deleteTake,
     addToStash, removeFromStash,
     openOverlay: setOverlay,

@@ -20,7 +20,7 @@ const RASCAL_WIDTH = 132;
 
 export function HomeScreen() {
   const {
-    den, stash, nearlyPlans, upcoming, currentUserId, memberById, openOverlay, toggleInterest,
+    den, stash, nearlyPlans, upcoming, currentUserId, memberById, openOverlay, startCaper,
   } = useStash();
   const insets = useSafeAreaInsets();
 
@@ -90,10 +90,8 @@ export function HomeScreen() {
                   {dotted(s.neighbourhood, `${s.wantCount} in`)}
                 </Text>
               </View>
-              {/* Only someone who is in can make the Caper. Anyone else is offered "I'm in" first. */}
-              {s.iWant
-                ? <RowButton label="Make it a Caper" onPress={() => openOverlay({ kind: 'caper', id: s.id })} />
-                : <RowButton label="I'm in" tone="paper" onPress={() => toggleInterest(s.id)} />}
+              {/* Offered to everyone once anyone is in. Making it counts as being in. */}
+              <RowButton label="Make it a Caper" onPress={() => startCaper(s.id)} />
             </View>
           ))}
         </View>
