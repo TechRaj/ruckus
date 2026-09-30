@@ -1,4 +1,14 @@
 /** Formats a date as "today", "yesterday", "3d" or "2w". */
+/** "today", "yesterday", or "on Sep 20", for a sentence like "Shruts stashed this today". */
+export function stashedWhen(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `on ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
 export function ago(iso: string) {
   const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
   if (days <= 0) return 'today';
