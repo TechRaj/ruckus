@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { reloadAppAsync } from 'expo';
 import { Mode, chooseMode, chosenMode, hasEntered, markEntered } from './entered';
-import { saveMusicPosition } from './sound';
+import { stopAllSound } from './sound';
 
 export const NIGHT_FROM = 20;
 export const NIGHT_UNTIL = 5;
@@ -31,7 +31,7 @@ export const launchedAtNight = hasEntered() && wantsNight();
 
 /** Saves the mode and reloads into it. `after` leaves time for the switch to finish moving. */
 export function switchMode(next: Mode, after = 0) {
-  Promise.all([chooseMode(next), saveMusicPosition()]).then(() => {
+  Promise.all([chooseMode(next), stopAllSound()]).then(() => {
     setTimeout(() => { reloadAppAsync('theme switch').catch(() => {}); }, after);
   });
 }
@@ -48,7 +48,7 @@ export function useNow(everyMs = 15000) {
 
 const reloadIfPaletteIsStale = (inside: boolean) => {
   if ((inside && wantsNight()) !== launchedAtNight) {
-    saveMusicPosition().then(() => reloadAppAsync('day/night palette')).catch(() => {});
+    stopAllSound().then(() => reloadAppAsync('day/night palette')).catch(() => {});
   }
 };
 

@@ -19,8 +19,8 @@ import { SignedOutScreen } from '../screens/SignedOutScreen';
 import { useStash } from '../state/StashContext';
 import { USE_MOCKS } from '../api/client';
 import { setInside } from '../theme/sound';
-import { useFollowTheClock } from '../theme/clock';
-import { colors, layout, radius, space, type } from '../theme/tokens';
+import { switchMode, useFollowTheClock } from '../theme/clock';
+import { colors, isNight, layout, radius, space, type } from '../theme/tokens';
 
 const Tab = createBottomTabNavigator();
 
@@ -45,12 +45,16 @@ export function RootNavigator() {
   const insets = useSafeAreaInsets();
 
   /**
-   * Development only: `xcrun simctl openurl <device> ruckus://dev/pro` opens
-   * the paywall, so billing can be checked without tapping through the app.
+   * Development only. `xcrun simctl openurl <device> ruckus://dev/pro` opens
+   * the paywall and `ruckus://dev/reload` reloads the way the theme switch
+   * does, so both can be checked without tapping through the app.
    */
   useEffect(() => {
     if (!__DEV__ || session !== 'ready') return;
-    const sub = Linking.addEventListener('url', ({ url }) => { if (url === 'ruckus://dev/pro') openPro(); });
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      if (url === 'ruckus://dev/pro') openPro();
+      if (url === 'ruckus://dev/reload') switchMode(isNight ? 'night' : 'day');
+    });
     return () => sub.remove();
   }, [session, openPro]);
 

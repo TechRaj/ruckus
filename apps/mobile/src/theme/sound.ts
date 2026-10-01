@@ -51,7 +51,7 @@ let band: AudioPlayer | null = null;
  * new one.
  */
 const held = globalThis as { __ruckusPlayers?: AudioPlayer[] };
-for (const p of held.__ruckusPlayers ?? []) { try { p.remove(); } catch { /* already gone */ } }
+for (const p of held.__ruckusPlayers ?? []) { try { p.pause(); p.remove(); } catch { /* already gone */ } }
 held.__ruckusPlayers = [];
 const hold = (p: AudioPlayer) => { held.__ruckusPlayers?.push(p); return p; };
 /** True while the user is inside the app, where the music belongs. */
@@ -91,6 +91,21 @@ export async function readSoundChoice() {
 export async function saveMusicPosition() {
   if (!band?.playing) return;
   try { await AsyncStorage.setItem(MUSIC_AT, String(band.currentTime)); } catch { /* it starts over next time */ }
+}
+
+/**
+ * Silences and releases every player. Call before the app reloads itself: the
+ * old runtime's players otherwise keep playing under the new one's, and the
+ * music ends up layered.
+ */
+export async function stopAllSound() {
+  await saveMusicPosition();
+  for (const p of held.__ruckusPlayers ?? []) {
+    try { p.pause(); p.remove(); } catch { /* already gone */ }
+  }
+  held.__ruckusPlayers = [];
+  band = null;
+  for (const name of Object.keys(voices) as Clip[]) delete voices[name];
 }
 
 export async function chooseSound(next: boolean) {
@@ -161,12 +176,19 @@ function playMusicIfWanted() {
   try {
     if (!inside || !musicChoice) { band?.pause(); return; }
     if (!band) {
-      band = hold(createAudioPlayer(music.file, { keepAudioSessionActive: true }));
-      band.loop = true;
-      band.volume = music.volume;
+      const b = hold(createAudioPlayer(music.file, { keepAudioSessionActive: true }));
+      band = b;
+      b.loop = true;
+      b.volume = music.volume;
       if (musicAt > 0) {
-        const b = band;
-        b.seekTo(musicAt).then(() => { if (inside && musicChoice && !b.playing) b.play(); }).catch(() => b.play());
+        /** A seek before the file has loaded is dropped and the track starts over, so wait for it. */
+        const at = musicAt;
+        musicAt = 0;
+        const sub = b.addListener('playbackStatusUpdate', status => {
+          if (!status.isLoaded) return;
+          sub.remove();
+          b.seekTo(at).catch(() => {}).then(() => { if (inside && musicChoice && band === b && !b.playing) b.play(); });
+        });
         return;
       }
     }
