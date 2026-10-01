@@ -29,7 +29,7 @@ share a link from any app
                 look up each tagged handle's display name
         │
         ▼
- PROXY          a language model picks out the places the caption names
+      PROXY     a language model picks out the places the caption names
                 Google Places turns each one into a real place, with coordinates
         │
         ▼
@@ -37,7 +37,7 @@ share a link from any app
                 you confirm the right place - nothing is saved until you do
         │
         ▼
- DATABASE       the place id and the link, in your Den's shared map
+     DATABASE   the place id and the link, in your Den's shared map
 ```
 
 The hard part is that a reel has **no location data**: there's no GPS and no
