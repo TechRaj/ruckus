@@ -22,6 +22,7 @@ import { RascalSleep } from '../components/RascalSleep';
 import { PlaceRow, ROW_HEIGHT } from '../components/PlaceRow';
 import { RascalPeek } from '../components/RascalPeek';
 import { useStashMarkers } from '../hooks/useStashMarkers';
+import { useDevSignal } from '../lib/devBus';
 import { StashSearch } from '../components/StashSearch';
 import { TORONTO, useMapCamera } from '../hooks/useMapCamera';
 import { holdListAt, useListScrollLock } from '../hooks/useListScrollLock';
@@ -33,6 +34,9 @@ import { lines } from '../theme/lines';
 import { EASE_DRAWER, tapSelection, useReduceMotion } from '../theme/motion';
 import { colors, isNight, layout, motion, space, type } from '../theme/tokens';
 import { StashItem } from '../types';
+
+/** The sheet's drag handle: 10 of padding either side of the 5pt bar. */
+const SHEET_HANDLE = 25;
 
 export function PlacesScreen() {
   const { loading, error, den, stash, visible, memberById, filter, category, query, sort, selectedId, currentUserId, select, setFilter, setCategory, setQuery, setSort, openOverlay, caperByPlace, position } = useStash();
@@ -74,9 +78,12 @@ export function PlacesScreen() {
   const [listHeight, setListHeight] = useState(0);
   const detentRef = useRef(detentIndex);
   detentRef.current = detentIndex;
+  /** Read through a ref: the list is replaced on every live update, and that must not scroll anything. */
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
   useEffect(() => {
-    if (!selectedId) return;
-    const index = visible.findIndex(s => s.id === selectedId);
+    if (!selectedId) { holdListAt(null); return; }
+    const index = visibleRef.current.findIndex(s => s.id === selectedId);
     if (index < 0) return;
     const offset = ROW_HEIGHT * index;
     const full = detentRef.current === 2;
@@ -84,7 +91,13 @@ export function PlacesScreen() {
     requestAnimationFrame(() => {
       listRef.current?.scrollToOffset({ offset, animated: full });
     });
-  }, [selectedId, visible]);
+  }, [selectedId]);
+
+  /** Development: open the sheet fully and go to the end of the list. */
+  useDevSignal('scroll-end', () => {
+    sheetRef.current?.snapToIndex(2);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 1500);
+  });
 
   /**
    * Open on the Den's own pins. Once per Den: after that the user is driving
@@ -183,6 +196,12 @@ export function PlacesScreen() {
         /** The shadow and blur are drawn by the background component. */
         backgroundComponent={GlassSheetBackground}
       >
+        {/**
+          * A real height for everything in the sheet: its height when fully
+          * open, less the handle. Without one the list grows to fit its rows,
+          * which leaves nothing to scroll and the lower rows out of reach.
+          */}
+        <View style={{ height: geo.snapPoints[2] - SHEET_HANDLE }}>
         <View style={styles.sheetHeader}>
           <View style={{ flex: 1 }}>
             <Kicker>{kicker}</Kicker>
@@ -261,6 +280,7 @@ export function PlacesScreen() {
               }
             />
           )}
+        </View>
         </View>
       </BottomSheet>
 

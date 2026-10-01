@@ -2,7 +2,7 @@
  * Turns a saved place into a Caper: one place, one day, and the people going.
  * Only someone who tapped "I'm in" on the place can open this.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, TextButton } from '../components/Buttons';
 import { Hint, Kicker } from '../components/Chrome';
@@ -15,6 +15,7 @@ import { SheetModal } from '../components/SheetModal';
 import { TimeWheel, WheelTime, wheelText } from '../components/TimeWheel';
 import { dayChoices, dayLabel } from '../lib/time';
 import { useStash } from '../state/StashContext';
+import { useDevScrollEnd } from '../lib/devBus';
 import { lines } from '../theme/lines';
 import { colors, edge, font, radius, space, type } from '../theme/tokens';
 
@@ -23,6 +24,8 @@ const TIMES = ['6 pm', '7 pm', '8 pm'];
 export function CaperSheet({
   id, onClose, onMade,
 }: { id: string; onClose: () => void; onMade: (caperId: string) => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+  useDevScrollEnd(scrollRef);
   const { stash, memberById, currentUserId, createCaper } = useStash();
   const item = stash.find(s => s.id === id);
   const days = useMemo(() => dayChoices(), []);
@@ -68,7 +71,7 @@ export function CaperSheet({
 
   return (
     <SheetModal onClose={onClose} height={0.82} dismissable={!busy}>
-      <ScrollView contentContainerStyle={styles.scroll} alwaysBounceVertical={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} alwaysBounceVertical={false}>
         <Kicker>Make it a Caper</Kicker>
         <Text style={styles.title}>{item.name}</Text>
         <Text style={styles.where}>{item.neighbourhood}</Text>

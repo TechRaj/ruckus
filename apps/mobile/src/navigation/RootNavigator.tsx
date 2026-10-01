@@ -4,7 +4,7 @@
  * the active pill is the active item's background.
  */
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
+import { createNavigationContainerRef, NavigationContainer } from '@react-navigation/native';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,7 @@ import { OfflineScreen } from '../screens/OfflineScreen';
 import { SignedOutScreen } from '../screens/SignedOutScreen';
 import { useStash } from '../state/StashContext';
 import { USE_MOCKS } from '../api/client';
+import { devEmit } from '../lib/devBus';
 import { setInside } from '../theme/sound';
 import { switchMode, useFollowTheClock } from '../theme/clock';
 import { colors, isNight, layout, radius, space, type } from '../theme/tokens';
@@ -36,8 +37,10 @@ function tabItem(label: string, Icon: (p: { size?: number; color?: string }) => 
   };
 }
 
+const navigation = createNavigationContainerRef();
+
 export function RootNavigator() {
-  const { session, overlay, openPro } = useStash();
+  const { session, overlay, openPro, openOverlay, stash } = useStash();
   useFollowTheClock(
     session === 'loading' ? null : session === 'ready',
     overlay.kind === 'none',
@@ -46,18 +49,28 @@ export function RootNavigator() {
   const insets = useSafeAreaInsets();
 
   /**
-   * Development only. `xcrun simctl openurl <device> ruckus://dev/pro` opens
-   * the paywall and `ruckus://dev/reload` reloads the way the theme switch
-   * does, so both can be checked without tapping through the app.
+   * Development only, for driving the app with `xcrun simctl openurl <device>`:
+   * `ruckus://dev/pro` opens the paywall, `dev/reload` reloads the way the
+   * theme switch does, `dev/tab/<Home|Places|People>` switches tab,
+   * `dev/sheet/<detail|caper|add|none>` opens or closes a sheet, and `dev/scroll-end` sends
+   * every scroll view on screen to its end.
    */
   useEffect(() => {
     if (!__DEV__ || session !== 'ready') return;
     const sub = Linking.addEventListener('url', ({ url }) => {
       if (url === 'ruckus://dev/pro') openPro();
       if (url === 'ruckus://dev/reload') switchMode(isNight ? 'night' : 'day');
+      if (url === 'ruckus://dev/scroll-end') devEmit('scroll-end');
+      const tab = url.match(/^ruckus:\/\/dev\/tab\/(Home|Places|People)$/)?.[1];
+      if (tab && navigation.isReady()) navigation.navigate(tab as never);
+      const sheet = url.match(/^ruckus:\/\/dev\/sheet\/(detail|caper|add|none)$/)?.[1];
+      if (sheet === 'none') openOverlay({ kind: 'none' });
+      const last = stash[stash.length - 1];
+      if (sheet === 'add') openOverlay({ kind: 'add' });
+      if ((sheet === 'detail' || sheet === 'caper') && last) openOverlay({ kind: sheet, id: last.id });
     });
     return () => sub.remove();
-  }, [session, openPro]);
+  }, [session, openPro, openOverlay, stash]);
 
   /** The music plays in the tabs only. */
   useEffect(() => { setInside(session === 'ready'); }, [session]);
@@ -71,7 +84,7 @@ export function RootNavigator() {
   if (session === 'noDen') return <OnboardingScreen />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigation}>
       <Tab.Navigator
         initialRouteName="Places"
         screenOptions={{

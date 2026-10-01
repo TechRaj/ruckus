@@ -1,5 +1,5 @@
 /** Home tab. Shows places that are close to becoming a plan and recent saves in the Den. */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RowButton } from '../components/Buttons';
@@ -12,6 +12,7 @@ import { Sprite } from '../components/Sprite';
 import { jump } from '../theme/sprites';
 import { ago, dayLabel, dayParts, dotted } from '../lib/time';
 import { useStash } from '../state/StashContext';
+import { useDevScrollEnd } from '../lib/devBus';
 import { lines } from '../theme/lines';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { Member } from '../types';
@@ -19,6 +20,8 @@ import { Member } from '../types';
 const RASCAL_WIDTH = 132;
 
 export function HomeScreen() {
+  const scrollRef = useRef<ScrollView>(null);
+  useDevScrollEnd(scrollRef);
   const {
     den, stash, nearlyPlans, upcoming, currentUserId, memberById, openOverlay, startCaper,
   } = useStash();
@@ -30,7 +33,7 @@ export function HomeScreen() {
     .slice(0, 6), [stash]);
 
   return (
-    <ScrollView
+    <ScrollView ref={scrollRef}
       style={styles.root}
       contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: space.xxl }}
     >

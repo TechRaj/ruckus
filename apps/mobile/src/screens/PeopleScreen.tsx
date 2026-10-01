@@ -2,7 +2,7 @@
  * People tab. Shows the active Den, its members and invite code, and the panel for switching, joining and making Dens.
  * Invites use the six-character code because the ruckus.app domain is not set up for universal links.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,12 +17,15 @@ import { PressableScale } from '../components/PressableScale';
 import { useSafetyMenu } from '../hooks/useSafetyMenu';
 import { legalLinks, openLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
+import { useDevScrollEnd } from '../lib/devBus';
 import { ROOM_WARNING } from '../types';
 import { lines } from '../theme/lines';
 import { chooseMusic, chooseSound, playTap, soundOn, useMusicOn } from '../theme/sound';
 import { colors, radius, space, type } from '../theme/tokens';
 
 export function PeopleScreen() {
+  const scrollRef = useRef<ScrollView>(null);
+  useDevScrollEnd(scrollRef);
   const { den, dens, switchDen, stash, savedCountBy, openOverlay, isPro, openPro, refreshSession, capacity, denAllowance, currentUserId, unblock, blocked } = useStash();
   const safetyMenu = useSafetyMenu();
 
@@ -101,7 +104,7 @@ export function PeopleScreen() {
     <View style={[styles.root, { paddingTop: insets.top + 14 }]}>
       {/* Outside the scroll view, so it stays where it is on the other tabs when the page scrolls. */}
       <View style={styles.pad}><ThemeSwitch /></View>
-    <ScrollView contentContainerStyle={{ paddingBottom: space.xxl }}>
+    <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: space.xxl }}>
       <View style={styles.pad}>
         <Emblem name={den.emblem} size={68} />
         <Text style={styles.title}>{den.name}</Text>

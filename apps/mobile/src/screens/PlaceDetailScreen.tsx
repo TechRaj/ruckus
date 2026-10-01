@@ -2,7 +2,7 @@
  * Place detail. Shows the saver's note, comments, the "I'm in" toggle, and links to directions and the original post.
  * CLAUDE.md §5.6: store the reel URL, never the reel. Link out to the post, no oEmbed or inline preview.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -17,12 +17,15 @@ import { TakeCard } from '../components/TakeCard';
 import { useSafetyMenu } from '../hooks/useSafetyMenu';
 import { ago, dotted, eventLabel, stashedWhen } from '../lib/time';
 import { useStash } from '../state/StashContext';
+import { useDevScrollEnd } from '../lib/devBus';
 import { lines } from '../theme/lines';
 import { EASE_OUT, tapImpact, useReduceMotion } from '../theme/motion';
 import { colors, font, radius, space, type } from '../theme/tokens';
 import { CATEGORY_LABEL, Member } from '../types';
 
 export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+  useDevScrollEnd(scrollRef);
   const {
     stash, memberById, currentUserId, toggleInterest, startCaper, addTake, updateTake, deleteTake, removeFromStash, caperByPlace,
   } = useStash();
@@ -76,7 +79,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
 
   return (
     <SheetModal onClose={onClose} height={0.88}>
-      <ScrollView
+      <ScrollView ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={keyboardDismissMode}
