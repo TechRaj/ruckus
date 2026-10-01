@@ -58,9 +58,18 @@ export function SignInScreen({
   const [rejected, setRejected] = useState(false);
   const [wait, setWait] = useState(0);
   const [welcome, setWelcome] = useState<{ name: string | null; den: string } | null>(null);
+  const [keyboard, setKeyboard] = useState(false);
   const enter = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (enter.current) clearTimeout(enter.current); }, []);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, () => setKeyboard(true));
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboard(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -165,13 +174,13 @@ export function SignInScreen({
       <Grain opacity={0.035} />
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.hero}
+        contentContainerStyle={[styles.hero, keyboard && styles.heroKeyboard]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={keyboardDismissMode}
         alwaysBounceVertical
         showsVerticalScrollIndicator={false}
       >
-          <Sprite sheet={jump} steps={jumpIdle} width={RASCAL} style={styles.rascal} accessibilityLabel="Rascal" />
+          <Sprite sheet={jump} steps={jumpIdle} width={RASCAL} style={[styles.rascal, keyboard && styles.rascalKeyboard]} accessibilityLabel="Rascal" />
           <Kicker>{step === 'email' ? heading.kicker : 'Sign in'}</Kicker>
           <Text style={styles.title}>{step === 'email' ? heading.title : 'Check your email'}</Text>
           <Text style={styles.sub}>
@@ -220,20 +229,12 @@ export function SignInScreen({
           {error ? <Hint style={styles.error}>{error}</Hint> : null}
           {step === 'code' && !error && wait > 0
             ? <Hint style={styles.note}>{`send again in 0:${String(wait).padStart(2, '0')}`}</Hint> : null}
-          {step === 'email' ? (
-            /** App Review wants the terms agreed to before anyone can post (guideline 1.2). */
-            <Text style={styles.terms}>
-              by continuing you agree to the{' '}
-              <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.terms)}>terms</Text>
-              {' '}and{' '}
-              <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.privacy)}>privacy policy</Text>.
-              {' '}no bullying or hateful posts.
-            </Text>
-          ) : null}
+          {step === 'email' && !keyboard ? <TermsNote /> : null}
           {USE_MOCKS ? <Hint style={styles.note}>mock mode: any email, any six digits</Hint> : null}
       </ScrollView>
       {step === 'email' ? (
         <>
+          {keyboard ? <TermsNote aboveButton /> : null}
           <PrimaryButton label="Send a code" onPress={sendCode} loading={busy} disabled={busy} />
           {arrival === 'new'
             ? <TextButton label="Back" onPress={onWelcome} muted />
@@ -252,6 +253,19 @@ export function SignInScreen({
   );
 }
 
+/** App Review wants the terms agreed to before anyone can post (guideline 1.2). */
+function TermsNote({ aboveButton = false }: { aboveButton?: boolean }) {
+  return (
+    <Text style={[styles.terms, aboveButton && styles.termsAboveButton]}>
+      by continuing you agree to the{' '}
+      <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.terms)}>terms</Text>
+      {' '}and{' '}
+      <Text style={styles.link} accessibilityRole="link" onPress={() => openLink(legalLinks.privacy)}>privacy policy</Text>.
+      {' '}no bullying or hateful posts.
+    </Text>
+  );
+}
+
 const messageOf = (err: unknown) =>
   (err instanceof Error && err.message) ? err.message.toLowerCase() : 'something went wrong. try again.';
 
@@ -260,12 +274,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: space.xl },
   scroll: { flex: 1 },
   hero: { flexGrow: 1, justifyContent: 'center' },
+  heroKeyboard: { justifyContent: 'flex-start' },
   /**
    * The frame has empty room above his head for the hop, so it is pulled up
    * to close the gap. No negative side margin: the scroll view clips anything
    * outside its own width.
    */
   rascal: { marginTop: -40, marginBottom: space.xs },
+  rascalKeyboard: { marginTop: 0 },
   title: { ...type.display, color: colors.ink, marginTop: 6 },
   sub: { ...type.body, color: colors.inkMuted, marginTop: 10, maxWidth: 300 },
   strong: { fontFamily: font.bold, color: colors.ink },
@@ -287,6 +303,7 @@ const styles = StyleSheet.create({
   error: { color: colors.warn, marginTop: space.md },
   note: { marginTop: space.md },
   terms: { ...type.hint, color: colors.inkMuted, marginTop: space.md },
+  termsAboveButton: { marginBottom: space.md },
   link: { textDecorationLine: 'underline' },
   welcome: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xl, gap: space.xs },
   welcomeTitle: { ...type.display, color: colors.ink, textAlign: 'center', marginTop: space.sm },
