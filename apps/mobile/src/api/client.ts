@@ -11,7 +11,12 @@ import { mockApi } from './mock';
  * app as a brand-new person without touching a real account. `npm run mobile:first-run`.
  */
 export const FIRST_RUN = process.env.EXPO_PUBLIC_FIRST_RUN === '1';
-export const USE_MOCKS = FIRST_RUN || !process.env.EXPO_PUBLIC_SUPABASE_URL;
+/**
+ * A release build never falls back to the mock: missing keys there are a
+ * build mistake, and fake Dens would look like a working app. The real
+ * adapter then fails to load and Boot shows its error screen.
+ */
+export const USE_MOCKS = FIRST_RUN || (__DEV__ && !process.env.EXPO_PUBLIC_SUPABASE_URL);
 
 /** Required lazily so the mock path never loads supabase-js or AsyncStorage. */
 export const api: Api = USE_MOCKS ? mockApi : (require('./ruckus') as { ruckusApi: Api }).ruckusApi;

@@ -15,6 +15,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
 import { PeopleScreen } from '../screens/PeopleScreen';
 import { PlacesScreen } from '../screens/PlacesScreen';
+import { OfflineScreen } from '../screens/OfflineScreen';
 import { SignedOutScreen } from '../screens/SignedOutScreen';
 import { useStash } from '../state/StashContext';
 import { USE_MOCKS } from '../api/client';
@@ -62,6 +63,7 @@ export function RootNavigator() {
     return <View style={styles.splash}><ActivityIndicator color={colors.inkMuted} /></View>;
   }
   if (session === 'signedOut') return <SignedOutScreen />;
+  if (session === 'offline') return <OfflineScreen />;
   if (session === 'noDen') return <OnboardingScreen />;
 
   return (

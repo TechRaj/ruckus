@@ -15,6 +15,7 @@ import { Field, Hint, keyboardDismissMode, Kicker } from '../components/Chrome';
 import { Grain } from '../components/Grain';
 import { Sprite } from '../components/Sprite';
 import { forgetEmail, rememberEmail } from '../lib/lastSignIn';
+import { lines } from '../theme/lines';
 import { legalLinks, openLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
 import { useReduceMotion } from '../theme/motion';
@@ -77,6 +78,15 @@ export function SignInScreen({
       setWait(RESEND_AFTER);
       setStep('code');
     } catch (err) {
+      if ((err as { code?: string }).code === 'too_many_codes') {
+        // Too soon for another email means one went out a moment ago, and it
+        // still works. Go to the code boxes rather than leave them stuck here.
+        setCode(''); setRejected(false);
+        setWait(RESEND_AFTER);
+        setStep('code');
+        setError(lines.codeAlreadySent);
+        return;
+      }
       setError(messageOf(err));
       playFail();
     } finally {

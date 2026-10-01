@@ -46,8 +46,11 @@ export function useNow(everyMs = 15000) {
   return now;
 }
 
+/** True when the palette on screen is wrong for where the user is, so a reload is coming. */
+export const paletteIsStale = (inside: boolean) => (inside && wantsNight()) !== launchedAtNight;
+
 const reloadIfPaletteIsStale = (inside: boolean) => {
-  if ((inside && wantsNight()) !== launchedAtNight) {
+  if (paletteIsStale(inside)) {
     saveMusicPosition().then(() => reloadAppAsync('day/night palette')).catch(() => {});
   }
 };
@@ -71,6 +74,8 @@ export function useFollowTheClock(inside: boolean | null, idle: boolean, persist
 
   useEffect(() => {
     if (!persists) return;
+    // A share that arrives with this foreground waits for the reload
+    // (IncomingShares checks paletteIsStale) and opens on the next run.
     const sub = AppState.addEventListener('change', state => {
       const now = ref.current;
       if (state === 'active' && now.idle && now.inside !== null) reloadIfPaletteIsStale(now.inside);

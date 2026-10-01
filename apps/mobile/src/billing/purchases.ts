@@ -64,18 +64,20 @@ export function onProChange(cb: (pro: boolean) => void): () => void {
   return () => { Purchases.removeCustomerInfoUpdateListener(listener); };
 }
 
-/** Shows the RevenueCat paywall for the current offering. Resolves true if the user purchased or restored. */
+/**
+ * Shows the RevenueCat paywall for the current offering. Resolves true if the
+ * user purchased or restored, false if they closed it. Throws when there is no
+ * paywall to show (no key in this build, no offering, offline), so the caller
+ * can say so instead of the tap doing nothing.
+ */
 export async function showPaywall(): Promise<boolean> {
-  if (!BILLING_ON) return false;
-  try {
-    configureBilling();
-    const { default: RevenueCatUI, PAYWALL_RESULT } = ui();
-    const result = await RevenueCatUI.presentPaywall();
-    return result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED;
-  } catch (err) {
-    console.warn('[billing] paywall', message(err));
-    return false;
-  }
+  if (!BILLING_ON) throw new Error('billing_off');
+  configureBilling();
+  const { default: RevenueCatUI, PAYWALL_RESULT } = ui();
+  const result = await RevenueCatUI.presentPaywall();
+  // presentPaywall reports a paywall that couldn't load (offline, no offering) as ERROR
+  if (result === PAYWALL_RESULT.ERROR || result === PAYWALL_RESULT.NOT_PRESENTED) throw new Error('paywall_unavailable');
+  return result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED;
 }
 
 /**

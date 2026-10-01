@@ -5,7 +5,9 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton, TextButton } from '../components/Buttons';
+import { Hint } from '../components/Chrome';
 import { SheetModal } from '../components/SheetModal';
+import { lines } from '../theme/lines';
 import { Sprite } from '../components/Sprite';
 import { lastEmail } from '../lib/lastSignIn';
 import { useStash } from '../state/StashContext';
@@ -16,6 +18,7 @@ export function SignOutSheet({ onClose }: { onClose: () => void }) {
   const { signOut } = useStash();
   const [email, setEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -24,8 +27,10 @@ export function SignOutSheet({ onClose }: { onClose: () => void }) {
   }, []);
 
   const leave = async () => {
-    setBusy(true);
-    try { await signOut(); } finally { setBusy(false); }
+    if (busy) return;
+    setBusy(true); setError(null);
+    // Signing out needs the server, so offline it fails. Say so instead of doing nothing.
+    try { await signOut(); } catch { setError(lines.signOutFailed); } finally { setBusy(false); }
   };
 
   return (
@@ -37,6 +42,7 @@ export function SignOutSheet({ onClose }: { onClose: () => void }) {
           Your Dens and saved places stay put. Sign back in any time with{' '}
           {email ? <Text style={styles.email}>{email}</Text> : 'your email'}.
         </Text>
+        {error ? <Hint style={styles.error}>{error}</Hint> : null}
         <View style={styles.gap} />
         <PrimaryButton label="Stay signed in" onPress={onClose} disabled={busy} />
         <TextButton label={busy ? 'Signing out…' : 'Sign out'} onPress={leave} danger />
@@ -54,4 +60,5 @@ const styles = StyleSheet.create({
   title: { ...type.displaySm, color: colors.ink, marginTop: space.xs },
   copy: { ...type.body, color: colors.inkSecondary, marginTop: 6 },
   email: { fontFamily: font.bold, color: colors.ink },
+  error: { color: colors.warn, marginTop: space.md },
 });

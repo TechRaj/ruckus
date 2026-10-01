@@ -15,6 +15,7 @@ import { SignOutSheet } from '../screens/SignOutSheet';
 import { DeleteAccountSheet } from '../screens/DeleteAccountSheet';
 import { Overlay, useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
+import { cleanLink, firstLink, isReelLink, searchHint } from '../lib/links';
 
 export function OverlayHost() {
   const { overlay } = useStash();
@@ -39,7 +40,15 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
       return (
         <AddPlaceScreen
           onClose={close}
-          onResolve={url => openOverlay({ kind: 'confirm', url })}
+          onResolve={input => {
+            // a pasted link goes to resolving; pasted words (a name, an address) to search
+            // "instagram.com/reel/..." pasted without https:// is still a link
+            const bare = /^[\w-]+(\.[\w-]+)+\/\S*$/.test(input.trim()) ? `https://${input.trim()}` : null;
+            const link = cleanLink(firstLink(input) ?? bare);
+            openOverlay(link
+              ? { kind: 'confirm', url: link, query: searchHint(link, input) }
+              : { kind: 'confirm', url: null, query: input.slice(0, 120) });
+          }}
           onManual={() => openOverlay({ kind: 'confirm', url: null })}
         />
       );
@@ -53,8 +62,9 @@ function OverlayScreen({ overlay }: { overlay: Overlay }) {
            */
           key={overlay.url ?? `search:${overlay.query ?? ''}`}
           sharedUrl={overlay.url}
-          initialQuery={overlay.query}
-          startInSearch={overlay.url === null}
+          initialQuery={overlay.query || searchHint(overlay.url)}
+          /** Only reel links can be read. Any other link is kept as the source and starts in search. */
+          startInSearch={!isReelLink(overlay.url)}
           onClose={close}
           /** Back from search returns to Add a place. */
           onBack={() => openOverlay({ kind: 'add' })}

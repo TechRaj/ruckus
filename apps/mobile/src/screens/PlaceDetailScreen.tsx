@@ -109,7 +109,7 @@ export function PlaceDetailScreen({ id, onClose }: { id: string; onClose: () => 
               <Text
                 style={styles.saverReport}
                 accessibilityRole="button"
-                onPress={() => safetyMenu({ userId: noteBy, displayName: memberById.get(noteBy)?.displayName })}
+                onPress={() => safetyMenu({ userId: noteBy, displayName: memberById.get(noteBy)?.displayName }, { commentOn: item.id, note: true })}
               >
                 Report
               </Text>

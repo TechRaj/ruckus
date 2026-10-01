@@ -7,8 +7,9 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import { api } from '../api/client';
+import { lines } from '../theme/lines';
 import { currentPosition, Position } from '../lib/location';
 import { forgetEmail, markSignedOut } from '../lib/lastSignIn';
 import { identify, onProChange, showCustomerCenter, showPaywall } from '../billing/purchases';
@@ -28,7 +29,8 @@ export type Overlay =
   | { kind: 'caper-made'; caperId: string }
   | { kind: 'saved'; name: string; count?: number };
 
-export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready';
+/** `offline`: signed in, but the Dens couldn't be loaded. Not a sign-out: the session is fine. */
+export type Session = 'loading' | 'signedOut' | 'noDen' | 'ready' | 'offline';
 
 interface StashState {
   session: Session;
@@ -103,7 +105,7 @@ interface StashState {
   /** People I've blocked, for People → Blocked. */
   blocked: Member[];
   /** Report a Den-mate, or their comment on a place when `placeId` (a Stash item id) is given. */
-  report: (userId: string, placeId?: string) => Promise<void>;
+  report: (userId: string, placeId?: string, note?: boolean) => Promise<void>;
   /** Hide a Den-mate's comments from me. Reloads the Stash so they go at once. */
   block: (userId: string) => Promise<void>;
   unblock: (userId: string) => Promise<void>;
@@ -171,8 +173,9 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async (preferDenId?: string) => {
+    let me: string | null = null;
     try {
-      const me = await api.auth.userId();
+      me = await api.auth.userId();
       setCurrentUserId(me);
       /** Not awaited, so a slow or failed billing call does not delay the session. */
       identify(me).then(pro => {
@@ -193,7 +196,8 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
       setSession('ready');
       await loadStash(active.id);
     } catch {
-      setSession('signedOut');
+      // A network blip is not a sign-out. Only a missing session sends someone to sign in.
+      setSession(me ? 'offline' : 'signedOut');
     }
   }, [loadStash]);
 
@@ -214,7 +218,15 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
 
   const openPro = useCallback(async () => {
     if (isPro) { await showCustomerCenter(); return true; }
-    if (!(await showPaywall())) return false;
+    let bought = false;
+    try {
+      bought = await showPaywall();
+    } catch (err) {
+      console.warn('[billing] paywall', err instanceof Error ? err.message : err);
+      Alert.alert(lines.proUnavailable);
+      return false;
+    }
+    if (!bought) return false;
     setIsPro(true);
     // don't make them wait for the webhook: tell the server now
     return api.syncPro();
@@ -441,8 +453,9 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await unregisterCurrentPushToken();
-    await markSignedOut();
     await api.auth.signOut();
+    // Only once it worked: the flag words the next sign-in screen as "signed out".
+    await markSignedOut();
     setOverlay({ kind: 'none' });
     await refreshSession();
   }, [refreshSession]);
@@ -457,18 +470,20 @@ export function StashProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAccount = useCallback(async () => {
     await api.auth.deleteAccount();
-    // The server took the push token and everything else with the account.
+    // The server took the push token with the account. Forget it here too, or
+    // a new account made on this device would never register it again.
+    await unregisterCurrentPushToken();
     // Forgetting the email means the next launch is a first visit.
     await forgetEmail();
     setOverlay({ kind: 'none' });
     await refreshSession();
   }, [refreshSession]);
 
-  const report = useCallback(async (userId: string, id?: string) => {
+  const report = useCallback(async (userId: string, id?: string, note = false) => {
     // Throw rather than return: the menu thanks the user on success.
     if (!den) throw new Error('not_a_member');
     const placeId = id ? stash.find(s => s.id === id)?.placeId : undefined;
-    await api.safety.report({ denId: den.id, userId, placeId });
+    await api.safety.report({ denId: den.id, userId, placeId, note });
   }, [den, stash]);
 
   const block = useCallback(async (userId: string) => {

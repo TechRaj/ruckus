@@ -11,7 +11,8 @@ export function useSafetyMenu() {
   const { report, block, currentUserId } = useStash();
 
   /** `displayName` is missing for someone who has left the Den; their words can still be reported. */
-  return useCallback((member: { userId: string; displayName?: string }, opts: { commentOn?: string } = {}) => {
+  /** `commentOn` is the Stash item; `note` says it's their note on it rather than a comment. */
+  return useCallback((member: { userId: string; displayName?: string }, opts: { commentOn?: string; note?: boolean } = {}) => {
     if (member.userId === currentUserId) return;
     const name = member.displayName ?? 'Someone';
     const done = (p: Promise<void>, after?: string) =>
@@ -19,7 +20,7 @@ export function useSafetyMenu() {
 
     Alert.alert(name, undefined, [
       opts.commentOn
-        ? { text: 'Report comment', onPress: () => done(report(member.userId, opts.commentOn), lines.safety.reported) }
+        ? { text: opts.note ? 'Report note' : 'Report comment', onPress: () => done(report(member.userId, opts.commentOn, opts.note), lines.safety.reported) }
         : { text: `Report ${name}`, onPress: () => done(report(member.userId), lines.safety.reported) },
       {
         text: `Block ${name}`, style: 'destructive', onPress: () =>
