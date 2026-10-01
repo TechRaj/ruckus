@@ -5,7 +5,7 @@
  * With no matches the screen goes to search.
  * CLAUDE.md §5.8: nothing is saved until the user picks and confirms.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -24,6 +24,7 @@ import { RascalSleep } from '../components/RascalSleep';
 import { SheetModal } from '../components/SheetModal';
 import { Sniffing } from '../components/Sniffing';
 import { dayLabel, dotted, eventLabel, eventOver } from '../lib/time';
+import { isReelLink } from '../lib/links';
 import { useStash } from '../state/StashContext';
 import { lines } from '../theme/lines';
 import { playFail, playTap } from '../theme/sound';
@@ -32,6 +33,9 @@ import { PlaceCandidate } from '../types';
 import type { ConfirmMode } from '../api/types';
 
 type Mode = 'resolving' | 'pick' | 'search' | 'saving';
+
+/** Four network steps; on a good connection about two seconds. Past this, offer search. */
+const RESOLVE_TIMEOUT_MS = 25_000;
 
 /** The backend takes up to 20 places in one save. */
 const MOST = 20;
@@ -83,13 +87,20 @@ export function ConfirmScreen({
   /** The query the current results belong to. The empty message shows only when this equals the typed query. */
   const [answered, setAnswered] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  /** A new share can replace this screen mid-save. The save still lands, but must not take over the new sheet. */
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
     if (startInSearch || !sharedUrl) return;
     let live = true;
-    api.resolveSharedUrl(sharedUrl)
-      .then(({ candidates: c, mode: m }) => {
+    /** Closing the sheet stops the work, and a stalled network gives up instead of sniffing for minutes. */
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), RESOLVE_TIMEOUT_MS);
+    api.resolveSharedUrl(sharedUrl, { signal: abort.signal })
+      .then(({ candidates: c, mode: m, limited }) => {
         if (!live) return;
+        if (limited) setLimitNote(lines.resolveLimited);
         /** No candidates, so go to search. */
         if (m === 'search' || c.length === 0) { setMode('search'); return; }
         setCandidates(c);
@@ -98,8 +109,9 @@ export function ConfirmScreen({
         setChosen(firstTicks(c, m));
         setMode('pick');
       })
-      .catch(() => { if (live) { setFailed(true); playFail(); } });
-    return () => { live = false; };
+      .catch(() => { if (live) { setFailed(true); playFail(); } })
+      .finally(() => clearTimeout(timer));
+    return () => { live = false; clearTimeout(timer); abort.abort(); };
   }, [sharedUrl, startInSearch]);
 
   /** Debounced. Each search is a paid geocode against a daily cap, and per-keystroke requests make the list flicker. */
@@ -109,7 +121,7 @@ export function ConfirmScreen({
     const asked = query.trim();
     setSearchError(null);
     const t = setTimeout(() => {
-      api.searchPlaces(asked, { fromLink: !!sharedUrl })
+      api.searchPlaces(asked, { fromLink: isReelLink(sharedUrl) ? sharedUrl : null })
         .then(r => { if (live) { setResults(r); setAnswered(asked); } })
         .catch(err => {
           if (!live) return;
@@ -141,7 +153,7 @@ export function ConfirmScreen({
     setMode('saving'); setLimitNote(null);
     try {
       await addToStash(chosen, sharedUrl, dates);
-      onSaved(name, chosen.length);
+      if (mounted.current) onSaved(name, chosen.length);
     } catch (err) {
       // A full Den is a limit, so keep the pick on screen and skip the
       // failed state.
@@ -151,9 +163,10 @@ export function ConfirmScreen({
         // Already Pro (the server just hadn't heard yet) -> sync it. Not Pro ->
         // the paywall, which syncs on purchase. Either way, if the server now
         // agrees, save again once so they don't have to tap twice.
-        const ready = isPro ? await api.syncPro() : await openPro();
-        if (ready && !retried) return save(true);
-        if (isPro) setLimitNote('Your upgrade is on its way. Try again in a few seconds.');
+        // `retried` means they just bought it: this closure's isPro is from before, so don't sell it again
+        const ready = retried ? false : isPro ? await api.syncPro() : await openPro();
+        if (ready) return save(true);
+        setLimitNote(isPro || retried ? 'Your upgrade is on its way. Try again in a few seconds.' : (e.message ?? lines.room.fullOwner));
         return;
       }
       if (e.code === 'den_full') { setMode(back); setLimitNote(e.message ?? 'This Den is full.'); return; }

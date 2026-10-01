@@ -120,7 +120,7 @@ declare module '@ruckus/api' {
       unregisterPushToken(token: string): Promise<void>;
     };
     safety: {
-      report(args: { denId: string; profileId: string; placeId?: string | null; reason?: string | null }): Promise<void>;
+      report(args: { denId: string; profileId: string; placeId?: string | null; reason?: string | null; note?: boolean }): Promise<void>;
       block(profileId: string): Promise<void>;
       unblock(profileId: string): Promise<void>;
       blocked(): Promise<{ id: string; displayName: string; avatar: string | null }[]>;

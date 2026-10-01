@@ -36,6 +36,11 @@ export const lines = {
     'matching the place…',
   ],
   hiding: "couldn't find that one. try searching, or add it by hand.",
+  resolveLimited: "that's today's link limit, so these are rougher guesses. check before you save.",
+  codeAlreadySent: 'we sent a code a moment ago. use that one.',
+  signOutFailed: "couldn't sign out. check your connection and try again.",
+  proUnavailable: "that didn't go through. check your connection and try again.",
+  offline: "couldn't reach your dens. check your connection.",
   missingEvent: "that event isn't in your den anymore.",
   saved: 'one step closer to making plans!',
 

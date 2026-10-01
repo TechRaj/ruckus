@@ -40,6 +40,7 @@ export function PeopleScreen() {
   const [panelError, setPanelError] = useState<string | null>(null);
 
   useEffect(() => {
+    setInvite(null);   // never show, or share, the previous Den's code
     if (den) api.getInviteLink(den.id).then(r => setInvite(r.code)).catch(() => {});
   }, [den]);
 
@@ -67,6 +68,8 @@ export function PeopleScreen() {
       if ((err as { needsUpgrade?: boolean }).needsUpgrade) {
         // bought Pro and the server knows -> do what they were trying to do
         if ((await openPro()) && !retried) return run(action, true);
+        // closed the paywall, or it couldn't open: keep the reason on screen
+        setPanelError(err instanceof Error && err.message ? err.message : "You're at the free limit.");
         return;
       }
       setPanelError(err instanceof Error && err.message ? err.message : 'That didn\'t work. Try again.');

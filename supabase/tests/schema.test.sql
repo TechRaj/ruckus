@@ -746,6 +746,12 @@ reset role;
 select t.ok((select body from public.reports where kind = 'comment') = 'go early', 'a reported comment is kept as it read');
 select t.ok((select count(*) from public.reports where reporter_id = t.id('carol')) = 2, 'both reports are filed');
 set role authenticated;
+select t.login('carol');
+select public.report(t.get('big')::uuid, t.id('erin'), (select id from public.places where google_place_id = 'note_1'), null, true);
+reset role;
+select t.ok((select body from public.reports where kind = 'comment' order by created_at desc limit 1) = 'erin''s note',
+            'reporting a note keeps the note as it read');
+set role authenticated;
 
 -- ------------------------------------------------ someone who has left
 reset role;

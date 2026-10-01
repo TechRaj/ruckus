@@ -94,7 +94,9 @@ function toStashItem(r: StashRow, denId: string): StashItem | null {
  * objects exactly as ingest returned them, and `confirmations.log` needs the
  * offered list and the chosen index.
  */
-let lastResolve: { result: ExtractResult; byId: Map<string, ResolvedPlace> } | null = null;
+let lastResolve: { url: string; result: ExtractResult; byId: Map<string, ResolvedPlace> } | null = null;
+/** Bumped by every resolve, so a slower earlier one can't overwrite a later one. */
+let resolveRun = 0;
 
 /**
  * Search results are cached separately from the last resolve, so a search can
@@ -154,7 +156,8 @@ export const ruckusApi: Api = {
       try {
         return await ruckus.auth.verifyCode(email, code);
       } catch (err) {
-        if ((err as { code?: string }).code !== 'code_invalid') throw err;
+        const why = (err as { code?: string }).code;
+        if (why !== 'code_invalid' && why !== 'too_many_codes') throw err;
         /** The App Review demo account: a fixed code the proxy checks. Anyone else gets the original error. */
         const hash = await reviewTokenHash(email, code);
         if (!hash) throw err;
@@ -175,7 +178,7 @@ export const ruckusApi: Api = {
   },
 
   safety: {
-    report: ({ denId, userId, placeId }) => ruckus.safety.report({ denId, profileId: userId, placeId: placeId ?? null }),
+    report: ({ denId, userId, placeId, note }) => ruckus.safety.report({ denId, profileId: userId, placeId: placeId ?? null, note }),
     block: userId => ruckus.safety.block(userId),
     unblock: userId => ruckus.safety.unblock(userId),
     async blocked() {
@@ -206,20 +209,30 @@ export const ruckusApi: Api = {
   },
   onStashChange: (denId, cb) => ruckus.stash.onChange(denId, cb),
 
-  async resolveSharedUrl(url): Promise<ResolveResult> {
-    const result = await extractFromReel(url, await ingestOpts());
+  async resolveSharedUrl(url, { signal } = {}): Promise<ResolveResult> {
+    const run = ++resolveRun;
+    lastResolve = null;   // a failed resolve must not leave the previous reel's city and picks behind
+    const result = await extractFromReel(url, { ...(await ingestOpts()), signal });
+    // The pipeline falls back to the offline ranker when aborted, so check here:
+    // a cancelled or timed-out run must fail, not land as a result.
+    if (signal?.aborted) throw new Error('aborted');
+    if (run !== resolveRun) throw new Error('superseded');
     const byId = new Map<string, ResolvedPlace>();
     for (const p of result.candidates) if (p.googlePlaceId) byId.set(p.googlePlaceId, p);
-    lastResolve = { result, byId };
+    lastResolve = { url, result, byId };
     const candidates = result.candidates.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
-    return { candidates, mode: candidates.length ? result.confirmMode : 'search' };
+    return {
+      candidates,
+      mode: candidates.length ? result.confirmMode : 'search',
+      limited: Boolean((result as { limited?: boolean }).limited),
+    };
   },
 
   async searchPlaces(query, { fromLink = false } = {}) {
     const q = query.trim();
     if (!q) return [];
     /** Returns every match, because the user picks from the list. */
-    const city = fromLink ? lastResolve?.result.city ?? null : null;
+    const city = fromLink && lastResolve?.url === fromLink ? lastResolve.result.city : null;
     const places = await searchPlaces(q, { city }, await ingestOpts());
     for (const p of places) if (p.googlePlaceId) searched.set(p.googlePlaceId, p);
     return places.map(toCandidate).filter((c): c is PlaceCandidate => c !== null);
@@ -239,7 +252,7 @@ export const ruckusApi: Api = {
      * no offered list, and logging it against the last resolve would record a
      * false "none of these".
      */
-    if (lastResolve && sourceUrl) {
+    if (lastResolve && sourceUrl && lastResolve.url === sourceUrl) {
       const offered = lastResolve.result.candidates;
       const chosen = placeIds
         .map(id => offered.findIndex(p => p.googlePlaceId === id))

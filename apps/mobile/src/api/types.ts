@@ -9,6 +9,8 @@ export type ConfirmMode = 'single' | 'choose' | 'multi' | 'search';
 export interface ResolveResult {
   candidates: PlaceCandidate[];
   mode: ConfirmMode;
+  /** Today's lookup cap was hit, so these came from the weaker offline ranker. */
+  limited?: boolean;
 }
 
 export interface Api {
@@ -47,9 +49,9 @@ export interface Api {
   onStashChange(denId: string, cb: () => void): () => void;
 
   /** Resolves a shared reel URL to ranked candidates. Runs on device and calls the proxy. */
-  resolveSharedUrl(url: string): Promise<ResolveResult>;
-  /** Set `fromLink` when searching inside a link's confirm flow. The search is then biased to that link's city. */
-  searchPlaces(query: string, opts?: { fromLink?: boolean }): Promise<PlaceCandidate[]>;
+  resolveSharedUrl(url: string, opts?: { signal?: AbortSignal }): Promise<ResolveResult>;
+  /** Pass the link being confirmed as `fromLink`; if it was resolved, the search is biased to its city. */
+  searchPlaces(query: string, opts?: { fromLink?: string | null }): Promise<PlaceCandidate[]>;
   /**
    * Saves one or more places by id in one write, with the reel URL if there is
    * one. Up to 20. Returns the saved rows in the order asked. See CLAUDE.md §5.6.
@@ -84,7 +86,8 @@ export interface Api {
   /** Report and block (App Store guideline 1.2). */
   safety: {
     /** Pass `placeId` to report that person's comment on the place; leave it out to report the person. */
-    report(args: { denId: string; userId: string; placeId?: string }): Promise<void>;
+    /** `note: true` when it's their note on the place rather than a comment. */
+    report(args: { denId: string; userId: string; placeId?: string; note?: boolean }): Promise<void>;
     /** Hides their comments from you. They aren't told. */
     block(userId: string): Promise<void>;
     unblock(userId: string): Promise<void>;

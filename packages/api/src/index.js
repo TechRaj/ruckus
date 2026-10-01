@@ -166,7 +166,10 @@ export function createRuckus({ url, anonKey, storage } = {}) {
      */
     async deleteAccount() {
       await rpc('delete_my_account', {});
-      await supabase.auth.signOut({ scope: 'local' });
+      // The account is gone from here on, so nothing below may report failure.
+      // signOut can still error (it may try to refresh a session whose user no
+      // longer exists); the local session is dropped either way.
+      try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* already signed out */ }
     },
 
     /** @returns {Promise<string|null>} current user id, or null if signed out */
@@ -404,8 +407,8 @@ export function createRuckus({ url, anonKey, storage } = {}) {
      * that place (kept as it read, even if they edit it); leave it out to
      * report the person. Nobody can read reports from the app.
      */
-    report: ({ denId, profileId, placeId = null, reason = null }) =>
-      rpc('report', { p_den: denId, p_profile: profileId, p_place: placeId, p_reason: reason }),
+    report: ({ denId, profileId, placeId = null, reason = null, note = false }) =>
+      rpc('report', { p_den: denId, p_profile: profileId, p_place: placeId, p_reason: reason, p_note: note }),
 
     /** Hide someone's comments from you, everywhere. They aren't told. */
     block: profileId => rpc('block_user', { p_profile: profileId }),

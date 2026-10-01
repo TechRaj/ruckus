@@ -17,13 +17,15 @@
 import { useEffect, useRef } from 'react';
 import { requireOptionalNativeModule } from 'expo-modules-core';
 import { useShareIntent } from 'expo-share-intent';
-import { cleanLink, firstLink } from '../lib/links';
+import { cleanLink, firstLink, searchHint } from '../lib/links';
+import { USE_MOCKS } from '../api/client';
 import { Overlay, useStash } from '../state/StashContext';
+import { paletteIsStale } from '../theme/clock';
 
 const AVAILABLE = requireOptionalNativeModule('ExpoShareIntentModule') != null;
 
 /** Sheets a share mustn't interrupt - it would throw away what they were doing. */
-const BUSY: Overlay['kind'][] = ['caper', 'caper-made', 'sign-out'];
+const BUSY: Overlay['kind'][] = ['caper', 'caper-made', 'sign-out', 'delete-account'];
 
 export function IncomingShares() {
   const { den, overlay, openOverlay } = useStash();
@@ -41,6 +43,11 @@ export function IncomingShares() {
   useEffect(() => {
     if (!hasShareIntent) return;
     if (!den || BUSY.includes(overlay.kind)) return;   // re-runs when that changes
+    // At dusk or dawn, with no sheet open, the app is about to reload into the
+    // other palette. Taking the share now would clear it just before that
+    // reload; leave it for the next run. With a sheet open there's no reload,
+    // so open it now.
+    if (!USE_MOCKS && overlay.kind === 'none' && paletteIsStale(true)) return;
     const key = `${shareIntent.webUrl ?? ''}\n${shareIntent.text ?? ''}`;
     if (handled.current === key) return;
     handled.current = key;
@@ -50,7 +57,7 @@ export function IncomingShares() {
     const text = shareIntent.text?.trim();
     // a link goes straight to resolving; other text - an address, a name -
     // starts a search with it; nothing usable opens Add a place
-    if (url) openOverlay({ kind: 'confirm', url });
+    if (url) openOverlay({ kind: 'confirm', url, query: searchHint(url, shareIntent.text) });
     else if (text) openOverlay({ kind: 'confirm', url: null, query: text.slice(0, 120) });
     else openOverlay({ kind: 'add' });
   }, [hasShareIntent, shareIntent, den, overlay.kind, openOverlay]);
