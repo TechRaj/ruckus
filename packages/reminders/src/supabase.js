@@ -31,6 +31,12 @@ export function createSupabaseReminderDb({ url, serviceKey, fetchImpl = fetch })
     setPlaceTimeZone(id, zone) {
       return call('set_place_time_zone', { p_place: id, p_zone: zone });
     },
+    async nextAt(now) {
+      const at = await call('next_event_reminder_at', { p_now: now.toISOString() });
+      if (!at) return null;
+      const next = new Date(at);
+      return Number.isNaN(next.getTime()) ? null : next;
+    },
     async claim(now) {
       const rows = await call('claim_event_reminders', { p_now: now.toISOString() }) ?? [];
       return rows.map(row => ({ sendId: row.send_id }));

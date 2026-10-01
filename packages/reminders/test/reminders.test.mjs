@@ -5,6 +5,8 @@ import {
   addCalendarDays,
   dueOffsets,
   fireInstant,
+  futureOffsets,
+  nextWakeMs,
   parseEventClock,
   reminderCopy,
   pickReminderEvent,
@@ -46,13 +48,16 @@ test('7, 3, and 1 day reminders become due at 09:00 local and stop at the event'
   const event = '2026-03-10';
   assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-03T13:59:00.000Z')), []);
   assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-03T14:00:00.000Z')), [7]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-03T14:01:00.000Z')), []);
   // 3 days before is still EST. 1 day before is already EDT.
   assert.equal(fireInstant(event, 3, TORONTO).toISOString(), '2026-03-07T14:00:00.000Z');
   assert.equal(fireInstant(event, 1, TORONTO).toISOString(), '2026-03-09T13:00:00.000Z');
-  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-09T13:00:00.000Z')), [7, 3, 1]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-09T13:00:00.000Z')), [1]);
   assert.deepEqual(dueOffsets(event, TORONTO, at('2026-03-10T13:00:00.000Z')), []);
   assert.deepEqual(dueOffsets(event, null, at('2026-03-09T13:00:00.000Z')), []);
   assert.deepEqual(dueOffsets('not-a-date', TORONTO, at('2026-03-09T13:00:00.000Z')), []);
+  assert.deepEqual(futureOffsets(event, TORONTO, at('2026-03-03T13:59:00.000Z')), [7, 3, 1]);
+  assert.deepEqual(futureOffsets(event, TORONTO, at('2026-03-03T14:00:00.000Z')), [3, 1]);
 });
 
 test('a plan with a clock time fires at that time, the same number of days before', () => {
@@ -65,11 +70,24 @@ test('a plan with a clock time fires at that time, the same number of days befor
   const event = '2026-10-03';
   // 3 days before is 2026-09-30. 18:45 EDT is 22:45 UTC.
   assert.equal(fireInstant(event, 3, TORONTO, clock).toISOString(), '2026-09-30T22:45:00.000Z');
-  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:44:00.000Z'), clock), [7]);
-  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:45:00.000Z'), clock), [7, 3]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-26T22:45:00.000Z'), clock), [7]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:44:00.000Z'), clock), []);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:45:00.000Z'), clock), [3]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T22:53:00.000Z'), clock), []);
   assert.deepEqual(dueOffsets(event, TORONTO, at('2026-10-03T22:45:00.000Z'), clock), []);
+  assert.deepEqual(futureOffsets(event, TORONTO, at('2026-09-30T22:44:00.000Z'), clock), [3, 1]);
   // No clock still means 09:00, which on that September morning is 13:00 UTC.
-  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T13:00:00.000Z')), [7, 3]);
+  assert.deepEqual(dueOffsets(event, TORONTO, at('2026-09-30T13:00:00.000Z')), [3]);
+});
+
+test('the timer wakes at the clock time and does not send a late backlog', () => {
+  const now = at('2026-09-30T22:44:00.000Z');
+  const fire = at('2026-09-30T22:45:00.000Z');
+  assert.equal(nextWakeMs(fire, now), 60_000);
+  assert.equal(nextWakeMs(fire, at('2026-09-30T22:44:50.000Z')), 10_000);
+  assert.equal(nextWakeMs(fire, at('2026-09-30T22:45:00.000Z')), 0);
+  assert.equal(nextWakeMs(null, now), 60_000);
+  assert.equal(nextWakeMs(at('2026-10-07T22:45:00.000Z'), now), 60_000);
 });
 
 test('copy follows the vote, and does not invent names', () => {

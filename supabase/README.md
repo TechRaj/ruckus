@@ -108,8 +108,9 @@ every current member who has a device, at **09:00 in that time zone**, 7, 3,
 and 1 calendar days before the date. A Caper that has a time ("6:45 pm")
 uses that time of day instead, exactly 7, 3, and 1 days before, and the
 alert stops once that time on the day itself has passed. Want-to-go is read
-when the alert is sent. The proxy runs that job itself every 10 minutes
-while it is up. `POST /internal/reminders/dispatch` is the same job, with
+when the alert is sent. The proxy wakes at that clock time while it is
+up, and a late check does not send the reminders it missed.
+`POST /internal/reminders/dispatch` is the same job, with
 header `x-ruckus-key: $PROXY_SECRET`, if you also want an outside cron. It
 needs `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `PROXY_SECRET` on the
 proxy. An optional `EXPO_ACCESS_TOKEN` is sent with the Expo push call.

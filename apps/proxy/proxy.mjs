@@ -23,7 +23,7 @@ import { readFileSync } from 'node:fs';
 import { SYSTEM } from '@ruckus/ingest';
 import { UUID, usersInEvent, entitlementActive, decideFromEvent, fetchSubscriber } from './revenuecat.mjs';
 import {
-  createSupabaseReminderDb, dispatchEventReminders, sendExpoPush, timeZoneFromCoordinate,
+  createSupabaseReminderDb, dispatchEventReminders, nextWakeMs, sendExpoPush, timeZoneFromCoordinate,
 } from '@ruckus/reminders';
 
 const app = express();
@@ -508,16 +508,17 @@ app.post('/pro/sync', requireCaller, async (req, res) => {
 /* ------------------------------------------------------------------ *
  * /internal/reminders/dispatch - send Den event reminders that are due.
  *
- * The proxy also runs this itself, every 10 minutes, so a plan's alert
- * goes out while this process is up. The route is the same job, for a
- * cron. Members are notified in the place's time zone, 7, 3, and 1 days
- * before the event: 09:00 when the save has no clock time, or the Caper's
- * own time when it has one. The alert still goes out if the app is closed.
- * Nothing in the response or the log is a push token.
+ * The proxy wakes at the next plan time, so an 8:15 reminder goes out at
+ * 8:15. A check that starts later does not send the ones it missed.
+ * The route is the same job, for a cron. Members are notified in the
+ * place's time zone, 7, 3, and 1 days before the event: 09:00 when the
+ * save has no clock time, or the Caper's own time when it has one. The
+ * alert still goes out if the app is closed. Nothing in the response or
+ * the log is a push token.
  * ------------------------------------------------------------------ */
 
-const REMINDER_EVERY_MS = 10 * 60 * 1000;
 let reminderRun = null;
+let reminderTimer = null;
 
 async function runReminderDispatch() {
   if (!SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -564,10 +565,31 @@ function startReminderTimer() {
     console.log('[reminders] timer off, database not configured');
     return;
   }
-  console.log('[reminders] timer on, every 10 minutes');
-  const tick = () => { runReminderDispatch().catch(() => {}); };
-  setTimeout(tick, 5_000);
-  setInterval(tick, REMINDER_EVERY_MS);
+  console.log('[reminders] timer on, at each plan time');
+  const db = createSupabaseReminderDb({
+    url: SUPABASE_URL,
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  });
+  const arm = async () => {
+    let wait = 60_000;
+    try {
+      const next = await db.nextAt(new Date());
+      wait = nextWakeMs(next, new Date());
+      if (wait === 0) {
+        const delay = next ? next.getTime() - Date.now() : 0;
+        if (delay > 50) {
+          reminderTimer = setTimeout(() => { arm().catch(() => {}); }, delay);
+          return;
+        }
+        await runReminderDispatch();
+        wait = 5_000;
+      }
+    } catch (err) {
+      console.error('[reminders]', err.message);
+    }
+    reminderTimer = setTimeout(() => { arm().catch(() => {}); }, wait);
+  };
+  arm().catch(() => {});
 }
 
 /* ------------------------------------------------------------------ *

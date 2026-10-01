@@ -5,7 +5,11 @@ export {
   dueOffsets,
   eventStartInstant,
   fireInstant,
+  futureOffsets,
+  nextWakeMs,
   parseEventClock,
+  REMINDER_ON_TIME_MS,
+  REMINDER_RECHECK_MS,
   timeZoneFromCoordinate,
   zonedLocalToUtc,
 } from './time.js';

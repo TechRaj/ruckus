@@ -9,9 +9,8 @@ import { AppState, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fireInstant, parseEventClock } from '@ruckus/reminders/clock';
-import { pickReminderEvent, reminderCopy } from '@ruckus/reminders/copy';
+import { fireInstant, futureOffsets, parseEventClock } from '@ruckus/reminders/clock';
+import { reminderCopy } from '@ruckus/reminders/copy';
 import { api, USE_MOCKS } from '../api/client';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,7 +37,6 @@ Notifications.setNotificationHandler({
 
 let currentToken: string | null = null;
 const handledResponses = new Set<string>();
-const SHOWN = 'ruckus.reminder.shown';
 
 export type ReminderSource = {
   denId: string;
@@ -47,71 +45,70 @@ export type ReminderSource = {
   events: { id: string; name: string; start: string | null; time?: string | null; iWant: boolean; interested: string[] }[];
 };
 
-function localToday() {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
+function reminderIdentifier(denId: string, eventId: string, offsetDays: number, start: string, clockKey: string) {
+  return `den-reminder-${denId}:${eventId}:${offsetDays}:${start}:${clockKey}`;
 }
 
-/** Expo Go cannot receive a server push, so a due event is scheduled on the device from the stash. */
+/** Expo Go cannot receive a server push, so future reminders are scheduled on the phone for their clock time. */
 async function scheduleStashReminder(source: ReminderSource) {
-  const chosen = pickReminderEvent(source.events, localToday());
-  const event = chosen ? source.events.find(item => item.id === chosen.id) : undefined;
-  const clock = parseEventClock(event?.time);
-  const clockKey = clock ? `${clock.hour}:${clock.minute}` : '9';
-  const key = chosen ? `${source.denId}:${chosen.id}:${chosen.offsetDays}:${chosen.start}:${clockKey}` : null;
-  const identifier = key ? `den-reminder-${key}` : null;
+  let zone = 'UTC';
+  try {
+    zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return;
+  }
+  const now = new Date();
+  const names = new Map(source.members.map(member => [member.userId, member.displayName]));
+  const planned: { identifier: string; event: ReminderSource['events'][number]; offsetDays: 7 | 3 | 1; fire: Date }[] = [];
+  for (const event of source.events) {
+    if (!event.start) continue;
+    const clock = parseEventClock(event.time);
+    const clockKey = clock ? `${clock.hour}:${clock.minute}` : '9';
+    for (const offsetDays of futureOffsets(event.start, zone, now, clock)) {
+      const fire = fireInstant(event.start, offsetDays, zone, clock);
+      if (fire.getTime() <= now.getTime()) continue;
+      planned.push({
+        identifier: reminderIdentifier(source.denId, event.id, offsetDays, event.start, clockKey),
+        event,
+        offsetDays: offsetDays as 7 | 3 | 1,
+        fire,
+      });
+    }
+  }
+  const wanted = new Set(planned.map(item => item.identifier));
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(scheduled.map(n => {
     const data = n.content.data as { kind?: string; placeId?: string } | undefined;
     const ours = data?.kind === 'den-reminder' || data?.placeId === 's6' || n.content.body?.includes('Josh, Mia');
-    if (!ours || n.identifier === identifier) return Promise.resolve();
+    if (!ours || wanted.has(n.identifier)) return Promise.resolve();
     return Notifications.cancelScheduledNotificationAsync(n.identifier);
   }));
-  if (!chosen || !key || !identifier) return;
-  if (scheduled.some(n => n.identifier === identifier)) return;
-  if ((await AsyncStorage.getItem(SHOWN)) === key) return;
-  if (!event) return;
-
-  let trigger: Notifications.NotificationTriggerInput = {
-    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-    seconds: 8,
-  };
-  if (clock) {
-    try {
-      const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const fire = fireInstant(chosen.start, chosen.offsetDays, zone, clock);
-      if (fire.getTime() - Date.now() > 15_000) trigger = {
+  const already = new Set(scheduled.map(n => n.identifier));
+  await Promise.all(planned.map(item => {
+    if (already.has(item.identifier)) return Promise.resolve();
+    const body = reminderCopy({
+      eventName: item.event.name,
+      offsetDays: item.offsetDays,
+      recipientVoted: item.event.iWant,
+      otherVoterNames: item.event.interested
+        .filter(id => id !== source.userId)
+        .map(id => names.get(id) ?? '')
+        .filter(Boolean),
+    });
+    return Notifications.scheduleNotificationAsync({
+      identifier: item.identifier,
+      content: {
+        title: item.event.name,
+        body,
+        data: { kind: 'den-reminder', denId: source.denId, placeId: item.event.id },
+        sound: true,
+      },
+      trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: fire,
-      };
-    } catch {
-      // An unreadable zone keeps the short delay.
-    }
-  }
-
-  const names = new Map(source.members.map(member => [member.userId, member.displayName]));
-  const body = reminderCopy({
-    eventName: chosen.name,
-    offsetDays: chosen.offsetDays as 7 | 3 | 1,
-    recipientVoted: event.iWant,
-    otherVoterNames: event.interested
-      .filter(id => id !== source.userId)
-      .map(id => names.get(id) ?? '')
-      .filter(Boolean),
-  });
-  await Notifications.scheduleNotificationAsync({
-    identifier: `den-reminder-${key}`,
-    content: {
-      title: chosen.name,
-      body,
-      data: { kind: 'den-reminder', denId: source.denId, placeId: chosen.id },
-      sound: true,
-    },
-    trigger,
-  });
-  await AsyncStorage.setItem(SHOWN, key);
+        date: item.fire,
+      },
+    });
+  }));
 }
 
 export async function unregisterCurrentPushToken() {

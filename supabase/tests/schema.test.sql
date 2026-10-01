@@ -524,6 +524,17 @@ select null from public.claim_event_reminders('2026-03-03 14:00+00');
 select t.ok((select status from public.event_reminder_sends where recipient_id = t.id('erin')) = 'skipped',
             'leaving the Den cancels an unsent reminder');
 
+select public.finish_event_reminder(
+  (select id from public.event_reminder_sends where recipient_id = t.id('alice') and offset_days = 7),
+  'failed', 'DeviceNotRegistered ExponentPushToken[alicealicealicealice]');
+select t.ok((select error from public.event_reminder_sends
+             where recipient_id = t.id('alice') and offset_days = 7) = 'DeviceNotRegistered [token]',
+            'a failed send is auditable and does not keep the token');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-03 14:00:30+00')) = 1,
+            'a failed send can be retried while that minute is still open');
+select t.ok((select count(*) from public.claim_event_reminders('2026-03-03 14:02+00')) = 0,
+            'a reminder that was missed is not sent later');
+
 -- 3 days before is still EST (14:00 UTC). 1 day before is EDT (13:00 UTC).
 select t.ok((select count(*) from public.claim_event_reminders('2026-03-07 13:59+00')) = 0,
             'the 3-day reminder waits until 09:00 EST');
@@ -563,15 +574,14 @@ select t.ok((select count(*) from public.claim_event_reminders('2026-09-30 22:45
              join public.places p on p.id = s.place_id
              where p.google_place_id = 'ChIJ_timed' and s.offset_days = 3) = 2,
             'three days before, the reminder fires at 6:45 pm');
-
-select public.finish_event_reminder(
-  (select id from public.event_reminder_sends where recipient_id = t.id('alice') and offset_days = 7),
-  'failed', 'DeviceNotRegistered ExponentPushToken[alicealicealicealice]');
-select t.ok((select error from public.event_reminder_sends
-             where recipient_id = t.id('alice') and offset_days = 7) = 'DeviceNotRegistered [token]',
-            'a failed send is auditable and does not keep the token');
-select t.ok((select count(*) from public.claim_event_reminders('2026-03-09 13:00+00')) = 1,
-            'a failed send can be retried; a sent or sending one cannot');
+select t.ok((select count(*) from public.due_event_reminders('2026-09-30 22:45:30+00') d
+             join public.places p on p.id = d.place_id
+             where p.google_place_id = 'ChIJ_timed' and d.offset_days = 3) = 2,
+            'the same reminder is still that minute half a minute later');
+select t.ok((select count(*) from public.due_event_reminders('2026-09-30 22:53+00') d
+             join public.places p on p.id = d.place_id
+             where p.google_place_id = 'ChIJ_timed' and d.offset_days = 3) = 0,
+            'eight minutes late is not that reminder');
 
 -- The date moves. Old unsent rows are skipped; the new date gets its own set.
 update public.saves set when_start = '2026-03-20'
