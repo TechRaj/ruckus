@@ -12,6 +12,7 @@
     "node": ">=20.6"
   },
   "scripts": {
+    "start": "node apps/proxy/proxy.mjs",
     "proxy": "npm run start -w @ruckus/proxy",
     "harness": "npm run start -w @ruckus/harness",
     "design": "node --env-file=.env tools/figma-export.mjs",
@@ -26,5 +27,11 @@
     "mobile:first-run": "EXPO_PUBLIC_FIRST_RUN=1 npm run start -w @ruckus/mobile -- --clear --ios"
   },
   "license": "MIT",
-  "description": "Collect places you find on Instagram Reels and turn them into plans with friends."
+  "description": "Collect places you find on Instagram Reels and turn them into plans with friends.",
+  "version": "1.0.0",
+  "dependencies": {
+    "expo": "~57.0.25",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  }
 }
